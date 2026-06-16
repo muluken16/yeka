@@ -175,7 +175,7 @@ namespace CleaningManagmentSystem.Controllers
         {
             var check = RequireAdmin(); if (check != null) return check;
             using var db = new MySqlConnection(_cs);
-            db.Execute("UPDATE users SET is_active=NOT is_active,updated_at=NOW() WHERE id=@id", new { id = UserId });
+            db.Execute("UPDATE users SET is_active = 1 - is_active,updated_at=NOW() WHERE id=@id", new { id = UserId });
             return Redirect("/Dashboard/SuperAdmin/Users?ok=Status+updated");
         }
 

@@ -49,8 +49,8 @@ namespace CleaningManagmentSystem.Pages.Dashboard.WeredaMahberat
                         wereda_name as weredaName, mahberat_name as mahberatName,
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time,'%H:%i') as time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at,
                         mahberat_approved, mahberat_approved_by, mahberat_notes
                     FROM staff_receipts
@@ -62,8 +62,8 @@ namespace CleaningManagmentSystem.Pages.Dashboard.WeredaMahberat
                         wereda_name as weredaName, company_name as mahberatName,
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time,'%H:%i') as time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at,
                         mahberat_approved, mahberat_approved_by, mahberat_notes
                     FROM outsource_receipts
@@ -81,8 +81,8 @@ namespace CleaningManagmentSystem.Pages.Dashboard.WeredaMahberat
                         wereda_name as weredaName, mahberat_name as mahberatName,
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time,'%H:%i') as time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at,
                         mahberat_approved, mahberat_approved_by, mahberat_notes
                     FROM staff_receipts
@@ -94,15 +94,15 @@ namespace CleaningManagmentSystem.Pages.Dashboard.WeredaMahberat
                         wereda_name as weredaName, company_name as mahberatName,
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time,'%H:%i') as time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at,
                         mahberat_approved, mahberat_approved_by, mahberat_notes
                     FROM outsource_receipts
                     WHERE mahberat_approved IS NOT NULL
                 ) as combined
                 WHERE 1=1 {searchFilter}
-                ORDER BY registered_at DESC LIMIT 100";
+                ORDER BY registered_at DESC";
 
             ActionedReceipts = (connection.Query(actionedQ, param)).ToList();
         }

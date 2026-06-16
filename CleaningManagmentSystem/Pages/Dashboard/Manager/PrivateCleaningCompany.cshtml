@@ -1,0 +1,573 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.Manager.PrivateCleaningCompanyModel
+@{
+    Layout = null;
+    var userName = HttpContext.Session.GetString("UserName");
+    if (userName == null) { Response.Redirect("/Login"); return; }
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Private Cleaning Companies — Manager — Yeka</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/dashboard.css" />
+</head>
+<body>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+<!-- Desktop Navbar -->
+<nav class="navbar navbar-dark dashboard-navbar fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/Dashboard/Manager">
+            <i class="bi bi-droplet-fill"></i> Yeka Cleaning
+        </a>
+        <div class="nav-user">
+            <span>Welcome, @userName</span>
+            <a class="btn-logout" href="/Login?logout=1">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile Navbar -->
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
+    <div class="container-fluid">
+        <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka</a>
+        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
+    </div>
+</nav>
+
+<nav id="sidebarMenu" class="sidebar d-lg-none">
+    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
+</nav>
+<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
+    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
+</nav>
+
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
+
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom flex-wrap gap-2">
+        <div>
+            <h1 class="h3 mb-0 fw-bold">
+                <i class="bi bi-briefcase me-2 text-primary"></i>Private Cleaning Companies
+            </h1>
+            <small class="text-muted">
+                Manage companies and link registered users as mobile app representatives
+            </small>
+        </div>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
+            <i class="bi bi-plus-circle me-1"></i>Add Company
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2">
+            <i class="bi bi-check-circle-fill me-1"></i>@Model.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>@Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Stats -->
+    <div class="d-flex gap-2 flex-wrap mb-3">
+        <span class="badge bg-primary px-3 py-2">Total: @Model.Companies.Count</span>
+        <span class="badge bg-success px-3 py-2">Active: @Model.Companies.Count(c => c.Status == "Active")</span>
+        <span class="badge bg-info text-dark px-3 py-2">
+            <i class="bi bi-phone me-1"></i>Linked: @Model.Companies.Count(c => c.RepUserId.HasValue)
+        </span>
+        <span class="badge bg-warning text-dark px-3 py-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>No mobile user: @Model.Companies.Count(c => !c.RepUserId.HasValue)
+        </span>
+    </div>
+
+    <!-- Companies Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:.85rem">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Company Name</th>
+                        <th>License No</th>
+                        <th>Contact Person</th>
+                        <th>Phone</th>
+                        <th>Services</th>
+                        <th>Status</th>
+                        <th><i class="bi bi-phone me-1"></i>Mobile Rep</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!Model.Companies.Any())
+                {
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            No companies yet. Click <strong>Add Company</strong> to register one.
+                        </td>
+                    </tr>
+                }
+                @foreach (var c in Model.Companies)
+                {
+                    <tr>
+                        <td class="text-muted small">@c.Id</td>
+                        <td class="fw-semibold">@c.CompanyName</td>
+                        <td><code class="small">@(string.IsNullOrEmpty(c.LicenseNumber) ? "—" : c.LicenseNumber)</code></td>
+                        <td>@(string.IsNullOrEmpty(c.ContactPerson) ? "—" : c.ContactPerson)</td>
+                        <td class="small">@(string.IsNullOrEmpty(c.Phone) ? "—" : c.Phone)</td>
+                        <td style="max-width:140px">
+                            <small class="text-muted">@(string.IsNullOrEmpty(c.ServicesOffered) ? "—" : c.ServicesOffered)</small>
+                        </td>
+                        <td>
+                            @if (c.Status == "Active")
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@c.Status</span>
+                            }
+                        </td>
+                        <td>
+                            @if (c.RepUserId.HasValue && !string.IsNullOrEmpty(c.RepUserEmail))
+                            {
+                                <div>
+                                    <i class="bi bi-person-check-fill text-success me-1"></i>
+                                    <strong class="small">@c.RepUserName</strong><br/>
+                                    <code class="small text-muted">@c.RepUserEmail</code>
+                                    @if (c.RepUserActive == false)
+                                    {
+                                        <span class="badge bg-danger ms-1 small">Inactive</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>No mobile user
+                                </span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                <!-- Edit -->
+                                <button class="btn btn-sm btn-outline-warning"
+                                        title="Edit company"
+                                        onclick="fillEdit(
+                                            @c.Id,
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.CompanyName)),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.LicenseNumber ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.ContactPerson ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.Phone ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.Email ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.Address ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.ServicesOffered ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.Status)),
+                                            @(c.RepUserId.HasValue ? c.RepUserId.Value.ToString() : "0")
+                                        )"
+                                        data-bs-toggle="modal" data-bs-target="#modalEdit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <!-- Link mobile rep -->
+                                <button class="btn btn-sm btn-outline-success"
+                                        title="Link mobile rep user"
+                                        onclick="fillLinkUser(
+                                            @c.Id,
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.CompanyName)),
+                                            @(c.RepUserId.HasValue ? c.RepUserId.Value.ToString() : "0")
+                                        )"
+                                        data-bs-toggle="modal" data-bs-target="#modalLinkUser">
+                                    <i class="bi bi-person-plus"></i>
+                                </button>
+                                <!-- Unlink rep -->
+                                @if (c.RepUserId.HasValue)
+                                {
+                                    <form method="post" class="m-0"
+                                          onsubmit="return confirm('Unlink rep user from this company?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="action" value="unlink_user" />
+                                        <input type="hidden" name="Id"     value="@c.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                title="Unlink mobile user">
+                                            <i class="bi bi-person-dash"></i>
+                                        </button>
+                                    </form>
+                                }
+                                <!-- Toggle status -->
+                                <form method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="action" value="toggle" />
+                                    <input type="hidden" name="Id"     value="@c.Id" />
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-@(c.Status == "Active" ? "danger" : "success")"
+                                            title="@(c.Status == "Active" ? "Deactivate" : "Activate")">
+                                        <i class="bi bi-power"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<!-- ════ ADD COMPANY MODAL ════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalAdd" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="action" value="create" />
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-briefcase me-1"></i> Add Private Cleaning Company
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Company Name *</label>
+                        <input class="form-control" name="CompanyName" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">License Number</label>
+                        <input class="form-control" name="LicenseNumber" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Contact Person</label>
+                        <input class="form-control" name="ContactPerson" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Phone</label>
+                        <input type="tel" class="form-control" name="Phone" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" class="form-control" name="Email" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Status</label>
+                        <select class="form-select" name="Status">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold"><i class="bi bi-phone me-1"></i>Mobile App Representative</label>
+                        <select class="form-select" name="RepUserId">
+                            <option value="">— Select registered user (optional) —</option>
+                            @foreach (var u in Model.AvailableUsers)
+                            {
+                                var label = $"{u.Name} ({u.Email})";
+                                if (!string.IsNullOrEmpty(u.LinkedCompany))
+                                    label += $" [linked: {u.LinkedCompany}]";
+                                var roleTag = u.Role.ToLower() switch {
+                                    "driver"            => " [Driver]",
+                                    "outsource"         => " [Outsource]",
+                                    "privatecompanyrep" => " [Private Rep]",
+                                    "manager"           => " [Manager]",
+                                    "staff"             => " [Staff]",
+                                    _                   => $" [{u.Role}]"
+                                };
+                                <option value="@u.Id">@label @roleTag</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Address</label>
+                        <input class="form-control" name="Address" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Services Offered</label>
+                        <textarea class="form-control" name="ServicesOffered" rows="2"
+                                  placeholder="e.g. Waste collection, Street cleaning"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Save Company
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ════ EDIT COMPANY MODAL ══════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEdit" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="action" value="update" />
+                <input type="hidden" name="Id"     id="eId" />
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-1"></i> Edit Company</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Company Name *</label>
+                        <input class="form-control" name="CompanyName" id="eName" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">License Number</label>
+                        <input class="form-control" name="LicenseNumber" id="eLicense" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Contact Person</label>
+                        <input class="form-control" name="ContactPerson" id="eContact" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Phone</label>
+                        <input type="tel" class="form-control" name="Phone" id="ePhone" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" class="form-control" name="Email" id="eEmail" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Status</label>
+                        <select class="form-select" name="Status" id="eStatus">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold"><i class="bi bi-phone me-1"></i>Mobile App Representative</label>
+                        <select class="form-select" name="RepUserId" id="eRepUserId">
+                            <option value="">— Select registered user (optional) —</option>
+                            @foreach (var u in Model.AvailableUsers)
+                            {
+                                var label = $"{u.Name} ({u.Email})";
+                                if (!string.IsNullOrEmpty(u.LinkedCompany))
+                                    label += $" [linked: {u.LinkedCompany}]";
+                                var roleTag = u.Role.ToLower() switch {
+                                    "driver"            => " [Driver]",
+                                    "outsource"         => " [Outsource]",
+                                    "privatecompanyrep" => " [Private Rep]",
+                                    "manager"           => " [Manager]",
+                                    "staff"             => " [Staff]",
+                                    _                   => $" [{u.Role}]"
+                                };
+                                <option value="@u.Id">@label @roleTag</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Address</label>
+                        <input class="form-control" name="Address" id="eAddress" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Services Offered</label>
+                        <textarea class="form-control" name="ServicesOffered" id="eServices" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-save me-1"></i>Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ════ LINK USER MODAL ═════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalLinkUser" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <form method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="action"  id="lAction" value="link_user" />
+                <input type="hidden" name="Id"      id="lId" />
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus me-1"></i> Link Mobile App User
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-pills mb-3 justify-content-center" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active btn-sm" data-bs-toggle="pill"
+                                    data-bs-target="#tab-link-existing" type="button"
+                                    onclick="setLinkAction('link_user')">
+                                Link Existing User
+                            </button>
+                        </li>
+                        <li class="nav-item ms-2" role="presentation">
+                            <button class="nav-link btn-sm" data-bs-toggle="pill"
+                                    data-bs-target="#tab-register-new" type="button"
+                                    onclick="setLinkAction('register_and_link_user')">
+                                Register &amp; Link New User
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Tab: Link Existing -->
+                        <div class="tab-pane fade show active" id="tab-link-existing" role="tabpanel">
+                            <div class="alert alert-info small py-2 mb-3">
+                                <i class="bi bi-info-circle-fill me-1"></i>
+                                Select a registered user as <strong>PrivateCompanyRep</strong> for
+                                <strong id="lblCompanyName"></strong>.
+                                Their role will be updated automatically.
+                            </div>
+                            <label class="form-label fw-semibold">Select User *</label>
+                            <select class="form-select" name="UserId" id="lUserId">
+                                <option value="">— Select a registered user —</option>
+                                @foreach (var u in Model.AvailableUsers)
+                                {
+                                    var label = $"{u.Name} ({u.Email})";
+                                    if (!string.IsNullOrEmpty(u.LinkedCompany))
+                                        label += $" — linked to: {u.LinkedCompany}";
+                                    var roleTag = u.Role.ToLower() switch {
+                                        "driver"            => " [Driver]",
+                                        "outsource"         => " [Outsource]",
+                                        "privatecompanyrep" => " [Private Rep]",
+                                        "manager"           => " [Manager]",
+                                        "staff"             => " [Staff]",
+                                        _                   => $" [{u.Role}]"
+                                    };
+                                    <option value="@u.Id">@label @roleTag</option>
+                                }
+                            </select>
+                            <div class="mt-2">
+                                <input type="text" class="form-control form-control-sm"
+                                       id="userSearchInput"
+                                       placeholder="Type to filter users…"
+                                       oninput="filterUsers(this.value)" />
+                            </div>
+                        </div>
+
+                        <!-- Tab: Register & Link New -->
+                        <div class="tab-pane fade" id="tab-register-new" role="tabpanel">
+                            <div class="alert alert-info small py-2 mb-3">
+                                <i class="bi bi-info-circle-fill me-1"></i>
+                                Register a new <strong>PrivateCompanyRep</strong> and link them to
+                                <strong id="lblCompanyName2"></strong>.
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold">Full Name *</label>
+                                <input class="form-control" name="NewUserName" placeholder="Representative Full Name" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold">Email *</label>
+                                <input type="email" class="form-control" name="NewUserEmail" placeholder="rep@company.com" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label fw-semibold">Password *</label>
+                                <input type="password" class="form-control" name="NewUserPassword" minlength="6" placeholder="Min 6 characters" />
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label fw-semibold">Phone</label>
+                                    <input type="tel" class="form-control" name="NewUserPhone" placeholder="+251 9..." />
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label fw-semibold">Address</label>
+                                    <input class="form-control" name="NewUserAddress" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-person-check me-1"></i>Link User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebarMenu').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+
+function fillEdit(id, name, license, contact, phone, email, address, services, status, repUserId) {
+    document.getElementById('eId').value      = id;
+    document.getElementById('eName').value    = name;
+    document.getElementById('eLicense').value = license;
+    document.getElementById('eContact').value = contact;
+    document.getElementById('ePhone').value   = phone;
+    document.getElementById('eEmail').value   = email;
+    document.getElementById('eAddress').value = address;
+    document.getElementById('eServices').value = services;
+
+    var statusSel = document.getElementById('eStatus');
+    for (var i = 0; i < statusSel.options.length; i++) {
+        statusSel.options[i].selected = (statusSel.options[i].value === status);
+    }
+
+    var repSel = document.getElementById('eRepUserId');
+    for (var i = 0; i < repSel.options.length; i++) {
+        repSel.options[i].selected = (repSel.options[i].value == repUserId);
+    }
+}
+
+function fillLinkUser(id, companyName, currentRepUserId) {
+    document.getElementById('lId').value = id;
+    document.getElementById('lAction').value = 'link_user';
+
+    var label = document.getElementById('lblCompanyName');
+    if (label) label.textContent = companyName;
+    var label2 = document.getElementById('lblCompanyName2');
+    if (label2) label2.textContent = companyName;
+
+    var sel = document.getElementById('lUserId');
+    if (sel && currentRepUserId > 0) {
+        for (var i = 0; i < sel.options.length; i++) {
+            sel.options[i].selected = (sel.options[i].value == currentRepUserId);
+        }
+    }
+}
+
+function setLinkAction(action) {
+    document.getElementById('lAction').value = action;
+}
+
+function filterUsers(query) {
+    var sel = document.getElementById('lUserId');
+    var lower = query.toLowerCase();
+    for (var i = 0; i < sel.options.length; i++) {
+        var opt = sel.options[i];
+        if (i === 0) { opt.style.display = ''; continue; } // keep placeholder
+        opt.style.display = opt.text.toLowerCase().includes(lower) ? '' : 'none';
+    }
+}
+
+document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(link) {
+    link.addEventListener('click', function() {
+        if (window.innerWidth < 992) toggleSidebar();
+    });
+});
+</script>
+</body>
+</html>

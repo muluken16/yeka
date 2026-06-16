@@ -53,12 +53,12 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         driver_name AS driverName, plate_number  AS vehicleName,
                         kilogram, price,
                         ROUND(kilogram * price, 2) AS total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') AS date,
-                        TIME_FORMAT(receipt_time,'%H:%i')    AS time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') AS date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s')    AS time,
                         status, notes, image_url AS imageUrl, registered_at,
                         mahberat_approved, mahberat_approved_by,
                         mahberat_approved_at, mahberat_notes,
-                        IFNULL(transport_request_id, 0) AS transport_request_id
+                        ISNULL(transport_request_id, 0) AS transport_request_id
                     FROM staff_receipts
                     WHERE status = 'Pending' AND mahberat_approved = 1
                     UNION ALL
@@ -67,8 +67,8 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         driver_name AS driverName, plate_number AS vehicleName,
                         kilogram, price,
                         ROUND(kilogram * price, 2) AS total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') AS date,
-                        TIME_FORMAT(receipt_time,'%H:%i')    AS time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') AS date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s')    AS time,
                         status, notes, image_url AS imageUrl, registered_at,
                         mahberat_approved, mahberat_approved_by,
                         mahberat_approved_at, mahberat_notes,
@@ -88,11 +88,11 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         driver_name AS driverName, plate_number  AS vehicleName,
                         kilogram, price,
                         ROUND(kilogram * price, 2) AS total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') AS date,
-                        TIME_FORMAT(receipt_time,'%H:%i')    AS time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') AS date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s')    AS time,
                         status, notes, image_url AS imageUrl, registered_at,
                         mahberat_approved, mahberat_notes,
-                        IFNULL(transport_request_id, 0) AS transport_request_id
+                        ISNULL(transport_request_id, 0) AS transport_request_id
                     FROM staff_receipts
                     WHERE status != 'Pending'
                     UNION ALL
@@ -101,8 +101,8 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         driver_name AS driverName, plate_number AS vehicleName,
                         kilogram, price,
                         ROUND(kilogram * price, 2) AS total,
-                        DATE_FORMAT(receipt_date,'%Y-%m-%d') AS date,
-                        TIME_FORMAT(receipt_time,'%H:%i')    AS time,
+                        DATE_FORMAT(receipt_date, '%Y-%m-%d') AS date,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s')    AS time,
                         status, notes, image_url AS imageUrl, registered_at,
                         mahberat_approved, mahberat_notes,
                         NULL AS transport_request_id
@@ -110,7 +110,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                     WHERE status != 'Pending'
                 ) AS combined
                 WHERE 1=1 {searchWhere}
-                ORDER BY registered_at DESC LIMIT 200";
+                ORDER BY registered_at DESC";
 
             HistorySubmissions = (await conn.QueryAsync(histQ, param)).ToList();
 

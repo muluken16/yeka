@@ -1,0 +1,468 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.Manager.ReportsModel
+@{
+    Layout = null;
+    var userName = HttpContext.Session.GetString("UserName");
+    if (userName == null) { Response.Redirect("/Login"); return; }
+
+    string fType   = Model.FilterType      ?? "All";
+    string fStatus = Model.FilterStatus    ?? "";
+    string fStart  = Model.FilterStartDate ?? DateTime.Today.AddMonths(-1).ToString("yyyy-MM-dd");
+    string fEnd    = Model.FilterEndDate   ?? DateTime.Today.ToString("yyyy-MM-dd");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>All Receipts Report — Manager — Yeka</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/dashboard.css" />
+    <style>
+        .stat-card  { border-radius: 14px; border: none; }
+        .badge-mahberat  { background: #0d6efd !important; color: #fff; }
+        .badge-outsource { background: #6f42c1 !important; color: #fff; }
+        .badge-private   { background: #0dcaf0 !important; color: #000; }
+        .chart-wrap { position: relative; height: 210px; }
+        @@media print {
+            .no-print { display: none !important; }
+            main { margin: 0 !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+<!-- Desktop Navbar -->
+<nav class="navbar navbar-dark dashboard-navbar fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/Dashboard/Manager">
+            <i class="bi bi-droplet-fill"></i> Yeka Cleaning
+        </a>
+        <div class="nav-user">
+            <span>Welcome, @userName</span>
+            <a class="btn-logout" href="/Login?logout=1">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </div>
+</nav>
+<!-- Mobile Navbar -->
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
+    <div class="container-fluid">
+        <button class="navbar-toggler" onclick="toggleSidebar()">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka</a>
+        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
+    </div>
+</nav>
+
+<nav id="sidebarMenu" class="sidebar d-lg-none">
+    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
+</nav>
+<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
+    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
+</nav>
+
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom flex-wrap gap-2 no-print">
+        <div>
+            <h1 class="h3 mb-0 fw-bold">
+                <i class="bi bi-file-earmark-bar-graph me-2 text-primary"></i>All Receipts Report
+            </h1>
+            <small class="text-muted">Mahberat · Outsource · Private — real data from database</small>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>Print
+            </button>
+            <form method="post" asp-page-handler="ExportCsv" class="m-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="FilterType"       value="@fType" />
+                <input type="hidden" name="FilterStatus"     value="@fStatus" />
+                <input type="hidden" name="FilterStartDate"  value="@fStart" />
+                <input type="hidden" name="FilterEndDate"    value="@fEnd" />
+                <input type="hidden" name="FilterWeredaId"   value="@(Model.FilterWeredaId   ?? 0)" />
+                <input type="hidden" name="FilterMahberatId" value="@(Model.FilterMahberatId ?? 0)" />
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-download me-1"></i>Export CSV
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger py-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>@Model.ErrorMessage
+        </div>
+    }
+
+    <!-- ════ FILTER BAR ═══════════════════════════════════════════════════ -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 no-print">
+        <div class="card-body pb-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-6 col-sm-4 col-md-2">
+                    <label class="form-label small fw-semibold mb-1">Type</label>
+                    <select name="FilterType" class="form-select form-select-sm">
+                        <option value="All"      >@(fType=="All"       ? "✓ " : "")All Types</option>
+                        <option value="Mahberat" >@(fType=="Mahberat"  ? "✓ " : "")Mahberat</option>
+                        <option value="Outsource">@(fType=="Outsource" ? "✓ " : "")Outsource</option>
+                        <option value="Private"  >@(fType=="Private"   ? "✓ " : "")Private</option>
+                    </select>
+                </div>
+                <div class="col-6 col-sm-4 col-md-2">
+                    <label class="form-label small fw-semibold mb-1">Status</label>
+                    <select name="FilterStatus" class="form-select form-select-sm">
+                        <option value=""          >@(string.IsNullOrEmpty(fStatus)  ? "✓ " : "")All Statuses</option>
+                        <option value="Pending"   >@(fStatus=="Pending"    ? "✓ " : "")Pending</option>
+                        <option value="Registered">@(fStatus=="Registered" ? "✓ " : "")Registered</option>
+                        <option value="Approved"  >@(fStatus=="Approved"   ? "✓ " : "")Approved</option>
+                        <option value="Billed"    >@(fStatus=="Billed"     ? "✓ " : "")Billed</option>
+                        <option value="Paid"      >@(fStatus=="Paid"       ? "✓ " : "")Paid</option>
+                        <option value="Rejected"  >@(fStatus=="Rejected"   ? "✓ " : "")Rejected</option>
+                    </select>
+                </div>
+                <div class="col-6 col-sm-4 col-md-2">
+                    <label class="form-label small fw-semibold mb-1">Wereda</label>
+                    <select name="FilterWeredaId" class="form-select form-select-sm">
+                        <option value="">All Weredas</option>
+                        @foreach (var w in Model.Weredas)
+                        {
+                            var wid = (int)w.id;
+                            <option value="@wid">@(Model.FilterWeredaId == wid ? "✓ " : "")@w.name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-sm-4 col-md-2">
+                    <label class="form-label small fw-semibold mb-1">Mahberat</label>
+                    <select name="FilterMahberatId" class="form-select form-select-sm">
+                        <option value="">All Mahberats</option>
+                        @foreach (var m in Model.Mahberats)
+                        {
+                            var mid = (int)m.id;
+                            <option value="@mid">@(Model.FilterMahberatId == mid ? "✓ " : "")@m.name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-sm-4 col-md-2">
+                    <label class="form-label small fw-semibold mb-1">From</label>
+                    <input type="date" name="FilterStartDate" class="form-control form-control-sm" value="@fStart" />
+                </div>
+                <div class="col-6 col-sm-4 col-md-1">
+                    <label class="form-label small fw-semibold mb-1">To</label>
+                    <input type="date" name="FilterEndDate" class="form-control form-control-sm" value="@fEnd" />
+                </div>
+                <div class="col-12 col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                    <a href="/Dashboard/Manager/Reports" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ════ STAT CARDS ═══════════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-2">
+            <div class="card stat-card bg-primary text-white shadow-sm text-center py-3">
+                <div class="fs-3 fw-bold">@Model.TotalCount</div>
+                <div class="small opacity-75">Total Receipts</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card stat-card bg-info text-dark shadow-sm text-center py-3">
+                <div class="fs-4 fw-bold">@Model.TotalKg.ToString("N1")</div>
+                <div class="small opacity-75">Total KG</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card stat-card bg-success text-white shadow-sm text-center py-3">
+                <div class="fs-4 fw-bold">@Model.TotalAmount.ToString("N0")</div>
+                <div class="small opacity-75">Total ETB</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card stat-card bg-warning text-dark shadow-sm text-center py-3">
+                <div class="fs-3 fw-bold">@Model.TotalPending</div>
+                <div class="small opacity-75">Pending / Registered</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card stat-card bg-success text-white shadow-sm text-center py-3" style="opacity:.85">
+                <div class="fs-3 fw-bold">@(Model.TotalApproved + Model.TotalPaid)</div>
+                <div class="small opacity-75">Approved / Paid</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card stat-card bg-danger text-white shadow-sm text-center py-3">
+                <div class="fs-3 fw-bold">@Model.TotalRejected</div>
+                <div class="small opacity-75">Rejected</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ CHARTS ═══════════════════════════════════════════════════════ -->
+    @if (Model.DailyKgChart.Any())
+    {
+        <div class="row g-3 mb-4 no-print">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 fw-semibold pt-3 pb-0">
+                        <i class="bi bi-bar-chart-line me-1 text-info"></i>Daily KG — last 30 days
+                    </div>
+                    <div class="card-body"><div class="chart-wrap"><canvas id="chartKg"></canvas></div></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 fw-semibold pt-3 pb-0">
+                        <i class="bi bi-cash-stack me-1 text-success"></i>Daily Amount ETB — last 30 days
+                    </div>
+                    <div class="card-body"><div class="chart-wrap"><canvas id="chartAmt"></canvas></div></div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ════ TABLE ════════════════════════════════════════════════════════ -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-3 pb-0">
+            <span class="fw-semibold">
+                <i class="bi bi-table me-1"></i>Receipts
+                <span class="badge bg-secondary ms-1">@Model.TotalCount</span>
+            </span>
+            <small class="text-muted no-print">@fStart → @fEnd</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Type</th>
+                        <th>Wereda</th>
+                        <th>Mahberat / Company</th>
+                        <th>Driver</th>
+                        <th>Plate</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th class="text-end">KG</th>
+                        <th class="text-end">Rate</th>
+                        <th class="text-end">Total (ETB)</th>
+                        <th>Status</th>
+                        <th class="no-print">Img</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!Model.Receipts.Any())
+                {
+                    <tr>
+                        <td colspan="13" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-5 d-block mb-2"></i>
+                            No receipts found for the selected filters.
+                        </td>
+                    </tr>
+                }
+                @{ int rowNum = 0; }
+                @foreach (dynamic r in Model.Receipts)
+                {
+                    rowNum++;
+                    string rType   = Convert.ToString(r.receiptType) ?? "";
+                    string status  = Convert.ToString(r.status)      ?? "";
+                    decimal kg     = (decimal)(r.kilogram   ?? 0m);
+                    decimal price  = (decimal)(r.price      ?? 0m);
+                    decimal total  = (decimal)(r.total      ?? 0m);
+                    string img     = Convert.ToString(r.imageUrl)    ?? "";
+
+                    string typeBadge = rType switch {
+                        "Outsource" => "badge-outsource",
+                        "Private"   => "badge-private",
+                        _           => "badge-mahberat"
+                    };
+                    string statusBadge = status switch {
+                        "Approved" or "Billed" => "bg-success",
+                        "Paid"                 => "bg-primary",
+                        "Pending"              => "bg-warning text-dark",
+                        "Registered"           => "bg-info text-dark",
+                        "Rejected" or "MahberatRejected" => "bg-danger",
+                        _                      => "bg-secondary"
+                    };
+
+                    <tr>
+                        <td class="text-muted">@rowNum</td>
+                        <td><span class="badge @typeBadge">@rType</span></td>
+                        <td>@(string.IsNullOrEmpty(Convert.ToString(r.weredaName))  ? "—" : (object)r.weredaName)</td>
+                        <td class="fw-semibold">@(string.IsNullOrEmpty(Convert.ToString(r.entityName))  ? "—" : (object)r.entityName)</td>
+                        <td>@(string.IsNullOrEmpty(Convert.ToString(r.driverName))  ? "—" : (object)r.driverName)</td>
+                        <td><code>@(string.IsNullOrEmpty(Convert.ToString(r.plateName)) ? "—" : (object)r.plateName)</code></td>
+                        <td>@r.receiptDate</td>
+                        <td class="text-muted">@r.receiptTime</td>
+                        <td class="text-end fw-semibold">@kg.ToString("N1")</td>
+                        <td class="text-end text-muted">@price.ToString("N2")</td>
+                        <td class="text-end fw-bold text-success">@total.ToString("N2")</td>
+                        <td><span class="badge @statusBadge">@status</span></td>
+                        <td class="no-print">
+                            @if (!string.IsNullOrEmpty(img))
+                            {
+                                <a href="@img" target="_blank" title="View receipt image"
+                                   class="btn btn-sm btn-outline-secondary py-0 px-1">
+                                    <i class="bi bi-image"></i>
+                                </a>
+                            }
+                            else { <span class="text-muted">—</span> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+                @if (Model.Receipts.Any())
+                {
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="8" class="text-end">Totals:</td>
+                            <td class="text-end">@Model.TotalKg.ToString("N1") kg</td>
+                            <td></td>
+                            <td class="text-end text-success">@Model.TotalAmount.ToString("N2")</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+
+    <!-- ════ BREAKDOWNS ═══════════════════════════════════════════════════ -->
+    @if (Model.Receipts.Any())
+    {
+        <div class="row g-3 mt-3 mb-5">
+            <!-- By Type -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 fw-semibold pt-3 pb-0">
+                        <i class="bi bi-pie-chart me-1 text-primary"></i>By Type
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0" style="font-size:.85rem">
+                            <thead class="table-light">
+                                <tr><th>Type</th><th class="text-center">Count</th><th class="text-end">KG</th><th class="text-end">ETB</th></tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var grp in Model.Receipts
+                                .GroupBy(r => Convert.ToString(r.receiptType) ?? "—")
+                                .Select(g => new { Type = g.Key,
+                                    Count = g.Count(),
+                                    Kg    = g.Sum(r => (decimal)(r.kilogram ?? 0m)),
+                                    Amt   = g.Sum(r => (decimal)(r.total    ?? 0m)) })
+                                .OrderByDescending(g => g.Amt))
+                            {
+                                string tb = grp.Type switch { "Outsource" => "badge-outsource", "Private" => "badge-private", _ => "badge-mahberat" };
+                                <tr>
+                                    <td><span class="badge @tb">@grp.Type</span></td>
+                                    <td class="text-center">@grp.Count</td>
+                                    <td class="text-end">@grp.Kg.ToString("N1")</td>
+                                    <td class="text-end fw-semibold">@grp.Amt.ToString("N2")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- By Status -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 fw-semibold pt-3 pb-0">
+                        <i class="bi bi-bar-chart me-1 text-warning"></i>By Status
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0" style="font-size:.85rem">
+                            <thead class="table-light">
+                                <tr><th>Status</th><th class="text-center">Count</th><th class="text-end">KG</th><th class="text-end">ETB</th></tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var grp in Model.Receipts
+                                .GroupBy(r => Convert.ToString(r.status) ?? "—")
+                                .Select(g => new { Status = g.Key,
+                                    Count = g.Count(),
+                                    Kg    = g.Sum(r => (decimal)(r.kilogram ?? 0m)),
+                                    Amt   = g.Sum(r => (decimal)(r.total    ?? 0m)) })
+                                .OrderByDescending(g => g.Count))
+                            {
+                                string sb2 = grp.Status switch {
+                                    "Approved" or "Billed" => "bg-success",
+                                    "Paid"                 => "bg-primary",
+                                    "Pending"              => "bg-warning text-dark",
+                                    "Registered"           => "bg-info text-dark",
+                                    "Rejected"             => "bg-danger",
+                                    _                      => "bg-secondary"
+                                };
+                                <tr>
+                                    <td><span class="badge @sb2">@grp.Status</span></td>
+                                    <td class="text-center">@grp.Count</td>
+                                    <td class="text-end">@grp.Kg.ToString("N1")</td>
+                                    <td class="text-end fw-semibold">@grp.Amt.ToString("N2")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+</main>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebarMenu').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(l) {
+    l.addEventListener('click', function() { if (window.innerWidth < 992) toggleSidebar(); });
+});
+
+// Chart.js data injected from server
+const labels  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.DailyKgChart.Select(p => p.Label).ToList()));
+const kgVals  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.DailyKgChart.Select(p => p.Value).ToList()));
+const amtVals = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.DailyAmountChart.Select(p => p.Value).ToList()));
+
+function buildChart(id, label, color, data) {
+    var ctx = document.getElementById(id);
+    if (!ctx || data.length === 0) return;
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ label: label, data: data,
+                backgroundColor: color + '88', borderColor: color,
+                borderWidth: 1.5, borderRadius: 4 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { maxRotation: 50, font: { size: 9 } } },
+                y: { beginAtZero: true, ticks: { font: { size: 9 } } }
+            }
+        }
+    });
+}
+
+buildChart('chartKg',  'KG',  '#0dcaf0', kgVals);
+buildChart('chartAmt', 'ETB', '#198754', amtVals);
+</script>
+</body>
+</html>

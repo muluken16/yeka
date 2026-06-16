@@ -15,7 +15,7 @@ class NotificationService extends ChangeNotifier {
   
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
-  void startPolling(int userId, {Duration interval = const Duration(seconds: 30)}) {
+  void startPolling(int userId, {Duration interval = const Duration(seconds: 15)}) {
     print('[NotificationService] Starting notification polling for user $userId');
     
     // Cancel existing timer
@@ -81,6 +81,18 @@ class NotificationService extends ChangeNotifier {
       }
     } catch (e) {
       print('[NotificationService] Error marking notification as read: $e');
+    }
+  }
+
+  Future<void> markAllAsRead(int userId) async {
+    try {
+      await _apiService.markAllNotificationsRead(userId);
+      _notifications = _notifications
+          .map((n) => n.copyWith(isRead: true))
+          .toList();
+      notifyListeners();
+    } catch (e) {
+      print('[NotificationService] Error marking all as read: $e');
     }
   }
 

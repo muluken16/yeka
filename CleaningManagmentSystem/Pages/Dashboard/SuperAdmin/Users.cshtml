@@ -189,8 +189,8 @@
                             <td class="fw-semibold">@u.Name</td>
                             <td><code class="small">@u.Email</code></td>
                             <td>
-                                <span class="badge bg-@Badge(u.Role) px-2 py-1">
-                                    @Label(u.Role)
+                                <span class="badge bg-@Badge(u.Role ?? "") px-2 py-1">
+                                    @Label(u.Role ?? "")
                                 </span>
                             </td>
                             <td class="small">

@@ -1,242 +1,467 @@
 @page
+@model CleaningManagmentSystem.Pages.Dashboard.Staff.LibraryModel
 @{
-    var userName = HttpContext.Session.GetString("UserName");
-    var userRole = HttpContext.Session.GetString("UserRole");
-    
-    if (userName == null)
-    {
-        Response.Redirect("/Login");
-        return;
-    }
     Layout = "/Pages/Dashboard/Staff/_StaffLayout.cshtml";
+    ViewData["Title"] = "Resource Library";
+    var userName = HttpContext.Session.GetString("UserName");
+    if (userName == null) { Response.Redirect("/Login"); return; }
+
+    string StatusBadge(string s) => (s ?? "").ToLower() switch {
+        "available" => "bg-success",
+        "borrowed"  => "bg-warning text-dark",
+        "reserved"  => "bg-info text-dark",
+        "damaged"   => "bg-danger",
+        _           => "bg-secondary"
+    };
+    string TrainingBadge(string s) => (s ?? "").ToLower() switch {
+        "completed" => "bg-success",
+        "ongoing"   => "bg-primary",
+        "scheduled" => "bg-info text-dark",
+        "cancelled" => "bg-danger",
+        _           => "bg-secondary"
+    };
+    string CatIcon(string c) => (c ?? "").ToLower() switch {
+        "cleaning"  => "bi-droplet",
+        "safety"    => "bi-shield-check",
+        "training"  => "bi-mortarboard",
+        "policy"    => "bi-file-text",
+        "forms"     => "bi-file-earmark-ruled",
+        "reports"   => "bi-bar-chart",
+        _           => "bi-book"
+    };
 }
 
-<div class="main-content p-4">
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2"><i class="bi bi-book me-2"></i>Resource Library</h1>
-        <span class="badge bg-primary">@userRole</span>
+<style>
+    .lib-card { border-radius:14px; border:1px solid #e8ecf0; transition:all .18s; }
+    .lib-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.08); transform:translateY(-2px); }
+    .trend-item { border-radius:12px; border:1px solid #e8ecf0; padding:14px 16px;
+                  transition:all .15s; background:#fff; }
+    .trend-item:hover { box-shadow:0 4px 14px rgba(0,0,0,.06); border-color:#0d6efd; }
+    .trend-num { width:32px; height:32px; border-radius:8px; background:#f0f5ff;
+                 display:flex; align-items:center; justify-content:center;
+                 font-weight:800; font-size:.82rem; color:#0d6efd; flex-shrink:0; }
+    .stat-kpi { border-radius:14px; border:none; }
+</style>
+
+<div class="main-content p-3 p-md-4">
+<div class="container-fluid">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start pt-2 pb-3 mb-4 border-bottom flex-wrap gap-2">
+        <div>
+            <h2 class="h4 fw-bold mb-0"><i class="bi bi-book me-2 text-primary"></i>Resource Library</h2>
+            <small class="text-muted">Books, documents and trending trainings</small>
+        </div>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
+            <i class="bi bi-plus-circle me-1"></i>Add Item
+        </button>
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-file-earmark-text display-4 text-primary"></i>
-                    <h4 class="mt-2">45</h4>
-                    <p class="text-muted mb-0">Documents</p>
-                </div>
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2">
+            <i class="bi bi-check-circle-fill me-1"></i>@Model.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>@Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- ── STAT CARDS ────────────────────────────────────────────────── -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card stat-kpi shadow-sm text-center py-3">
+                <div class="fs-2 fw-bold text-primary">@Model.TotalItems</div>
+                <div class="small text-muted"><i class="bi bi-book me-1"></i>Total Items</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-collection-play display-4 text-success"></i>
-                    <h4 class="mt-2">12</h4>
-                    <p class="text-muted mb-0">Videos</p>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-kpi shadow-sm text-center py-3">
+                <div class="fs-2 fw-bold text-success">@Model.AvailableItems</div>
+                <div class="small text-muted"><i class="bi bi-check-circle me-1"></i>Available</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-download display-4 text-info"></i>
-                    <h4 class="mt-2">230</h4>
-                    <p class="text-muted mb-0">Downloads</p>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-kpi shadow-sm text-center py-3">
+                <div class="fs-2 fw-bold text-warning">@Model.BorrowedItems</div>
+                <div class="small text-muted"><i class="bi bi-arrow-left-right me-1"></i>Borrowed</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-bookmark display-4 text-warning"></i>
-                    <h4 class="mt-2">8</h4>
-                    <p class="text-muted mb-0">Saved Items</p>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-kpi shadow-sm text-center py-3">
+                <div class="fs-2 fw-bold text-info">@Model.TotalTrainings</div>
+                <div class="small text-muted"><i class="bi bi-mortarboard me-1"></i>Trainings</div>
             </div>
         </div>
     </div>
 
     <div class="row g-4">
+
+        <!-- ── LEFT: Library items ────────────────────────────────────── -->
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <ul class="nav nav-pills" id="libraryTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="documents-tab" data-bs-toggle="pill" data-bs-target="#documents" type="button"><i class="bi bi-file-earmark-text me-1"></i> Documents</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="videos-tab" data-bs-toggle="pill" data-bs-target="#videos" type="button"><i class="bi bi-collection-play me-1"></i> Videos</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="guides-tab" data-bs-toggle="pill" data-bs-target="#guides" type="button"><i class="bi bi-compass me-1"></i> Guides</button>
-                        </li>
-                    </ul>
-                </div>
-                <div class="card-body p-0">
-                    <div class="tab-content p-3" id="libraryTabsContent">
-                        <div class="tab-pane fade show active" id="documents">
-                            <div class="list-group list-group-flush">
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-file-pdf text-danger fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Employee Handbook 2026</h6>
-                                            <small class="text-muted">PDF - 2.4 MB</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-file-word text-info fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Cleaning Procedures Manual</h6>
-                                            <small class="text-muted">DOCX - 1.8 MB</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-file-excel text-success fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Monthly Report Template</h6>
-                                            <small class="text-muted">XLSX - 456 KB</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-file-pdf text-danger fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Safety Guidelines 2026</h6>
-                                            <small class="text-muted">PDF - 1.2 MB</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-file-word text-info fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Performance Review Form</h6>
-                                            <small class="text-muted">DOCX - 89 KB</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
+
+            <!-- Filter bar -->
+            <div class="card border-0 shadow-sm rounded-4 mb-3">
+                <div class="card-body py-2">
+                    <form method="get" class="row g-2 align-items-end">
+                        <div class="col-12 col-md-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" name="SearchQuery" class="form-control"
+                                       placeholder="Search title, author, ISBN…"
+                                       value="@Model.SearchQuery" />
                             </div>
                         </div>
-                        <div class="tab-pane fade" id="videos">
-                            <div class="list-group list-group-flush">
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-play-circle text-primary fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Cleaning Equipment Training</h6>
-                                            <small class="text-muted">Video - 12:45</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-play-circle text-primary fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Safety Procedures Overview</h6>
-                                            <small class="text-muted">Video - 8:30</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tab-pane fade" id="guides">
-                            <div class="list-group list-group-flush">
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-book text-success fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Onboarding Guide</h6>
-                                            <small class="text-muted">PDF - 3.2 MB</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-book text-success fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-0">Equipment Maintenance Guide</h6>
-                                            <small class="text-muted">PDF - 2.1 MB</small>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-search me-2"></i>Quick Search</h5>
-                </div>
-                <div class="card-body">
-                    <form>
-                        <div class="mb-3">
-                            <input type="text" class="form-control" placeholder="Search documents...">
-                        </div>
-                        <div class="mb-3">
-                            <select class="form-select">
-                                <option>All Categories</option>
-                                <option>Policies</option>
-                                <option>Training</option>
-                                <option>Forms</option>
-                                <option>Reports</option>
+                        <div class="col-6 col-md-3">
+                            <select name="FilterCategory" class="form-select form-select-sm">
+                                <option value="">All Categories</option>
+                                @foreach (var cat in Model.Categories)
+                                {
+                                    <option value="@cat">@(Model.FilterCategory == cat ? "✓ " : "")@cat</option>
+                                }
                             </select>
                         </div>
-                        <button type="button" class="btn btn-primary w-100">Search</button>
+                        <div class="col-6 col-md-3">
+                            <select name="FilterStatus" class="form-select form-select-sm">
+                                <option value="">All Status</option>
+                                <option value="Available" >@(Model.FilterStatus=="Available"  ? "✓ " : "")Available</option>
+                                <option value="Borrowed"  >@(Model.FilterStatus=="Borrowed"   ? "✓ " : "")Borrowed</option>
+                                <option value="Reserved"  >@(Model.FilterStatus=="Reserved"   ? "✓ " : "")Reserved</option>
+                                <option value="Damaged"   >@(Model.FilterStatus=="Damaged"    ? "✓ " : "")Damaged</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2 d-flex gap-1">
+                            <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                                <i class="bi bi-funnel"></i>
+                            </button>
+                            <a href="/Dashboard/Staff/Library" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x"></i>
+                            </a>
+                        </div>
                     </form>
                 </div>
             </div>
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-star me-2"></i>Recent Documents</h5>
+
+            <!-- Items table -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-white border-0 fw-semibold pt-3 pb-0">
+                    <i class="bi bi-collection me-1 text-primary"></i>Library Items
+                    <span class="badge bg-secondary ms-1">@Model.Items.Count</span>
                 </div>
-                <div class="list-group list-group-flush">
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-file-earmark-text text-primary me-2"></i>
-                            <div>
-                                <small class="fw-bold">Employee Handbook</small><br>
-                                <small class="text-muted">Updated 2 days ago</small>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size:.83rem">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>Category</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-center">Avail</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @if (!Model.Items.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-book display-5 d-block mb-2 opacity-25"></i>
+                                    No items found. Add your first library item.
+                                </td>
+                            </tr>
+                        }
+                        @{ int rn = 0; }
+                        @foreach (dynamic item in Model.Items)
+                        {
+                            rn++;
+                            string st  = Convert.ToString(item.status)   ?? "";
+                            string cat = Convert.ToString(item.category) ?? "";
+                            int qty    = (int)(item.quantity  ?? 0);
+                            int avail  = (int)(item.available ?? 0);
+
+                            <tr>
+                                <td class="text-muted">@rn</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width:32px;height:32px;border-radius:8px;background:#e7f0ff;
+                                                    display:flex;align-items:center;justify-content:center;
+                                                    color:#0d6efd;font-size:1rem;flex-shrink:0">
+                                            <i class="bi @CatIcon(cat)"></i>
+                                        </div>
+                                        <span class="fw-semibold">@item.title</span>
+                                    </div>
+                                </td>
+                                <td class="text-muted">@(string.IsNullOrEmpty(Convert.ToString(item.author)) ? "—" : (object)item.author)</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(cat))
+                                    {
+                                        <span class="badge bg-light text-dark border small">@cat</span>
+                                    }
+                                    else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-center">@qty</td>
+                                <td class="text-center">
+                                    <span class="fw-bold @(avail > 0 ? "text-success" : "text-danger")">@avail</span>
+                                </td>
+                                <td class="small text-muted">@(string.IsNullOrEmpty(Convert.ToString(item.location)) ? "—" : (object)item.location)</td>
+                                <td><span class="badge @StatusBadge(st)">@st</span></td>
+                                <td class="text-center">
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <button class="btn btn-sm btn-outline-warning"
+                                                data-bs-toggle="modal" data-bs-target="#modalEdit"
+                                                onclick="fillEdit(@item.id,
+                                                    '@Html.Raw(Convert.ToString(item.title).Replace("'","&#39;"))',
+                                                    '@Html.Raw(Convert.ToString(item.author).Replace("'","&#39;"))',
+                                                    '@Html.Raw(Convert.ToString(item.category).Replace("'","&#39;"))',
+                                                    '@Html.Raw(Convert.ToString(item.isbn).Replace("'","&#39;"))',
+                                                    @qty,
+                                                    '@Html.Raw(Convert.ToString(item.location).Replace("'","&#39;"))',
+                                                    '@st')">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" class="m-0"
+                                              onsubmit="return confirm('Remove this item?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: Trending Trainings ──────────────────────────────── -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 fw-semibold pt-3 pb-0">
+                    <i class="bi bi-fire me-1 text-danger"></i>Trending Trainings
+                    <span class="badge bg-danger ms-1">@Model.TotalTrainings</span>
+                </div>
+                <div class="card-body p-3">
+                    @if (!Model.Trainings.Any())
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-mortarboard display-4 d-block mb-2 opacity-25"></i>
+                            No trainings scheduled yet.
+                        </div>
+                    }
+                    <div class="d-flex flex-column gap-2">
+                    @{ int tn = 0; }
+                    @foreach (dynamic t in Model.Trainings)
+                    {
+                        tn++;
+                        string ts   = Convert.ToString(t.status)   ?? "";
+                        string tcat = Convert.ToString(t.category) ?? "";
+                        DateTime? tStart = t.start_date as DateTime?;
+                        DateTime? tEnd   = t.end_date   as DateTime?;
+                        string countdown = "";
+                        if (tStart.HasValue)
+                        {
+                            int days = (tStart.Value.Date - DateTime.Today).Days;
+                            countdown = days == 0 ? "Today" : days == 1 ? "Tomorrow"
+                                      : days > 0 ? $"In {days}d" : "Ongoing";
+                        }
+
+                        <div class="trend-item">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="trend-num">@tn</div>
+                                <div class="flex-fill overflow-hidden">
+                                    <div class="fw-semibold text-truncate" style="font-size:.87rem"
+                                         title="@t.title">@t.title</div>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        <span class="badge @TrainingBadge(ts)" style="font-size:.68rem">@ts</span>
+                                        @if (!string.IsNullOrEmpty(tcat))
+                                        {
+                                            <span class="badge bg-light text-dark border" style="font-size:.68rem">@tcat</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(countdown))
+                                        {
+                                            <span class="badge bg-primary" style="font-size:.68rem">@countdown</span>
+                                        }
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size:.72rem">
+                                        @if (!string.IsNullOrEmpty(Convert.ToString(t.trainer)))
+                                        {
+                                            <span><i class="bi bi-person me-1"></i>@t.trainer</span>
+                                        }
+                                        @if (tStart.HasValue)
+                                        {
+                                            <span class="ms-2"><i class="bi bi-calendar3 me-1"></i>@tStart.Value.ToString("dd MMM yyyy")</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(Convert.ToString(t.location)))
+                                    {
+                                        <div class="text-muted" style="font-size:.72rem">
+                                            <i class="bi bi-geo-alt me-1"></i>@t.location
+                                        </div>
+                                    }
+                                </div>
                             </div>
                         </div>
+                    }
                     </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-file-word text-info me-2"></i>
-                            <div>
-                                <small class="fw-bold">Cleaning Procedures</small><br>
-                                <small class="text-muted">Updated 5 days ago</small>
-                            </div>
+
+                    @if (Model.Trainings.Any())
+                    {
+                        <div class="mt-3">
+                            <a href="/Dashboard/Staff/Training" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="bi bi-mortarboard me-1"></i>View All Trainings
+                            </a>
                         </div>
-                    </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-file-excel text-success me-2"></i>
-                            <div>
-                                <small class="fw-bold">Monthly Reports</small><br>
-                                <small class="text-muted">Updated 1 week ago</small>
-                            </div>
-                        </div>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
+
 </div>
+</div>
+
+<!-- ════ ADD ITEM MODAL ═══════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalAdd" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Add">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle me-1"></i>Add Library Item</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Title *</label>
+                        <input class="form-control" name="Title" required placeholder="Book or document title" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">ISBN / Code</label>
+                        <input class="form-control" name="Isbn" placeholder="ISBN or reference code" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Author</label>
+                        <input class="form-control" name="Author" placeholder="Author name" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Category</label>
+                        <input class="form-control" name="Category" placeholder="e.g. Cleaning, Safety, Training" list="catList" />
+                        <datalist id="catList">
+                            @foreach (var c in Model.Categories)
+                            { <option value="@c" /> }
+                        </datalist>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Quantity</label>
+                        <input type="number" class="form-control" name="Quantity" value="1" min="1" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Location</label>
+                        <input class="form-control" name="Location" placeholder="Shelf / Room" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Status</label>
+                        <select class="form-select" name="Status">
+                            <option value="Available">Available</option>
+                            <option value="Borrowed">Borrowed</option>
+                            <option value="Reserved">Reserved</option>
+                            <option value="Damaged">Damaged</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Add Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ════ EDIT ITEM MODAL ══════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEdit" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Update">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="EditId" id="eId" />
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-1"></i>Edit Library Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Title *</label>
+                        <input class="form-control" name="Title" id="eTitle" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">ISBN / Code</label>
+                        <input class="form-control" name="Isbn" id="eIsbn" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Author</label>
+                        <input class="form-control" name="Author" id="eAuthor" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Category</label>
+                        <input class="form-control" name="Category" id="eCategory" list="catList" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Quantity</label>
+                        <input type="number" class="form-control" name="Quantity" id="eQty" min="1" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Location</label>
+                        <input class="form-control" name="Location" id="eLocation" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Status</label>
+                        <select class="form-select" name="Status" id="eStatus">
+                            <option value="Available">Available</option>
+                            <option value="Borrowed">Borrowed</option>
+                            <option value="Reserved">Reserved</option>
+                            <option value="Damaged">Damaged</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning fw-semibold">
+                        <i class="bi bi-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function fillEdit(id, title, author, category, isbn, qty, location, status) {
+    document.getElementById('eId').value       = id;
+    document.getElementById('eTitle').value    = title;
+    document.getElementById('eAuthor').value   = author;
+    document.getElementById('eCategory').value = category;
+    document.getElementById('eIsbn').value     = isbn;
+    document.getElementById('eQty').value      = qty;
+    document.getElementById('eLocation').value = location;
+    var sel = document.getElementById('eStatus');
+    for (var i = 0; i < sel.options.length; i++)
+        sel.options[i].selected = sel.options[i].value === status;
+}
+</script>
+}

@@ -1,382 +1,772 @@
 @page
+@model CleaningManagmentSystem.Pages.IndexModel
 @{
     Layout = null;
-    ViewData["Title"] = "Home";
-}
 
+    // ── Service images (Unsplash, no API key needed) ─────────────────────
+    var svcImgs = new[] {
+        "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&q=80",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+        "https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?w=600&q=80",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80",
+        "https://images.unsplash.com/photo-1527515545081-5db817172677?w=600&q=80",
+        "https://images.unsplash.com/photo-1563453392212-326f5e854473?w=600&q=80",
+        "https://images.unsplash.com/photo-1591891937573-6949f04ef95b?w=600&q=80",
+        "https://images.unsplash.com/photo-1617347454431-f49d7ff5c3b1?w=600&q=80",
+    };
+    var svcIcons = new[] {
+        "bi-house-heart","bi-building","bi-droplet","bi-truck",
+        "bi-stars","bi-recycle","bi-clipboard-check","bi-tools"
+    };
+
+    // ── Fallback services ─────────────────────────────────────────────────
+    var svcFallback = new[] {
+        ("Residential Cleaning",  "Regular and deep cleaning for homes and apartments."),
+        ("Commercial Cleaning",   "Office, retail space and commercial premises."),
+        ("Waste Collection",      "Organized waste collection across all weredas."),
+        ("Transport Services",    "Managed transport with driver assignment and tracking."),
+    };
+
+    // ── Post category color ───────────────────────────────────────────────
+    string CatClr(string c) => (c ?? "").ToLower() switch {
+        "announcement" => "#272AF5",
+        "training"     => "#198754",
+        "operations"   => "#fd7e14",
+        "hr"           => "#0dcaf0",
+        _              => "#6c757d"
+    };
+
+    // ── Gallery fallback images ───────────────────────────────────────────
+    var galFallback = new[] {
+        ("https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80", "City Cleaning"),
+        ("https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=600&q=80", "Waste Management"),
+        ("https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80", "Office Cleaning"),
+        ("https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80", "Team at Work"),
+        ("https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80", "Equipment"),
+        ("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80", "Street Cleaning"),
+    };
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title data-i18n-title="home_page_title">@ViewData["Title"] - Yeka Cleaning Services</title>
+    <title>Yeka Cleaning Management System</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <style>
-        .chat-window {
+        /* ════ CSS Reset + variables ════════════════════════════════════════ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --blue:  #2E86AB, #A23B72;
+            --blue2: #2E86AB, #A23B72;
+            --dark:  #0d1117;
+            --r:     14px;   
+        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fff; color: #1a1a2e; }
+
+        /* ════ NAVBAR — fixed, never moves ══════════════════════════════════ */
+        .site-nav {
             position: fixed;
-            bottom: 110px;
-            right: 30px;
-            width: 380px;
-            height: 500px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            z-index: 9999;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .chat-window.active {
-            display: flex;
-        }
-        .chat-header {
+            top: 0; left: 0; right: 0;
+            z-index: 1050;
             background: linear-gradient(135deg, #2E86AB, #A23B72);
-            color: white;
-            padding: 15px;
+            box-shadow: 0 2px 24px rgba(39,42,245,.35);
+            padding: 0;
+        }
+        .site-nav .inner {
+            max-width: 1200px;
+            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding: 0 24px;
+            height: 60px;
         }
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            background: #f8f9fa;
-        }
-        .message {
-            margin-bottom: 15px;
-            max-width: 80%;
-            padding: 10px 15px;
-            border-radius: 15px;
-            font-size: 14px;
-        }
-        .bot-message {
-            background: #2E86AB;
-            color: white;
-            border-bottom-left-radius: 3px;
-        }
-        .user-message {
-            background: #F18F01;
-            color: white;
-            margin-left: auto;
-            border-bottom-right-radius: 3px;
-        }
-        .chat-input {
-            padding: 15px;
-            border-top: 1px solid #dee2e6;
+        .nav-brand {
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.1rem;
+            text-decoration: none;
             display: flex;
-            gap: 10px;
+            align-items: center;
+            gap: 8px;
         }
-        .chat-input input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #dee2e6;
-            border-radius: 25px;
-            outline: none;
+        .nav-links { display: flex; align-items: center; gap: 4px; }
+        .nav-links a {
+            color: rgba(255,255,255,.82);
+            text-decoration: none;
+            padding: 6px 13px;
+            border-radius: 8px;
+            font-size: .875rem;
+            font-weight: 500;
+            transition: all .18s;
         }
-        .chat-input input:focus {
-            border-color: #2E86AB;
+        .nav-links a:hover { color: #fff; background: rgba(255,255,255,.12); }
+        .nav-login {
+            background: rgba(255,255,255,.18) !important;
+            border: 1.5px solid rgba(255,255,255,.35) !important;
+            color: #fff !important;
+            font-weight: 600 !important;
         }
-        .chat-input button {
-            background: #2E86AB;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+        .nav-login:hover { background: rgba(255,255,255,.28) !important; }
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: 1.5px solid rgba(255,255,255,.4);
+            color: #fff;
+            border-radius: 8px;
+            padding: 6px 10px;
             cursor: pointer;
+            font-size: 1.1rem;
         }
-        .chat-input button:hover {
-            background: #A23B72;
+        @@media (max-width: 768px) {
+            .nav-toggle { display: block; }
+            .nav-links { display: none; flex-direction: column; position: absolute;
+                          top: 60px; left: 0; right: 0; background: var(--blue2);
+                          padding: 12px 16px; gap: 4px; }
+            .nav-links.open { display: flex; }
         }
-        .contact-card {
-            background: #e9ecef;
-            padding: 10px;
-            border-radius: 10px;
-            margin-top: 10px;
-            font-size: 13px;
-        }
-        .contact-card i {
-            color: #2E86AB;
-            margin-right: 5px;
-        }
-        .quick-replies {
+
+        /* ════ Offset body for fixed nav ════════════════════════════════════ */
+        body { padding-top: 60px; }
+
+        /* ════ HERO ══════════════════════════════════════════════════════════ */
+        .hero {
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue2) 55%, #0f0f8a 100%);
+            min-height: 520px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 10px;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
         }
-        .quick-reply {
-            background: white;
-            border: 1px solid #2E86AB;
-            color: #2E86AB;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            cursor: pointer;
+        .hero::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 75% 50%, rgba(255,255,255,.07) 0%, transparent 65%);
+            pointer-events: none;
         }
-        .quick-reply:hover {
-            background: #2E86AB;
-            color: white;
+        .hero-inner { max-width: 1200px; margin: 0 auto; padding: 64px 24px; width: 100%; }
+        .hero-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.25);
+            border-radius: 20px; padding: 5px 14px; color: #fff;
+            font-size: .78rem; font-weight: 600; margin-bottom: 18px;
+        }
+        .hero h1 { font-size: clamp(2rem,5vw,3rem); font-weight: 800; color: #fff; line-height: 1.15; margin-bottom: 16px; }
+        .hero p  { color: rgba(255,255,255,.72); font-size: 1rem; max-width: 500px; line-height: 1.7; margin-bottom: 28px; }
+        .btn-hero-solid {
+            background: rgba(255,255,255,.18); border: 1.5px solid rgba(255,255,255,.4);
+            color: #fff; border-radius: 10px; padding: 12px 26px;
+            font-weight: 600; font-size: .9rem; text-decoration: none;
+            display: inline-flex; align-items: center; gap: 8px; transition: all .2s;
+        }
+        .btn-hero-solid:hover { background: rgba(255,255,255,.28); color: #fff; }
+        .btn-hero-cta {
+            background: #fff; color: var(--blue); border: none;
+            border-radius: 10px; padding: 12px 26px;
+            font-weight: 700; font-size: .9rem; text-decoration: none;
+            display: inline-flex; align-items: center; gap: 8px; transition: all .2s;
+        }
+        .btn-hero-cta:hover { background: #eef0ff; color: var(--blue2); }
+        .hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .hstat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+                 border-radius: 12px; padding: 18px; text-align: center; }
+        .hstat .n { font-size: 1.8rem; font-weight: 800; color: #fff; line-height: 1; }
+        .hstat .l { font-size: .72rem; color: rgba(255,255,255,.55); margin-top: 4px; }
+
+        /* ════ Section ═══════════════════════════════════════════════════════ */
+        .section { padding: 72px 0; }
+        .section.bg-light { background: #f8fafc; }
+        .section-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .sec-h { font-size: clamp(1.5rem,3vw,2rem); font-weight: 800; color: var(--dark); text-align: center; margin-bottom: 10px; }
+        .sec-s { color: #64748b; font-size: .95rem; text-align: center; max-width: 540px; margin: 0 auto 44px; }
+
+        /* ════ Features ══════════════════════════════════════════════════════ */
+        .feat { border-radius: var(--r); border: 1px solid #e8ecf0; padding: 28px 24px;
+                transition: all .2s; height: 100%; }
+        .feat:hover { border-color: var(--blue); box-shadow: 0 8px 24px rgba(39,42,245,.1); transform: translateY(-4px); }
+        .feat-ico { width: 52px; height: 52px; border-radius: 14px;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 1.4rem; margin-bottom: 16px; }
+
+        /* ════ Services ══════════════════════════════════════════════════════ */
+        .svc { border-radius: var(--r); overflow: hidden; border: 1px solid #e8ecf0;
+               background: #fff; transition: all .22s; height: 100%; }
+        .svc:hover { box-shadow: 0 8px 28px rgba(39,42,245,.13); transform: translateY(-4px); border-color: var(--blue); }
+        .svc-img { position: relative; height: 180px; overflow: hidden; }
+        .svc-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+        .svc:hover .svc-img img { transform: scale(1.07); }
+        .svc-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, rgba(39,42,245,.1) 0%, rgba(39,42,245,.5) 100%);
+            display: flex; align-items: flex-end; justify-content: flex-end; padding: 10px;
+        }
+        .svc-overlay i { font-size: 1.5rem; color: rgba(255,255,255,.9); }
+        .svc-body { padding: 16px 18px 20px; }
+        .svc-body h6 { font-weight: 700; font-size: .9rem; margin-bottom: 6px; }
+        .svc-body p  { color: #64748b; font-size: .78rem; line-height: 1.55; margin: 0; }
+
+        /* ════ Posts ═════════════════════════════════════════════════════════ */
+        .post { border-radius: var(--r); border: 1px solid #e8ecf0; background: #fff;
+                transition: all .2s; height: 100%; overflow: hidden; }
+        .post:hover { box-shadow: 0 8px 24px rgba(0,0,0,.08); transform: translateY(-3px); }
+        .post-top { height: 4px; }
+        .post-body { padding: 18px 20px 20px; }
+        .post-cat { font-size: .7rem; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: .06em; border-radius: 6px; padding: 3px 8px; display: inline-block; }
+        .post-title { font-size: .92rem; font-weight: 700; line-height: 1.4; margin: 10px 0 8px; }
+        .post-prev  { font-size: .8rem; color: #64748b; line-height: 1.6; margin-bottom: 12px; }
+        .post-date  { font-size: .72rem; color: #94a3b8; display: flex; align-items: center; gap: 5px; }
+
+        /* ════ Gallery ═══════════════════════════════════════════════════════ */
+        .gal { border-radius: var(--r); overflow: hidden; position: relative;
+               aspect-ratio: 1; background: #e8ecf0; display: block; }
+        .gal img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; display: block; }
+        .gal:hover img { transform: scale(1.06); }
+        .gal-ov {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 55%);
+            display: flex; align-items: flex-end; padding: 14px;
+            opacity: 0; transition: opacity .25s;
+        }
+        .gal:hover .gal-ov { opacity: 1; }
+        .gal-ph { width: 100%; height: 100%; display: flex; align-items: center;
+                  justify-content: center; font-size: 2.5rem; color: #adb5bd; }
+
+        /* ════ CTA banner ════════════════════════════════════════════════════ */
+        .cta-band {
+            background: linear-gradient(135deg, var(--blue) 0%, var(--blue2) 100%);
+            padding: 64px 24px; text-align: center;
+        }
+
+        /* ════ Footer ════════════════════════════════════════════════════════ */
+        .footer { background: var(--dark); color: rgba(255,255,255,.6); padding: 52px 0 24px; }
+        .footer h6 { color: #fff; font-weight: 700; margin-bottom: 14px; font-size: .9rem; }
+        .footer a  { color: rgba(255,255,255,.5); text-decoration: none; font-size: .85rem; }
+        .footer a:hover { color: #fff; }
+        .footer-hr { border-color: rgba(255,255,255,.1) !important; }
+        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+        /* ════ Chat widget ═══════════════════════════════════════════════════ */
+        .chat-fab {
+            position: fixed; bottom: 28px; right: 28px;
+            width: 54px; height: 54px; border-radius: 50%;
+            background: var(--blue); color: #fff; border: none; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(39,42,245,.45);
+            font-size: 1.4rem; z-index: 9999; display: flex;
+            align-items: center; justify-content: center; transition: all .2s;
+        }
+        .chat-fab:hover { transform: scale(1.1); background: var(--blue2); }
+        .chat-win {
+            position: fixed; bottom: 96px; right: 28px;
+            width: 340px; max-height: 480px; border-radius: 16px;
+            background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.18);
+            display: none; flex-direction: column; overflow: hidden; z-index: 9999;
+        }
+        .chat-win.open { display: flex; }
+        .chat-hdr { background: linear-gradient(135deg,var(--blue),#6f42c1); color: #fff;
+                    padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+        .chat-msgs { flex: 1; overflow-y: auto; padding: 14px; background: #f8fafc; }
+        .msg { margin-bottom: 12px; max-width: 80%; padding: 9px 13px; border-radius: 12px;
+               font-size: .83rem; line-height: 1.5; }
+        .mb  { background: var(--blue); color: #fff; border-bottom-left-radius: 3px; }
+        .mu  { background: #e9ecef; color: #1a1a2e; margin-left: auto; border-bottom-right-radius: 3px; }
+        .chat-inp { padding: 12px; border-top: 1px solid #e8ecf0; display: flex; gap: 8px; }
+        .chat-inp input { flex: 1; padding: 8px 14px; border: 1px solid #e8ecf0;
+                          border-radius: 20px; outline: none; font-size: .83rem; }
+        .chat-inp input:focus { border-color: var(--blue); }
+        .chat-inp button { background: var(--blue); color: #fff; border: none;
+                           width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+                           display: flex; align-items: center; justify-content: center; }
+
+        @@media (max-width: 576px) {
+            .hero h1 { font-size: 1.8rem; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .chat-win { width: calc(100vw - 32px); right: 16px; }
         }
     </style>
 </head>
 <body>
-<header>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" asp-area="" asp-page="/Index" data-i18n="nav_brand"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="navbar-collapse collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-lg-center">
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Index" data-i18n="nav_home"><i class="bi bi-house-door"></i> Home</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Gallery" data-i18n="nav_gallery"><i class="bi bi-images"></i> Gallery</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Services" data-i18n="nav_services"><i class="bi bi-briefcase"></i> Services</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/About" data-i18n="nav_about"><i class="bi bi-people"></i> About Us</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Contact" data-i18n="nav_contact"><i class="bi bi-envelope"></i> Contact Us</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Blog" data-i18n="nav_blog"><i class="bi bi-journal-text"></i> Blog</a></li>
-                    <li class="nav-item ms-lg-3"><a class="login-btn" asp-area="" asp-page="/Login" data-i18n="nav_login">Login</a></li>
-                    <li class="nav-item ms-lg-3">
-                        <select id="languageSelect" class="form-select form-select-sm border-light text-dark"></select>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-</header>
 
-<div class="hero-section">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-7 hero-content">
-                <h1 data-i18n="hero_title">Professional Cleaning Services for Your Home & Office</h1>
-                <p data-i18n="hero_subtitle">Experience the difference with our expert cleaning team. We bring cleanliness to perfection.</p>
-                <a href="#services" class="hero-btn" data-i18n="hero_button">Explore Our Services</a>
-            </div>
+<!-- ════ NAVBAR (fixed, never moves) ═════════════════════════════════════ -->
+<nav class="site-nav">
+    <div class="inner">
+        <a class="nav-brand" href="/">
+            <i class="bi bi-droplet-fill" style="color:#93c5fd"></i>
+            Yeka Cleaning
+        </a>
+        <button class="nav-toggle" id="navToggle" onclick="document.getElementById('navLinks').classList.toggle('open')">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="nav-links" id="navLinks">
+            <a href="#services">Services</a>
+            <a href="#posts">News</a>
+            <a href="#gallery">Gallery</a>
+            <a asp-page="/About">About</a>
+            <a asp-page="/Contact">Contact</a>
+            <a asp-page="/Login" class="nav-login ms-2">
+                <i class="bi bi-person-fill me-1"></i>Login
+            </a>
         </div>
     </div>
-</div>
+</nav>
 
-<section class="features-section">
-    <div class="container">
-        <h2 class="text-center mb-5" data-i18n="features_title">Why Choose Us</h2>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="bi bi-award"></i></div>
-                    <h4 data-i18n="feature_expert_title">Expert Team</h4>
-                    <p data-i18n="feature_expert_text">Our certified cleaning professionals deliver exceptional results.</p>
+<!-- ════ HERO ═════════════════════════════════════════════════════════════ -->
+<section class="hero">
+    <div class="hero-inner">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center">
+            <!-- Left: text + pills + buttons -->
+            <div>
+                <div class="hero-tag">
+                    <i class="bi bi-stars"></i>Professional Cleaning Services
+                </div>
+                <h1>Keeping Yeka<br><span style="color:#93c5fd">Clean & Healthy</span></h1>
+                <p>
+                    Yeka Cleaning Management System — coordinating waste collection,
+                    transport, staff and reports across all sub-cities of Addis Ababa.
+                </p>
+                <!-- Feature check-pills -->
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px">
+                    <span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+                                 color:rgba(255,255,255,.9);border-radius:20px;padding:5px 13px;font-size:.78rem">
+                        <i class="bi bi-check-circle-fill" style="color:#4ade80;margin-right:5px"></i>Expert Staff
+                    </span>
+                    <span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+                                 color:rgba(255,255,255,.9);border-radius:20px;padding:5px 13px;font-size:.78rem">
+                        <i class="bi bi-check-circle-fill" style="color:#4ade80;margin-right:5px"></i>Real-Time Tracking
+                    </span>
+                    <span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+                                 color:rgba(255,255,255,.9);border-radius:20px;padding:5px 13px;font-size:.78rem">
+                        <i class="bi bi-check-circle-fill" style="color:#4ade80;margin-right:5px"></i>Fully Managed
+                    </span>
+                    <span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);
+                                 color:rgba(255,255,255,.9);border-radius:20px;padding:5px 13px;font-size:.78rem">
+                        <i class="bi bi-check-circle-fill" style="color:#4ade80;margin-right:5px"></i>24/7 Support
+                    </span>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap">
+                    <a href="#services" class="btn-hero-cta">
+                        <i class="bi bi-briefcase"></i>Our Services
+                    </a>
+                    <a asp-page="/Login" class="btn-hero-solid">
+                        <i class="bi bi-person-fill"></i>Staff Login
+                    </a>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="bi bi-shield-check"></i></div>
-                    <h4 data-i18n="feature_trusted_title">Trusted & Secure</h4>
-                    <p data-i18n="feature_trusted_text">Fully vetted staff. Your property is in safe hands.</p>
+
+            <!-- Right: CSS illustrated hero visual -->
+            <div style="position:relative;height:400px">
+                <!-- Main illustrated card -->
+                <div style="width:100%;height:100%;border-radius:24px;overflow:hidden;
+                             background:linear-gradient(135deg,#e8f4ff 0%,#eef0ff 50%,#f0fff4 100%);
+                             box-shadow:0 24px 64px rgba(0,0,0,.35);position:relative">
+
+                    <!-- Background decorative circles -->
+                    <div style="position:absolute;width:200px;height:200px;border-radius:50%;
+                                background:rgba(39,42,245,.06);top:-40px;right:-40px"></div>
+                    <div style="position:absolute;width:140px;height:140px;border-radius:50%;
+                                background:rgba(25,135,84,.06);bottom:20px;left:-20px"></div>
+
+                    <!-- Center illustration: building + cleaning icons -->
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;
+                                align-items:center;justify-content:center;gap:16px;padding:24px">
+
+                        <!-- Top row: 3 service cards -->
+                        <div style="display:flex;gap:12px;width:100%">
+                            <div style="flex:1;background:#fff;border-radius:14px;padding:14px;
+                                        box-shadow:0 4px 16px rgba(39,42,245,.1);text-align:center">
+                                <div style="width:40px;height:40px;border-radius:10px;background:#eef0ff;
+                                            display:flex;align-items:center;justify-content:center;
+                                            margin:0 auto 8px;font-size:1.2rem;color:#272AF5">
+                                    <i class="bi bi-droplet-fill"></i>
+                                </div>
+                                <div style="font-size:.72rem;font-weight:700;color:#1a1a2e">Waste Collection</div>
+                                <div style="font-size:.65rem;color:#64748b;margin-top:2px">All weredas</div>
+                            </div>
+                            <div style="flex:1;background:#fff;border-radius:14px;padding:14px;
+                                        box-shadow:0 4px 16px rgba(25,135,84,.1);text-align:center">
+                                <div style="width:40px;height:40px;border-radius:10px;background:#e6f9f1;
+                                            display:flex;align-items:center;justify-content:center;
+                                            margin:0 auto 8px;font-size:1.2rem;color:#198754">
+                                    <i class="bi bi-building"></i>
+                                </div>
+                                <div style="font-size:.72rem;font-weight:700;color:#1a1a2e">Commercial</div>
+                                <div style="font-size:.65rem;color:#64748b;margin-top:2px">Office & retail</div>
+                            </div>
+                            <div style="flex:1;background:#fff;border-radius:14px;padding:14px;
+                                        box-shadow:0 4px 16px rgba(253,126,20,.1);text-align:center">
+                                <div style="width:40px;height:40px;border-radius:10px;background:#fff8e1;
+                                            display:flex;align-items:center;justify-content:center;
+                                            margin:0 auto 8px;font-size:1.2rem;color:#fd7e14">
+                                    <i class="bi bi-truck"></i>
+                                </div>
+                                <div style="font-size:.72rem;font-weight:700;color:#1a1a2e">Transport</div>
+                                <div style="font-size:.65rem;color:#64748b;margin-top:2px">Fleet managed</div>
+                            </div>
+                        </div>
+
+                        <!-- Middle: main visual bar -->
+                        <div style="width:100%;background:#fff;border-radius:16px;padding:16px 20px;
+                                    box-shadow:0 4px 20px rgba(39,42,245,.08);
+                                    display:flex;align-items:center;gap:14px">
+                            <div style="width:52px;height:52px;border-radius:14px;
+                                        background:linear-gradient(135deg,#272AF5,#6f42c1);
+                                        display:flex;align-items:center;justify-content:center;
+                                        color:#fff;font-size:1.5rem;flex-shrink:0">
+                                <i class="bi bi-recycle"></i>
+                            </div>
+                            <div style="flex:1">
+                                <div style="font-weight:700;font-size:.88rem;color:#1a1a2e">Yeka Cleaning System</div>
+                                <div style="font-size:.75rem;color:#64748b;margin-top:3px">Coordinating all sub-cities of Addis Ababa</div>
+                                <!-- Progress bar -->
+                                <div style="height:5px;background:#e8ecf0;border-radius:10px;margin-top:8px;overflow:hidden">
+                                    <div style="height:100%;width:82%;background:linear-gradient(90deg,#272AF5,#6f42c1);border-radius:10px"></div>
+                                </div>
+                                <div style="font-size:.65rem;color:#272AF5;margin-top:3px;font-weight:600">82% operations complete today</div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom row: stats -->
+                        <div style="display:flex;gap:10px;width:100%">
+                            <div style="flex:1;background:linear-gradient(135deg,#272AF5,#1a1cb8);
+                                        border-radius:14px;padding:14px;text-align:center;color:#fff">
+                                <div style="font-size:1.4rem;font-weight:800;line-height:1">12</div>
+                                <div style="font-size:.65rem;opacity:.8;margin-top:3px">Weredas Active</div>
+                            </div>
+                            <div style="flex:1;background:linear-gradient(135deg,#198754,#0f5132);
+                                        border-radius:14px;padding:14px;text-align:center;color:#fff">
+                                <div style="font-size:1.4rem;font-weight:800;line-height:1">48</div>
+                                <div style="font-size:.65rem;opacity:.8;margin-top:3px">Mahberats</div>
+                            </div>
+                            <div style="flex:1;background:linear-gradient(135deg,#fd7e14,#dc6902);
+                                        border-radius:14px;padding:14px;text-align:center;color:#fff">
+                                <div style="font-size:1.4rem;font-weight:800;line-height:1">24/7</div>
+                                <div style="font-size:.65rem;opacity:.8;margin-top:3px">Support</div>
+                            </div>
+                            <div style="flex:1;background:linear-gradient(135deg,#6f42c1,#4a1d96);
+                                        border-radius:14px;padding:14px;text-align:center;color:#fff">
+                                <div style="font-size:1.4rem;font-weight:800;line-height:1">100%</div>
+                                <div style="font-size:.65rem;opacity:.8;margin-top:3px">Digital</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="bi bi-clock-history"></i></div>
-                    <h4 data-i18n="feature_flexible_title">Flexible Schedule</h4>
-                    <p data-i18n="feature_flexible_text">We work around your schedule. Same-day service!</p>
+
+                <!-- Floating badge: top-right -->
+                <div style="position:absolute;top:-12px;right:-12px;
+                            background:#fff;border-radius:14px;padding:10px 14px;
+                            display:flex;align-items:center;gap:8px;
+                            box-shadow:0 8px 24px rgba(0,0,0,.15)">
+                    <div style="width:32px;height:32px;border-radius:8px;background:#198754;
+                                display:flex;align-items:center;justify-content:center;color:#fff">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:.78rem;color:#1a1a2e">Verified</div>
+                        <div style="font-size:.68rem;color:#64748b">All areas</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="services-preview" id="services">
-    <div class="container">
-        <h2 class="text-center mb-5">Our Services</h2>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="service-item"><h5><i class="bi bi-house"></i> Residential Cleaning</h5><p>Regular house cleaning, deep cleaning</p></div>
-                <div class="service-item"><h5><i class="bi bi-building"></i> Commercial Cleaning</h5><p>Office, retail, restaurants</p></div>
+<!-- ════ FEATURES ════════════════════════════════════════════════════════ -->
+<section class="section bg-light">
+    <div class="section-inner">
+        <div class="sec-h">Why Choose Us</div>
+        <p class="sec-s">Reliable, professional and fully digitised cleaning management.</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+            <div class="feat">
+                <div class="feat-ico" style="background:#eef0ff;color:var(--blue)"><i class="bi bi-award"></i></div>
+                <h5 style="font-weight:700;margin-bottom:8px">Expert Staff</h5>
+                <p style="color:#64748b;font-size:.88rem;line-height:1.6">Trained and certified cleaning professionals with field experience.</p>
             </div>
-            <div class="col-md-6">
-                <div class="service-item"><h5><i class="bi bi-droplet"></i> Deep Cleaning</h5><p>Thorough top-to-bottom cleaning</p></div>
-                <div class="service-item"><h5><i class="bi bi-stars"></i> Special Services</h5><p>Carpet, window, upholstery</p></div>
+            <div class="feat">
+                <div class="feat-ico" style="background:#e6f9f1;color:#198754"><i class="bi bi-shield-check"></i></div>
+                <h5 style="font-weight:700;margin-bottom:8px">Fully Managed</h5>
+                <p style="color:#64748b;font-size:.88rem;line-height:1.6">End-to-end tracking from dispatch to payment in one system.</p>
+            </div>
+            <div class="feat">
+                <div class="feat-ico" style="background:#fff8e1;color:#fd7e14"><i class="bi bi-clock-history"></i></div>
+                <h5 style="font-weight:700;margin-bottom:8px">Real-Time Tracking</h5>
+                <p style="color:#64748b;font-size:.88rem;line-height:1.6">Live transport, receipt verification and instant reporting.</p>
             </div>
         </div>
-        <div class="text-center mt-4"><a asp-page="/Services" class="hero-btn" data-i18n="services_view_all">View All Services</a></div>
     </div>
 </section>
 
-<footer>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-4"><h5><i class="bi bi-droplet-fill"></i> <span data-i18n="footer_brand">Yeka Cleaning</span></h5><p data-i18n="footer_desc">Your trusted partner for professional cleaning services.</p></div>
-            <div class="col-md-4 mb-4">
-                <h5 data-i18n="footer_quicklinks">Quick Links</h5>
-                <ul class="list-unstyled">
-                    <li><a asp-page="/Services" data-i18n="footer_link_services">Services</a></li>
-                    <li><a asp-page="/About" data-i18n="footer_link_about">About Us</a></li>
-                    <li><a asp-page="/Contact" data-i18n="footer_link_contact">Contact</a></li>
-                    <li><a asp-page="/Blog" data-i18n="footer_link_blog">Blog</a></li>
+<!-- ════ SERVICES ════════════════════════════════════════════════════════ -->
+<section class="section" id="services">
+    <div class="section-inner">
+        <div class="sec-h">Our Services</div>
+        <p class="sec-s">Professional cleaning solutions for every need across Yeka sub-city.</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+            @if (Model.Services.Any())
+            {
+                @foreach (dynamic svc in Model.Services)
+                {
+                    int idx = Model.Services.IndexOf(svc);
+                    string img  = svcImgs[idx  % svcImgs.Length];
+                    string icon = svcIcons[idx % svcIcons.Length];
+                    string desc = Convert.ToString(svc.description) ?? "";
+                    string prev = desc.Length > 85 ? desc[..85] + "…" : desc;
+                    <div class="svc">
+                        <div class="svc-img">
+                            <img src="@img" alt="@svc.name" loading="lazy" />
+                            <div class="svc-overlay"><i class="bi @icon"></i></div>
+                        </div>
+                        <div class="svc-body">
+                            <h6>@svc.name</h6>
+                            @if (!string.IsNullOrEmpty(prev)) { <p>@prev</p> }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                @for (int i = 0; i < svcFallback.Length; i++)
+                {
+                    <div class="svc">
+                        <div class="svc-img">
+                            <img src="@svcImgs[i]" alt="@svcFallback[i].Item1" loading="lazy" />
+                            <div class="svc-overlay"><i class="bi @svcIcons[i]"></i></div>
+                        </div>
+                        <div class="svc-body">
+                            <h6>@svcFallback[i].Item1</h6>
+                            <p>@svcFallback[i].Item2</p>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ════ POSTS / NEWS ════════════════════════════════════════════════════ -->
+<section class="section bg-light" id="posts">
+    <div class="section-inner">
+        <div class="sec-h">Latest News & Announcements</div>
+        <p class="sec-s">Stay updated with the latest from Yeka Cleaning Management.</p>
+
+        @if (Model.Posts.Any())
+        {
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+            @foreach (dynamic post in Model.Posts)
+            {
+                bool pinned = (bool)(post.is_pinned ?? false);
+                string cat  = Convert.ToString(post.category) ?? "";
+                string pri  = Convert.ToString(post.priority) ?? "Normal";
+                string body = Convert.ToString(post.content) ?? "";
+                string prev = body.Length > 130 ? body[..130] + "…" : body;
+                DateTime? dt = post.created_at as DateTime?;
+                string clr = CatClr(cat);
+
+                <div class="post">
+                    <div class="post-top" style="background:@clr"></div>
+                    <div class="post-body">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                            <span class="post-cat" style="background:@clr;color:#fff">
+                                @(string.IsNullOrEmpty(cat) ? "General" : cat)
+                            </span>
+                            <div style="display:flex;gap:4px">
+                                @if (pinned) { <span style="font-size:.65rem;background:#272AF5;color:#fff;border-radius:5px;padding:2px 6px"><i class="bi bi-pin-fill"></i> Pinned</span> }
+                                @if (pri != "Normal") { <span style="font-size:.65rem;background:#dc3545;color:#fff;border-radius:5px;padding:2px 6px">@pri</span> }
+                            </div>
+                        </div>
+                        <div class="post-title">@post.title</div>
+                        <div class="post-prev">@prev</div>
+                        <div class="post-date">
+                            <i class="bi bi-calendar3"></i>
+                            @(dt.HasValue ? dt.Value.ToString("dd MMMM yyyy") : "—")
+                        </div>
+                    </div>
+                </div>
+            }
+            </div>
+        }
+        else
+        {
+            <div style="text-align:center;padding:40px;color:#94a3b8">
+                <i class="bi bi-postcard" style="font-size:3rem;display:block;margin-bottom:12px;opacity:.3"></i>
+                No announcements yet. Check back soon.
+            </div>
+        }
+    </div>
+</section>
+
+<!-- ════ GALLERY ═════════════════════════════════════════════════════════ -->
+<section class="section" id="gallery">
+    <div class="section-inner">
+        <div class="sec-h">Gallery</div>
+        <p class="sec-s">A glimpse of our work across Yeka sub-city.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            @if (Model.Gallery.Any())
+            {
+                @foreach (dynamic g in Model.Gallery)
+                {
+                    string gImg  = Convert.ToString(g.image_url) ?? "";
+                    string gTitle= Convert.ToString(g.title)     ?? "";
+                    string gCat  = Convert.ToString(g.category)  ?? "";
+
+                    <div class="gal">
+                        @if (!string.IsNullOrEmpty(gImg))
+                        {
+                            <img src="@gImg" alt="@gTitle" loading="lazy" />
+                        }
+                        else
+                        {
+                            <div class="gal-ph"><i class="bi bi-image"></i></div>
+                        }
+                        <div class="gal-ov">
+                            <div>
+                                <div style="color:#fff;font-weight:600;font-size:.85rem">@gTitle</div>
+                                @if (!string.IsNullOrEmpty(gCat)) { <div style="color:rgba(255,255,255,.7);font-size:.72rem">@gCat</div> }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                @for (int i = 0; i < galFallback.Length; i++)
+                {
+                    <div class="gal">
+                        <img src="@galFallback[i].Item1" alt="@galFallback[i].Item2" loading="lazy" />
+                        <div class="gal-ov">
+                            <div style="color:#fff;font-weight:600;font-size:.85rem">@galFallback[i].Item2</div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ════ CTA ══════════════════════════════════════════════════════════════ -->
+<section class="cta-band">
+    <h2 style="font-weight:800;color:#fff;margin-bottom:10px">Ready to get started?</h2>
+    <p style="color:rgba(255,255,255,.72);margin-bottom:28px;font-size:1rem">
+        Log in to access the full management system — receipts, approvals, reports and more.
+    </p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        <a asp-page="/Login" class="btn-hero-cta">
+            <i class="bi bi-person-fill"></i>Staff Login
+        </a>
+        <a asp-page="/Contact" class="btn-hero-solid">
+            <i class="bi bi-envelope"></i>Contact Us
+        </a>
+    </div>
+</section>
+
+<!-- ════ FOOTER ══════════════════════════════════════════════════════════ -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 2fr;gap:32px">
+            <div>
+                <h6><i class="bi bi-droplet-fill" style="color:#93c5fd;margin-right:8px"></i>Yeka Cleaning</h6>
+                <p style="font-size:.85rem;line-height:1.6">Professional cleaning management for Yeka sub-city, Addis Ababa.</p>
+            </div>
+            <div>
+                <h6>Navigation</h6>
+                <ul style="list-style:none;line-height:2">
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#posts">News</a></li>
+                    <li><a href="#gallery">Gallery</a></li>
                 </ul>
             </div>
-            <div class="col-md-4 mb-4"><h5 data-i18n="footer_contact_title">Contact Us</h5><p><i class="bi bi-telephone"></i> <span data-i18n="footer_phone">(555) 123-4567</span></p><p><i class="bi bi-envelope"></i> <span data-i18n="footer_email">info@yeka-cleaning.com</span></p></div>
+            <div>
+                <h6>Links</h6>
+                <ul style="list-style:none;line-height:2">
+                    <li><a asp-page="/About">About Us</a></li>
+                    <li><a asp-page="/Contact">Contact</a></li>
+                    <li><a asp-page="/Login">Login</a></li>
+                </ul>
+            </div>
+            <div>
+                <h6>Contact</h6>
+                <p style="font-size:.85rem;margin-bottom:6px"><i class="bi bi-telephone" style="color:#93c5fd;margin-right:8px"></i>+251 (0) 11 234 5678</p>
+                <p style="font-size:.85rem;margin-bottom:6px"><i class="bi bi-envelope" style="color:#93c5fd;margin-right:8px"></i>info@yeka-cleaning.et</p>
+                <p style="font-size:.85rem"><i class="bi bi-geo-alt" style="color:#93c5fd;margin-right:8px"></i>Yeka Sub-city, Addis Ababa</p>
+            </div>
         </div>
-        <div class="text-center border-top pt-3"><p class="mb-0" data-i18n="footer_copyright">&copy; 2026 Yeka Cleaning Services. All rights reserved.</p></div>
+        <hr class="footer-hr mt-4 mb-3" />
+        <p style="text-align:center;font-size:.82rem">&copy; @DateTime.Now.Year Yeka Cleaning Management System. All rights reserved.</p>
     </div>
 </footer>
 
-<button class="chatbot-btn" onclick="toggleChat()" title="Chat with us"><i class="bi bi-chat-dots-fill"></i></button>
-
-<div class="chat-window" id="chatWindow">
-    <div class="chat-header">
-        <div data-i18n="chat_title">
-            <i class="bi bi-robot"></i> Yeka Cleaning Support
+<!-- ════ CHAT ══════════════════════════════════════════════════════════════ -->
+<button class="chat-fab" onclick="document.getElementById('chatWin').classList.toggle('open')" title="Support">
+    <i class="bi bi-chat-dots-fill"></i>
+</button>
+<div class="chat-win" id="chatWin">
+    <div class="chat-hdr">
+        <div style="display:flex;align-items:center;gap:8px">
+            <i class="bi bi-robot" style="font-size:1.1rem"></i>
+            <span style="font-weight:600">Yeka Support</span>
         </div>
-        <button style="background:none;border:none;color:white;cursor:pointer;font-size:20px" onclick="toggleChat()">
-            <i class="bi bi-x"></i>
+        <button onclick="document.getElementById('chatWin').classList.remove('open')"
+                style="background:none;border:none;color:#fff;cursor:pointer;font-size:1rem">
+            <i class="bi bi-x-lg"></i>
         </button>
     </div>
-    <div class="chat-messages" id="chatMessages">
-        <div class="message bot-message">
-            <span id="chatWelcome" data-i18n="chat_welcome">Hello! Welcome to Yeka Cleaning! How can I help you today?</span>
-            <div class="quick-replies">
-                <span class="quick-reply" data-reply-key="pricing" data-i18n="chat_pricing" onclick="sendQuickMessage('pricing')">Pricing</span>
-                <span class="quick-reply" data-reply-key="services" data-i18n="chat_services" onclick="sendQuickMessage('services')">Services</span>
-                <span class="quick-reply" data-reply-key="booking" data-i18n="chat_book_now" onclick="sendQuickMessage('booking')">Book Now</span>
-                <span class="quick-reply" data-reply-key="contact" data-i18n="chat_contact" onclick="sendQuickMessage('contact')">Contact</span>
+    <div class="chat-msgs" id="cMsgs">
+        <div class="msg mb">
+            Hello! Welcome to Yeka Cleaning. How can I help?
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">
+                @foreach (var q in new[]{"Services","Contact","Login Help","Gallery"})
+                {
+                    <span onclick="cSend('@q')"
+                          style="background:#fff;border:1px solid #272AF5;color:#272AF5;
+                                 border-radius:12px;padding:3px 10px;font-size:.72rem;cursor:pointer">
+                        @q
+                    </span>
+                }
             </div>
         </div>
     </div>
-    <div class="chat-input">
-        <input type="text" id="chatInput" placeholder="Type your message..." data-i18n-placeholder="chat_placeholder" onkeypress="handleKeyPress(event)">
-        <button onclick="sendMessage()"><i class="bi bi-send"></i></button>
+    <div class="chat-inp">
+        <input type="text" id="cIn" placeholder="Type your message…"
+               onkeydown="if(event.key==='Enter')cSendInput()" />
+        <button onclick="cSendInput()"><i class="bi bi-send-fill"></i></button>
     </div>
 </div>
 
-<script>
-    const chatResponseKeys = {
-        pricing: 'faq_pricing',
-        services: 'faq_services',
-        booking: 'faq_booking',
-        contact: 'faq_contact',
-        hello: 'faq_hello',
-        hi: 'faq_hi',
-        price: 'faq_price',
-        cost: 'faq_cost',
-        service: 'faq_service',
-        cleaning: 'faq_cleaning',
-        book: 'faq_book',
-        time: 'faq_time',
-        hours: 'faq_hours',
-        location: 'faq_location',
-        address: 'faq_address',
-        about: 'faq_about',
-        company: 'faq_company',
-        default: 'faq_default'
-    };
-
-    const faq = {};
-
-    function refreshFaqResponses() {
-        const translation = window.YekaTranslation;
-        if (!translation) {
-            return;
-        }
-
-        Object.keys(chatResponseKeys).forEach(key => {
-            const translationKey = chatResponseKeys[key];
-            faq[key] = translation.get(translationKey) || '';
-        });
-    }
-
-    function toggleChat() {
-        const chatWindow = document.getElementById('chatWindow');
-        chatWindow.classList.toggle('active');
-    }
-
-    function handleKeyPress(event) {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
-    }
-
-    function sendQuickMessage(key) {
-        const label = window.YekaTranslation?.get('chat_' + key) || key;
-        addUserMessage(label);
-        setTimeout(() => addBotMessage(faq[key] || faq.default), 500);
-    }
-
-    function sendMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        if (message) {
-            addUserMessage(message);
-            const response = getBotResponse(message.toLowerCase());
-            setTimeout(() => addBotMessage(response), 500);
-            input.value = '';
-        }
-    }
-
-    function addUserMessage(message) {
-        const chatMessages = document.getElementById('chatMessages');
-        const userMsg = document.createElement('div');
-        userMsg.className = 'message user-message';
-        userMsg.textContent = message;
-        chatMessages.appendChild(userMsg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function addBotMessage(message) {
-        const chatMessages = document.getElementById('chatMessages');
-        const botMsg = document.createElement('div');
-        botMsg.className = 'message bot-message';
-        botMsg.innerHTML = message.replace(/\n/g, '<br>');
-        chatMessages.appendChild(botMsg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function getBotResponse(message) {
-        for (let key in faq) {
-            if (message.includes(key) && faq[key]) {
-                return faq[key];
-            }
-        }
-        return faq.default || 'I understand you need help. For immediate assistance, please contact us.';
-    }
-
-    function refreshChatLabels() {
-        const welcomeEl = document.getElementById('chatWelcome');
-        if (welcomeEl) {
-            welcomeEl.textContent = window.YekaTranslation?.get('chat_welcome') || welcomeEl.textContent;
-        }
-        document.querySelectorAll('.quick-reply').forEach(btn => {
-            const labelKey = btn.dataset.i18n;
-            if (labelKey) {
-                btn.textContent = window.YekaTranslation?.get(labelKey) || btn.textContent;
-            }
-        });
-        const input = document.getElementById('chatInput');
-        if (input) {
-            input.placeholder = window.YekaTranslation?.get('chat_placeholder') || input.placeholder;
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        refreshFaqResponses();
-        refreshChatLabels();
-    });
-
-    if (window.YekaTranslation) {
-        window.YekaTranslation.onLanguageChanged = () => {
-            refreshFaqResponses();
-            refreshChatLabels();
-        };
-    }
-</script>
-
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="~/js/translation.js"></script>
+<script>
+// ── Smooth scroll ─────────────────────────────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+        var t = document.querySelector(this.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior:'smooth', block:'start' }); }
+    });
+});
+
+// ── Chat ──────────────────────────────────────────────────────────────────
+function cSend(msg) {
+    addM(msg,'u'); setTimeout(function(){ addM(cReply(msg.toLowerCase()),'b'); },400);
+}
+function cSendInput() {
+    var v = document.getElementById('cIn').value.trim();
+    if(v){ cSend(v); document.getElementById('cIn').value=''; }
+}
+function addM(txt,who) {
+    var el=document.getElementById('cMsgs'), d=document.createElement('div');
+    d.className='msg '+(who==='b'?'mb':'mu');
+    d.textContent=txt;
+    el.appendChild(d); el.scrollTop=el.scrollHeight;
+}
+function cReply(m) {
+    if(m.includes('service')||m.includes('clean')) return 'We offer residential, commercial, waste collection and transport services. See the Services section above!';
+    if(m.includes('contact')||m.includes('phone')||m.includes('email')) return 'Reach us: +251 (0) 11 234 5678 or info@yeka-cleaning.et';
+    if(m.includes('login')||m.includes('staff')||m.includes('password')) return 'Click the Login button in the top navigation to access the staff dashboard.';
+    if(m.includes('gallery')||m.includes('photo')) return 'Scroll down to our Gallery section to see photos of our work!';
+    if(m.includes('news')||m.includes('post')||m.includes('announce')) return 'Check the News & Announcements section on this page for the latest updates.';
+    return 'Thanks for reaching out! For detailed help, visit our Contact page or call +251 (0) 11 234 5678.';
+}
+</script>
 </body>
 </html>

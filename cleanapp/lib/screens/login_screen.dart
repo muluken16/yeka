@@ -20,25 +20,25 @@ class _LoginScreenState extends State<LoginScreen> {
     {
       'label': 'Driver',
       'icon': Icons.local_shipping_rounded,
-      'email': 'driver1@yeka.et',
+      'email': 'abebe.girma@yeka.et',
       'pass': 'driver123',
     },
     {
       'label': 'Outsource',
       'icon': Icons.business_rounded,
-      'email': 'outsource@yeka.et',
+      'email': 'selamawit.t@yeka.et',
       'pass': 'outsource123',
     },
     {
-      'label': 'Private',
+      'label': 'Private Co.',
       'icon': Icons.cleaning_services_rounded,
-      'email': 'private@yeka.et',
-      'pass': 'private123',
+      'email': 'wudueco@gmail.com',
+      'pass': 'Mule@123',
     },
     {
       'label': 'Manager',
       'icon': Icons.admin_panel_settings_rounded,
-      'email': 'manager@yeka.et',
+      'email': 'tigist.worku@yeka.et',
       'pass': 'manager123',
     },
   ];
@@ -325,6 +325,13 @@ class _LoginScreenState extends State<LoginScreen> {
             color: AppColors.textHint,
             fontWeight: FontWeight.w600,
           ),
+        ),
+      ),
+      const SizedBox(height: 4),
+      Center(
+        child: Text(
+          'Tap a role to auto-fill credentials',
+          style: TextStyle(fontSize: 10, color: AppColors.textHint),
         ),
       ),
       const SizedBox(height: 10),

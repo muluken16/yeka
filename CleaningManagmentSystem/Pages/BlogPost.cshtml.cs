@@ -51,7 +51,7 @@ namespace CleaningManagmentSystem.Pages
                     @"SELECT id as Id, title as Title, category as Category, content as Content, image_url as ImageUrl, created_at as CreatedAt 
                       FROM posts 
                       WHERE id != @Id AND status = 'Published' AND target_role = 'All' 
-                      ORDER BY created_at DESC LIMIT 3",
+                      ORDER BY created_at DESC",
                     new { Id = id }).ToList();
 
                 return Page();

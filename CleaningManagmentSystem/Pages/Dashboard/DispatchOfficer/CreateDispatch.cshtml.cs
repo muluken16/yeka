@@ -265,7 +265,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
                 parameters.Add("Status", FilterStatus);
             }
 
-            sql += " ORDER BY created_at DESC LIMIT 100";
+            sql += " ORDER BY created_at DESC";
 
             Dispatches = connection.Query<Dispatch>(sql, parameters).ToList();
             Console.WriteLine($"[CreateDispatch] Loaded {Dispatches.Count} dispatches");
@@ -276,7 +276,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
             using var connection = new MySqlConnection(_connectionString);
             
             ActiveDispatches = connection.QueryFirstOrDefault<int?>("SELECT COUNT(*) FROM dispatches WHERE status IN ('Pending', 'In Progress', 'Assigned')") ?? 0;
-            CompletedToday = connection.QueryFirstOrDefault<int?>("SELECT COUNT(*) FROM dispatches WHERE status = 'Completed' AND DATE(created_at) = CURDATE()") ?? 0;
+            CompletedToday = connection.QueryFirstOrDefault<int?>("SELECT COUNT(*) FROM dispatches WHERE status = 'Completed' AND CAST(created_at AS DATE) = CAST(NOW() AS DATE)") ?? 0;
             PendingDispatches = connection.QueryFirstOrDefault<int?>("SELECT COUNT(*) FROM dispatches WHERE status = 'Pending'") ?? 0;
             
             Console.WriteLine($"[CreateDispatch] Statistics - Active: {ActiveDispatches}, Completed Today: {CompletedToday}, Pending: {PendingDispatches}");

@@ -768,7 +768,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                     parameters.Add("FilterEndDate", FilterEndDate.Value);
                 }
 
-                query += " ORDER BY registered_at DESC LIMIT 10";
+                query += " ORDER BY registered_at DESC";
 
                 var receipts = connection.Query(query, parameters).ToList();
                 RecentReceipts = receipts;

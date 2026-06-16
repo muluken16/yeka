@@ -49,14 +49,13 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
         {
             try
             {
-                using var connection = new MySqlConnector.MySqlConnection(_connectionString);
+                using var connection = new MySqlConnection(_connectionString);
 
                 // Load recent staff receipts
                 var receipts = connection.Query(@"
                     SELECT plate_number, receipt_date, kilogram, status, id
                     FROM staff_receipts 
-                    ORDER BY registered_at DESC 
-                    LIMIT 5").ToList();
+                    ORDER BY registered_at DESC ").ToList();
 
                 foreach (var r in receipts)
                 {
@@ -74,8 +73,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                 var reports = connection.Query(@"
                     SELECT report_title, created_at, status, id
                     FROM agency_reports 
-                    ORDER BY created_at DESC 
-                    LIMIT 5").ToList();
+                    ORDER BY created_at DESC ").ToList();
 
                 foreach (var r in reports)
                 {

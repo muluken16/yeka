@@ -484,7 +484,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                                       receipt_date, receipt_time, kilogram, price,
                                       kilogram * price AS total_price, status, registered_at
                                FROM staff_receipts
-                               ORDER BY registered_at DESC LIMIT 10";
+                               ORDER BY registered_at DESC";
 
                 var receipts = connection.Query(query).ToList();
                 RecentReceipts = receipts;

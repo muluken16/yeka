@@ -3,174 +3,393 @@
 @{
     Layout = "/Pages/Dashboard/Staff/_StaffLayout.cshtml";
     ViewData["Title"] = "Staff Dashboard";
-}
+    var staffName = HttpContext.Session.GetString("UserName") ?? "Staff";
 
-<div class="main-content p-4">
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
-            <h1 class="h2">
-                <i class="bi bi-speedometer2 me-2"></i>Staff Dashboard
-            </h1>
-            <span class="badge bg-primary">Staff</span>
-        </div>
-
-        @if (!string.IsNullOrEmpty(Model.Message))
-        {
-            <div class="alert @(Model.IsSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show" role="alert">
-                @Model.Message
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
-        <!-- Quick Stats Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-primary mb-2">
-                            <i class="bi bi-geo-alt"></i>
-                        </div>
-                        <h6 class="card-title">Weredas</h6>
-                        <p class="h3 fw-bold text-primary">@Model.Weredas.Count</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-success mb-2">
-                            <i class="bi bi-building"></i>
-                        </div>
-                        <h6 class="card-title">Mahberats</h6>
-                        <p class="h3 fw-bold text-success">@Model.Mahberats.Count</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-warning mb-2">
-                            <i class="bi bi-truck"></i>
-                        </div>
-                        <h6 class="card-title">Vehicles</h6>
-                        <p class="h3 fw-bold text-warning">@Model.Vehicles.Count</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-info mb-2">
-                            <i class="bi bi-person-badge"></i>
-                        </div>
-                        <h6 class="card-title">Drivers</h6>
-                        <p class="h3 fw-bold text-info">@Model.Drivers.Count</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="row mb-4">
-            <div class="col-lg-6 mb-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Receipts by Wereda</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="weredaChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6 mb-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Kilogram Trend</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="trendChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var weredaCtx = document.getElementById('weredaChart').getContext('2d');
-            new Chart(weredaCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.ChartLabels)),
-                    datasets: [{
-                        data: @Html.Raw(Json.Serialize(Model.ChartValues)),
-                        backgroundColor: ['#008080', '#006666', '#009999', '#00cccc', '#339999', '#66cccc']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-
-            var trendCtx = document.getElementById('trendChart').getContext('2d');
-            new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: @Html.Raw(Json.Serialize(Model.TrendLabels)),
-                    datasets: [{
-                        label: 'Kilograms',
-                        data: @Html.Raw(Json.Serialize(Model.TrendValues)),
-                        borderColor: '#008080',
-                        tension: 0.1,
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        });
-    </script>
+    string PriorityColor(string p) => (p ?? "").ToLower() switch {
+        "high"   => "danger",
+        "urgent" => "danger",
+        "medium" => "warning",
+        _        => "secondary"
+    };
+    string TrainingStatus(string s) => (s ?? "").ToLower() switch {
+        "completed"  => "bg-success",
+        "ongoing"    => "bg-primary",
+        "scheduled"  => "bg-info text-dark",
+        "cancelled"  => "bg-danger",
+        _            => "bg-secondary"
+    };
 }
 
 <style>
-    .form-select:focus, .form-control:focus {
-        border-color: #008080;
-        box-shadow: 0 0 0 0.25rem rgba(0, 128, 128, 0.25);
-    }
-    
-    .btn-primary {
-        background-color: #008080;
-        border-color: #008080;
-    }
-    
-    .btn-primary:hover {
-        background-color: #006666;
-        border-color: #006666;
-    }
-    
-    .chart-container canvas {
-        max-height: 280px;
-    }
-    
-    .card {
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
-    }
+    .kpi-card { border-radius:16px; border:none; transition:transform .18s,box-shadow .18s; }
+    .kpi-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.1)!important; }
+    .post-card { border-radius:14px; border:1px solid #eaecf0;
+                 transition:box-shadow .18s,transform .18s; height:100%; }
+    .post-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.08); transform:translateY(-2px); }
+    .post-card.pinned { border-left:4px solid #0d6efd; }
+    .training-item { border-radius:12px; border:1px solid #eaecf0; padding:14px 16px;
+                     transition:box-shadow .15s; }
+    .training-item:hover { box-shadow:0 4px 16px rgba(0,0,0,.07); }
+    .service-chip { border-radius:12px; border:1px solid #e2e8f0; padding:14px;
+                    background:#fff; transition:all .18s; text-align:center; }
+    .service-chip:hover { border-color:#0d6efd; background:#f0f5ff; }
+    .section-label { font-size:.72rem; font-weight:700; text-transform:uppercase;
+                     letter-spacing:.08em; color:#8a9bb0; margin-bottom:1rem; }
+    .chart-box { height:190px; position:relative; }
+    .quick-action { border-radius:14px; border:1px solid #e8ecef; padding:18px;
+                    text-decoration:none; color:inherit; display:block;
+                    transition:all .18s; text-align:center; }
+    .quick-action:hover { border-color:#0d6efd; background:#f0f5ff; color:#0d6efd; }
+    .quick-action i { font-size:1.8rem; margin-bottom:8px; display:block; }
+    @@media print { .no-print { display:none!important; } }
 </style>
+
+<div class="main-content p-3 p-md-4">
+<div class="container-fluid">
+
+    <!-- ── Header ─────────────────────────────────────────────────────── -->
+    <div class="d-flex justify-content-between align-items-center pt-2 pb-3 mb-4 border-bottom flex-wrap gap-2">
+        <div>
+            <h1 class="h4 fw-bold mb-0">
+                <i class="bi bi-speedometer2 me-2 text-primary"></i>Staff Dashboard
+            </h1>
+            <small class="text-muted">
+                Welcome back, <strong>@staffName</strong> ·
+                @DateTime.Now.ToString("dddd, dd MMMM yyyy")
+            </small>
+        </div>
+        <div class="d-flex gap-2 flex-wrap no-print">
+            <a href="/Dashboard/Staff/RegisterReceipt" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>Register Receipt
+            </a>
+            <a href="/Dashboard/Staff/Approvals" class="btn btn-warning btn-sm">
+                <i class="bi bi-check2-square me-1"></i>Approvals
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Message))
+    {
+        <div class="alert @(Model.IsSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show py-2">
+            @Model.Message
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- ════ KPI CARDS ════════════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:46px;height:46px;border-radius:12px;background:#e7f0ff;
+                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#0d6efd">
+                        <i class="bi bi-geo-alt"></i>
+                    </div>
+                    <div>
+                        <div class="fs-2 fw-bold lh-1 text-primary">@Model.Weredas.Count</div>
+                        <div class="small text-muted">Weredas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:46px;height:46px;border-radius:12px;background:#e6f9f1;
+                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#198754">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <div>
+                        <div class="fs-2 fw-bold lh-1 text-success">@Model.Mahberats.Count</div>
+                        <div class="small text-muted">Mahberats</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:46px;height:46px;border-radius:12px;background:#fff8e1;
+                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fd7e14">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <div>
+                        <div class="fs-2 fw-bold lh-1" style="color:#fd7e14">@Model.Vehicles.Count</div>
+                        <div class="small text-muted">Vehicles</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:46px;height:46px;border-radius:12px;background:#f0e9ff;
+                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#6f42c1">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div>
+                        <div class="fs-2 fw-bold lh-1" style="color:#6f42c1">@Model.Drivers.Count</div>
+                        <div class="small text-muted">Drivers</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ QUICK ACTIONS ════════════════════════════════════════════════ -->
+    <div class="section-label no-print">Quick Actions</div>
+    <div class="row g-2 mb-4 no-print">
+        @{
+            var actions = new[] {
+                ("/Dashboard/Staff/RegisterReceipt",      "bi-receipt",              "text-primary",  "Register Receipt"),
+                ("/Dashboard/Staff/OutsourceReceipt",     "bi-building-add",         "text-success",  "Outsource Receipt"),
+                ("/Dashboard/Staff/PrivateCompanyReceipt","bi-briefcase",            "text-warning",  "Private Receipt"),
+                ("/Dashboard/Staff/Approvals",            "bi-check2-square",        "text-danger",   "Approvals"),
+                ("/Dashboard/Staff/StaffReport",          "bi-file-earmark-bar-graph","text-info",    "Staff Report"),
+                ("/Dashboard/Staff/AgencyReport",         "bi-file-earmark-text",    "text-secondary","Agency Report"),
+            };
+        }
+        @foreach (var a in actions)
+        {
+            <div class="col-4 col-md-2">
+                <a href="@a.Item1" class="quick-action">
+                    <i class="bi @a.Item2 @a.Item3"></i>
+                    <div style="font-size:.78rem;font-weight:600">@a.Item4</div>
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- ════ POSTS + TRAININGS ════════════════════════════════════════════ -->
+    <div class="row g-4 mb-4">
+
+        <!-- Posts column -->
+        <div class="col-12 col-lg-7">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="section-label mb-0">
+                    <i class="bi bi-postcard me-1"></i>Latest Posts & Announcements
+                </div>
+                <a href="/Dashboard/Staff/Post" class="btn btn-outline-primary btn-sm py-0 no-print">
+                    View All <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            @if (!Model.HomePosts.Any())
+            {
+                <div class="text-center py-4 text-muted border rounded-3">
+                    <i class="bi bi-postcard display-5 d-block mb-2 opacity-25"></i>
+                    No posts published yet.
+                </div>
+            }
+            <div class="row g-3">
+            @foreach (dynamic post in Model.HomePosts)
+            {
+                bool pinned = (bool)(post.is_pinned ?? false);
+                string cat  = Convert.ToString(post.category) ?? "";
+                string pri  = Convert.ToString(post.priority) ?? "Normal";
+                string catColor = cat.ToLower() switch {
+                    "announcement" => "bg-primary",
+                    "training"     => "bg-success",
+                    "operations"   => "bg-warning text-dark",
+                    "hr"           => "bg-info text-dark",
+                    _              => "bg-secondary"
+                };
+                string content = Convert.ToString(post.content) ?? "";
+                string preview = content.Length > 120 ? content[..120] + "…" : content;
+                DateTime? dt = post.created_at as DateTime?;
+
+                <div class="col-12 col-sm-6">
+                    <div class="card post-card @(pinned ? "pinned" : "") p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge @catColor small">@(string.IsNullOrEmpty(cat) ? "General" : cat)</span>
+                            <div class="d-flex gap-1">
+                                @if (pinned) { <span class="badge bg-primary small"><i class="bi bi-pin-fill"></i></span> }
+                                @if (pri != "Normal") { <span class="badge bg-@PriorityColor(pri) small">@pri</span> }
+                            </div>
+                        </div>
+                        <h6 class="fw-bold mb-1" style="font-size:.9rem">@post.title</h6>
+                        <p class="text-muted small mb-2" style="font-size:.78rem;line-height:1.5">@preview</p>
+                        <div class="text-muted" style="font-size:.72rem">
+                            <i class="bi bi-clock me-1"></i>
+                            @(dt.HasValue ? dt.Value.ToString("dd MMM yyyy") : "—")
+                        </div>
+                    </div>
+                </div>
+            }
+            </div>
+        </div>
+
+        <!-- Trainings column -->
+        <div class="col-12 col-lg-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="section-label mb-0">
+                    <i class="bi bi-mortarboard me-1"></i>Upcoming Trainings
+                </div>
+                <a href="/Dashboard/Staff/Training" class="btn btn-outline-success btn-sm py-0 no-print">
+                    View All <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            @if (!Model.HomeTrainings.Any())
+            {
+                <div class="text-center py-4 text-muted border rounded-3">
+                    <i class="bi bi-mortarboard display-5 d-block mb-2 opacity-25"></i>
+                    No upcoming trainings.
+                </div>
+            }
+            <div class="d-flex flex-column gap-2">
+            @foreach (dynamic t in Model.HomeTrainings)
+            {
+                string tStatus = Convert.ToString(t.status) ?? "";
+                DateTime? tStart = t.start_date as DateTime?;
+                DateTime? tEnd   = t.end_date   as DateTime?;
+                string tCat   = Convert.ToString(t.category) ?? "";
+                string daysLeft = "";
+                if (tStart.HasValue)
+                {
+                    int days = (tStart.Value.Date - DateTime.Today).Days;
+                    daysLeft = days == 0 ? "Today" : days == 1 ? "Tomorrow" : days > 0 ? $"In {days} days" : "Ongoing";
+                }
+
+                <div class="training-item">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="fw-bold mb-0" style="font-size:.88rem">@t.title</h6>
+                        <span class="badge @TrainingStatus(tStatus) small">@tStatus</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 small text-muted" style="font-size:.76rem">
+                        @if (!string.IsNullOrEmpty(Convert.ToString(t.trainer)))
+                        {
+                            <span><i class="bi bi-person me-1"></i>@t.trainer</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Convert.ToString(t.location)))
+                        {
+                            <span><i class="bi bi-geo-alt me-1"></i>@t.location</span>
+                        }
+                        @if (tStart.HasValue)
+                        {
+                            <span><i class="bi bi-calendar3 me-1"></i>@tStart.Value.ToString("dd MMM")</span>
+                        }
+                        @if (!string.IsNullOrEmpty(daysLeft))
+                        {
+                            <span class="badge bg-light text-dark border">@daysLeft</span>
+                        }
+                    </div>
+                </div>
+            }
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ SERVICES ════════════════════════════════════════════════════ -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="section-label mb-0">
+                <i class="bi bi-briefcase me-1"></i>Available Services
+            </div>
+            <a href="/Dashboard/Staff/Service" class="btn btn-outline-secondary btn-sm py-0 no-print">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        @if (!Model.HomeServices.Any())
+        {
+            <div class="text-center py-4 text-muted border rounded-3">
+                <i class="bi bi-briefcase display-5 d-block mb-2 opacity-25"></i>
+                No services registered yet.
+            </div>
+        }
+        <div class="row g-3">
+        @foreach (dynamic svc in Model.HomeServices)
+        {
+            string svcDesc = Convert.ToString(svc.description) ?? "";
+            string svcPrev = svcDesc.Length > 80 ? svcDesc[..80] + "…" : svcDesc;
+            decimal svcPrice = (decimal)(svc.price ?? 0m);
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="service-chip h-100">
+                    <div style="width:40px;height:40px;border-radius:10px;background:#e7f0ff;
+                                display:flex;align-items:center;justify-content:center;
+                                margin:0 auto 10px;font-size:1.2rem;color:#0d6efd">
+                        <i class="bi bi-tools"></i>
+                    </div>
+                    <div class="fw-semibold small mb-1">@svc.name</div>
+                    @if (!string.IsNullOrEmpty(svcPrev))
+                    {
+                        <div class="text-muted" style="font-size:.72rem;line-height:1.4">@svcPrev</div>
+                    }
+                    @if (svcPrice > 0)
+                    {
+                        <div class="fw-bold text-success mt-2" style="font-size:.82rem">
+                            @svcPrice.ToString("N2") ETB
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        </div>
+    </div>
+
+    <!-- ════ RECENT RECEIPTS ═════════════════════════════════════════════ -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="section-label mb-0">
+                <i class="bi bi-clock-history me-1"></i>Recent Receipts
+            </div>
+            <a href="/Dashboard/Staff/RegisterReceipt" class="btn btn-outline-primary btn-sm py-0 no-print">
+                All Receipts <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Wereda</th>
+                            <th>Mahberat</th>
+                            <th>Plate</th>
+                            <th>Driver</th>
+                            <th class="text-end">KG</th>
+                            <th class="text-end">ETB</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.RecentReceipts.Any())
+                    {
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No receipts yet.</td></tr>
+                    }
+                    @foreach (dynamic r in Model.RecentReceipts)
+                    {
+                        string st = Convert.ToString(r.status) ?? "";
+                        string sc = st switch {
+                            "Approved" or "Billed" => "bg-success",
+                            "Paid"                 => "bg-primary",
+                            "Pending"              => "bg-warning text-dark",
+                            "Registered"           => "bg-info text-dark",
+                            "Rejected"             => "bg-danger",
+                            _                      => "bg-secondary"
+                        };
+                        decimal kg  = (decimal)(r.kilogram    ?? 0m);
+                        decimal tot = (decimal)(r.total_price ?? 0m);
+                        DateTime? rd = r.receipt_date as DateTime?;
+
+                        <tr>
+                            <td>@(string.IsNullOrEmpty(Convert.ToString(r.wereda_name)) ? "—" : (object)r.wereda_name)</td>
+                            <td class="fw-semibold">@(string.IsNullOrEmpty(Convert.ToString(r.mahberat_name)) ? "—" : (object)r.mahberat_name)</td>
+                            <td><code style="font-size:.75rem">@(Convert.ToString(r.plate_number) ?? "—")</code></td>
+                            <td>@(string.IsNullOrEmpty(Convert.ToString(r.driver_name)) ? "—" : (object)r.driver_name)</td>
+                            <td class="text-end fw-semibold">@kg.ToString("N1")</td>
+                            <td class="text-end text-success fw-bold">@tot.ToString("N0")</td>
+                            <td><span class="badge @sc">@st</span></td>
+                            <td class="text-muted">@(rd.HasValue ? rd.Value.ToString("dd MMM") : "—")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>

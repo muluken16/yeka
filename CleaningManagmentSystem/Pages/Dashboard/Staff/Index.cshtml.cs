@@ -85,6 +85,11 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
         public List<string> StatusLabels { get; set; } = new();
         public List<int> StatusValues { get; set; } = new();
 
+        // ── Home page content ─────────────────────────────────────────────
+        public List<dynamic> HomePosts     { get; set; } = new();
+        public List<dynamic> HomeTrainings { get; set; } = new();
+        public List<dynamic> HomeServices  { get; set; } = new();
+
         public string Message { get; set; } = "";
         public bool IsSuccess { get; set; }
 
@@ -543,13 +548,13 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                 ViewData["Drivers"] = drivers;
 
                 // Load recent receipts (last 10) with optional filters
-                var baseStaffQuery = @"SELECT id, wereda_name, mahberat_name, plate_number, driver_name, 
+                var baseStaffQuery = @"SELECT id, wereda_id, mahberat_id, driver_id, wereda_name, mahberat_name, plate_number, driver_name, 
                                       receipt_date, receipt_time, kilogram, price, 
                                       kilogram * price AS total_price, status, registered_at, 'Mahberat' as receipt_type
                                FROM staff_receipts 
                                WHERE status IN ('Registered', 'Approved')";
 
-                var baseOutsourceQuery = @"SELECT id, wereda_name, company_name as mahberat_name, plate_number, driver_name, 
+                var baseOutsourceQuery = @"SELECT id, wereda_id, company_id as mahberat_id, driver_id, wereda_name, company_name as mahberat_name, plate_number, driver_name, 
                                       receipt_date, receipt_time, kilogram, price, 
                                       kilogram * price AS total_price, status, registered_at, 'Outsource' as receipt_type
                                FROM outsource_receipts 
@@ -560,7 +565,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                 if (FilterWeredaId.HasValue && FilterWeredaId.Value > 0)
                     combinedQuery += " AND wereda_id = @FilterWeredaId";
                 if (!string.IsNullOrWhiteSpace(FilterPlate))
-                    combinedQuery += " AND plate_number LIKE CONCAT('%', @FilterPlate, '%')";
+                    combinedQuery += " AND plate_number LIKE @FilterPlate";
                 if (FilterDriverId.HasValue && FilterDriverId.Value > 0)
                     combinedQuery += " AND driver_id = @FilterDriverId";
                 if (FilterStartDate.HasValue)
@@ -568,12 +573,12 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                 if (FilterEndDate.HasValue)
                     combinedQuery += " AND receipt_date <= @FilterEndDate";
 
-                combinedQuery += " ORDER BY registered_at DESC LIMIT 10";
+                combinedQuery += " ORDER BY registered_at DESC";
 
                 var receipts = connection.Query(combinedQuery, new {
                     FilterWeredaId,
                     FilterMahberatId,
-                    FilterPlate,
+                    FilterPlate = string.IsNullOrWhiteSpace(FilterPlate) ? null : $"%{FilterPlate}%",
                     FilterDriverId,
                     FilterStartDate,
                     FilterEndDate
@@ -591,8 +596,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                     ) as combined
                     LEFT JOIN weredas w ON combined.wereda_id = w.id
                     GROUP BY w.name
-                    ORDER BY Value DESC
-                    LIMIT 10").ToList();
+                    ORDER BY Value DESC").ToList();
 
                 ChartLabels = weredaStats.Select(w => (string?)(w.Label) ?? "Unknown").ToList();
                 ChartValues = weredaStats.Select(w => (int)w.Value).ToList();
@@ -606,8 +610,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         SELECT id, plate_number FROM outsource_receipts
                     ) as combined 
                     GROUP BY plate_number
-                    ORDER BY Value DESC
-                    LIMIT 10").ToList();
+                    ORDER BY Value DESC").ToList();
 
                 VehicleLabels = vehicleStats.Select(v => (string?)(v.Label) ?? "Unknown").ToList();
                 VehicleValues = vehicleStats.Select(v => (int)v.Value).ToList();
@@ -620,8 +623,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         UNION ALL
                         SELECT receipt_date, kilogram, registered_at FROM outsource_receipts
                     ) as combined 
-                    ORDER BY registered_at DESC 
-                    LIMIT 10").ToList();
+                    ORDER BY registered_at DESC ").ToList();
 
                 TrendLabels = trendData.Select(t => ((DateTime)t.Label).ToString("MM-dd")).ToList();
                 TrendValues = trendData.Select(t => (decimal)t.Value).ToList();
@@ -638,6 +640,28 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
 
                 StatusLabels = statusStats.Select(s => (string?)(s.Label) ?? "Unknown").ToList();
                 StatusValues = statusStats.Select(s => (int)s.Value).ToList();
+
+                // ── Home page content ──────────────────────────────────────────
+                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;
+
+                HomePosts = connection.Query<dynamic>(@"
+                    SELECT id, title, category, content, is_pinned, priority, created_at
+                    FROM posts
+                    WHERE status='Published' AND (target_role='All' OR target_role='staff')
+                    ORDER BY is_pinned DESC, created_at DESC").ToList();
+
+                HomeTrainings = connection.Query<dynamic>(@"
+                    SELECT id, title, trainer, location,
+                           start_date, end_date, status, category
+                    FROM trainings
+                    WHERE (assigned_to_user_id=@Uid OR assigned_to_user_id IS NULL)
+                      AND end_date >= CAST(NOW() AS DATE)
+                    ORDER BY start_date ASC", new { Uid = userId }).ToList();
+
+                HomeServices = connection.Query<dynamic>(@"
+                    SELECT id, name, description, price
+                    FROM services
+                    ORDER BY id DESC").ToList();
             }
             catch (Exception ex)
             {

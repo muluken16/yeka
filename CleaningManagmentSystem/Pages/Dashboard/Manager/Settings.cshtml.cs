@@ -226,7 +226,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     setting_key VARCHAR(100) UNIQUE NOT NULL,
                     setting_value TEXT,
-                    updated_at DATETIME DEFAULT NOW() ON UPDATE NOW()
+                    updated_at DATETIME DEFAULT NOW()
                 )");
         }
     }

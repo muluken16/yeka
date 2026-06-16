@@ -1,19 +1,23 @@
+using System.IO;
 using Microsoft.AspNetCore.Http;
 using CleaningManagmentSystem.Data;
 using CleaningManagmentSystem.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    ContentRootPath = exeDir,
+});
 
-// Bind URL (Render sets PORT, local dev uses 5000)
+builder.Configuration.AddJsonFile(Path.Combine(exeDir, "appsettings.json"), optional: false);
+
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Add services to the container.
 builder.Services.AddRazorPages();
-builder.Services.AddControllers(); // Added for Mobile API
+builder.Services.AddControllers();
 builder.Services.AddSingleton<EmailService>();
 
-// Add CORS support
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -24,7 +28,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add session with explicit cookie settings
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -37,11 +40,15 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// Initialize and seed database
+Console.WriteLine($"[Debug] Current dir: {Environment.CurrentDirectory}");
+Console.WriteLine($"[Debug] ContentRootPath: {AppContext.BaseDirectory}");
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"[Debug] ConnectionString: {connectionString ?? "NULL"}");
+
 Console.WriteLine("[Startup] Initializing database...");
 try
 {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     if (!string.IsNullOrEmpty(connectionString))
     {
         await DatabaseSeeder.SeedAsync(connectionString);
@@ -49,7 +56,7 @@ try
     }
     else
     {
-        Console.WriteLine("[Startup] Warning: DefaultConnection not configured in appsettings.json");
+        Console.WriteLine("[Startup] Warning: DefaultConnection not configured");
     }
 }
 catch (Exception ex)
@@ -57,7 +64,6 @@ catch (Exception ex)
     Console.WriteLine($"[Startup] Database initialization error: {ex.Message}");
 }
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -66,9 +72,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
-app.UseCors("AllowAll"); // Enable CORS
+app.UseCors("AllowAll");
 app.UseSession();
-
 
 app.Use(async (context, next) =>
 {
@@ -80,7 +85,6 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
-// Redirect old /Dashboard/Staff to /Dashboard/Staff/Index
 app.MapGet("/Dashboard/Staff", (HttpContext context) =>
 {
     context.Response.Redirect("/Dashboard/Staff/Index");
@@ -88,8 +92,7 @@ app.MapGet("/Dashboard/Staff", (HttpContext context) =>
 });
 
 app.MapRazorPages();
-app.MapControllers(); // Added for Mobile API
+app.MapControllers();
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 Console.WriteLine($"[Startup] Application running on http://0.0.0.0:{port} (all interfaces)");
 app.Run();

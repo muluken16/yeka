@@ -297,7 +297,7 @@ namespace CleaningManagmentSystem.Controllers
             if (dto.DriverId > 0)
             {
                 var vehicle = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                    "SELECT id, plate_number FROM vehicles WHERE driver_id = @DriverId LIMIT 1",
+                    "SELECT id, plate_number FROM vehicles WHERE driver_id = @DriverId",
                     new { DriverId = dto.DriverId });
                 if (vehicle != null)
                 {
@@ -359,7 +359,7 @@ namespace CleaningManagmentSystem.Controllers
                           VALUES
                             (@WeredaId, @WeredaName, @MahberatId, @MahberatName,
                              @VehicleId, @PlateNumber, @DriverId, @DriverName,
-                             CURTIME(), CURDATE(), @Kg, @Total,
+                             CAST(NOW() AS TIME), CAST(NOW() AS DATE), @Kg, @Total,
                              @RegisteredBy, 'Pending', @Notes, @ImageUrl,
                              @TrId, NOW())",
                         new
@@ -409,7 +409,7 @@ namespace CleaningManagmentSystem.Controllers
             await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
                 "Receipt Submitted", $"Driver submitted receipt for trip {req.request_number}. Please verify in Receipt Approvals.", "Action");
 
-            await LogStatusAsync(conn, id, (string)req.status, "ReceiptSubmitted", dto.DriverId, dto.DriverName, "Driver", dto.Notes ?? "");
+            await LogStatusAsync(conn, id, (string)req.status, "ReceiptSubmitted", dto.DriverId, dto.DriverName ?? "", "Driver", dto.Notes ?? "");
             return Ok(new { success = true, newStatus = "ReceiptSubmitted" });
         }
 
@@ -450,7 +450,7 @@ namespace CleaningManagmentSystem.Controllers
                 try
                 {
                     var srId = await conn.QueryFirstOrDefaultAsync<int?>(
-                        "SELECT id FROM staff_receipts WHERE transport_request_id = @TrId LIMIT 1",
+                        "SELECT id FROM staff_receipts WHERE transport_request_id = @TrId",
                         new { TrId = id });
 
                     if (srId.HasValue && srId.Value > 0)
@@ -499,7 +499,7 @@ namespace CleaningManagmentSystem.Controllers
                             if (tr.driver_id != null)
                             {
                                 var v = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                                    "SELECT id, plate_number FROM vehicles WHERE driver_id = @DId LIMIT 1",
+                                    "SELECT id, plate_number FROM vehicles WHERE driver_id = @DId",
                                     new { DId = (int)tr.driver_id });
                                 if (v != null) { vehicleId = (int?)v.id; plateNumber = (string?)v.plate_number; }
                             }
@@ -516,7 +516,7 @@ namespace CleaningManagmentSystem.Controllers
                                   VALUES
                                     (@WeredaId, @WeredaName, @MahberatId, @MahberatName,
                                      @VehicleId, @PlateNumber, @DriverId, @DriverName,
-                                     CURTIME(), CURDATE(), @Kg, @Rate,
+                                     CAST(NOW() AS TIME), CAST(NOW() AS DATE), @Kg, @Rate,
                                      'TransportRequest', 'Pending', @Notes, @ImageUrl,
                                      @TrId, NOW(),
                                      1, @By, NOW(), @Notes)",
@@ -735,7 +735,7 @@ namespace CleaningManagmentSystem.Controllers
                               VALUES
                               (@WeredaId, @WeredaName, @MahberatId, @MahberatName,
                                @VehicleId, @PlateNumber, @DriverId, @DriverName,
-                               CURTIME(), CURDATE(), @Kg, @Cost,
+                               CAST(NOW() AS TIME), CAST(NOW() AS DATE), @Kg, @Cost,
                                'TransportRequest', 'Approved', @Notes, @ImageUrl,
                                1, @MahberatUser, NOW(), @MahberatNotes,
                                NOW())",
@@ -821,7 +821,7 @@ namespace CleaningManagmentSystem.Controllers
                          LEFT JOIN mahberats m2 ON m2.id = tr.receipt_mahberat_id
                          LEFT JOIN weredas   w  ON w.id  = tr.receipt_wereda_id
                          {whereClause}
-                         ORDER BY tr.created_at DESC LIMIT 200";
+                         ORDER BY tr.created_at DESC";
 
             var results = await conn.QueryAsync(sql, param);
             return Ok(results);
@@ -876,7 +876,7 @@ namespace CleaningManagmentSystem.Controllers
             var notifs = await conn.QueryAsync(
                 @"SELECT id, transport_request_id, request_number, title, body, notification_type, is_read, created_at
                   FROM transport_notifications WHERE recipient_user_id = @UserId
-                  ORDER BY created_at DESC LIMIT 50",
+                  ORDER BY created_at DESC",
                 new { UserId = userId });
             return Ok(notifs);
         }

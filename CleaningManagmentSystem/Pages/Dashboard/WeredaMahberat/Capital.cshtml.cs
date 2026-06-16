@@ -72,7 +72,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.WeredaMahberat
                 using var connection = new MySqlConnection(_connectionString);
 
                 var lastTransaction = connection.QueryFirstOrDefault<CapitalTransaction>(
-                    "SELECT balance FROM capital_transactions ORDER BY id DESC LIMIT 1");
+                    "SELECT balance FROM capital_transactions ORDER BY id DESC");
 
                 Transaction.Balance = lastTransaction?.Balance ?? 0;
                 if (Transaction.TransactionType.ToLower() == "income")

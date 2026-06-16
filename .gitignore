@@ -1,15 +1,20 @@
 # .NET build artifacts
 bin/
 obj/
+**/bin/
+**/obj/
 *.user
 *.suo
 .vs/
 
-# Flutter build artifacts
+# Flutter/Android build artifacts
 cleanapp/build/
 cleanapp/.dart_tool/
 cleanapp/.flutter-plugins
 cleanapp/.flutter-plugins-dependencies
+cleanapp/android/app/build/
+cleanapp/android/build/
+**/build/
 
 # Environment / secrets
 appsettings.Development.json
@@ -19,7 +24,20 @@ appsettings.Development.json
 # OS files
 .DS_Store
 Thumbs.db
+*.log
+b.txt
+build_output.txt
+query
 
 # Rider / VS Code
 .idea/
 .vscode/
+
+# Project uploads
+CleaningManagmentSystem/wwwroot/uploads/
+
+# Build/Publish Outputs
+**/installer_output/
+**/publish/
+**/publish_new/
+**/setup_output/

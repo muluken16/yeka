@@ -195,7 +195,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
 
             if (!string.IsNullOrEmpty(FilterDate))
             {
-                sql += " AND DATE(created_at) = @FilterDate";
+                sql += " AND CAST(created_at AS DATE) = @FilterDate";
                 parameters.Add("FilterDate", FilterDate);
             }
 

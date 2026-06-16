@@ -34,7 +34,7 @@ namespace CleaningManagmentSystem.Controllers
                 return Unauthorized(new { message = "Invalid credentials or inactive account" });
 
             // Normalize role to the exact casing the Flutter app expects
-            user.Role = NormalizeRole(user.Role);
+            user.Role = NormalizeRole(user.Role ?? string.Empty);
 
             // If the user is a driver, fetch their assigned vehicle
             if (user.Role.ToLower() == "driver")
@@ -111,7 +111,7 @@ namespace CleaningManagmentSystem.Controllers
         {
             using var connection = CreateConnection();
             var vehicles = await connection.QueryAsync(
-                "SELECT id, CONCAT(model, ' - ', plate_number) as name FROM vehicles WHERE status = 'Available' ORDER BY plate_number ASC");
+                "SELECT id, CONCAT(COALESCE(model, 'Unknown'), ' - ', plate_number) as name FROM vehicles WHERE status = 'Available' ORDER BY plate_number ASC");
             return Ok(vehicles);
         }
 
@@ -125,7 +125,7 @@ namespace CleaningManagmentSystem.Controllers
             var weredaName = await connection.QueryFirstOrDefaultAsync<string>(
                 "SELECT name FROM weredas WHERE id = @Id", new { Id = request.WeredaId });
                 
-            string entityName = null;
+            string entityName = string.Empty;
             if (isOutsource) {
                 entityName = await connection.QueryFirstOrDefaultAsync<string>(
                     "SELECT company_name FROM outsource_companies WHERE id = @Id", new { Id = request.MahberatId });
@@ -199,7 +199,7 @@ namespace CleaningManagmentSystem.Controllers
                         kilogram, 
                         price as total, 
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date, 
-                        TIME_FORMAT(receipt_time, '%H:%i') as time, 
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time, 
                         status,
                         notes,
                         image_url as imageUrl,
@@ -216,7 +216,7 @@ namespace CleaningManagmentSystem.Controllers
                         kilogram, 
                         price as total, 
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date, 
-                        TIME_FORMAT(receipt_time, '%H:%i') as time, 
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time, 
                         status,
                         notes,
                         image_url as imageUrl,
@@ -245,7 +245,7 @@ namespace CleaningManagmentSystem.Controllers
                         kilogram, 
                         price as total, 
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date, 
-                        TIME_FORMAT(receipt_time, '%H:%i') as time, 
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time, 
                         status,
                         notes,
                         image_url as imageUrl,
@@ -265,7 +265,7 @@ namespace CleaningManagmentSystem.Controllers
                         kilogram, 
                         price as total, 
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date, 
-                        TIME_FORMAT(receipt_time, '%H:%i') as time, 
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time, 
                         status,
                         notes,
                         image_url as imageUrl,
@@ -324,7 +324,7 @@ namespace CleaningManagmentSystem.Controllers
                 var notifs = await connection.QueryAsync(
                     @"SELECT id, transport_request_id, request_number, title, body, notification_type, is_read, created_at
                       FROM transport_notifications WHERE recipient_user_id = @UserId
-                      ORDER BY created_at DESC LIMIT 50",
+                      ORDER BY created_at DESC",
                     new { UserId = userId });
                 return Ok(notifs);
             }
@@ -345,6 +345,23 @@ namespace CleaningManagmentSystem.Controllers
             }
             catch { }
             return Ok(new { success = true });
+        }
+
+        [HttpPost("notifications/read-all/{userId}")]
+        public async Task<IActionResult> MarkAllNotificationsRead(int userId)
+        {
+            using var connection = CreateConnection();
+            try
+            {
+                var count = await connection.ExecuteAsync(
+                    "UPDATE transport_notifications SET is_read = 1 WHERE recipient_user_id = @UserId AND is_read = 0",
+                    new { UserId = userId });
+                return Ok(new { success = true, updated = count });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpGet("reports/{userId}")]
@@ -395,8 +412,7 @@ namespace CleaningManagmentSystem.Controllers
                 @"SELECT p.id, p.company_name, p.phone, p.address,
                          COALESCE(p.services_offered, '') AS services_provided
                   FROM private_cleaning_companies p
-                  WHERE p.rep_user_id = @Uid AND COALESCE(p.is_active, 1) = 1
-                  LIMIT 1",
+                  WHERE p.rep_user_id = @Uid AND COALESCE(p.is_active, 1) = 1",
                 new { Uid = userId });
 
             if (company != null)
@@ -410,8 +426,7 @@ namespace CleaningManagmentSystem.Controllers
                 @"SELECT p.id, p.company_name, p.phone, p.address,
                          COALESCE(p.services_offered, '') AS services_provided
                   FROM private_cleaning_companies p
-                  WHERE p.email = @Email AND COALESCE(p.is_active, 1) = 1
-                  LIMIT 1",
+                  WHERE p.email = @Email AND COALESCE(p.is_active, 1) = 1",
                 new { Email = (string)userInfo.email });
 
             if (company != null)
@@ -429,8 +444,7 @@ namespace CleaningManagmentSystem.Controllers
                 @"SELECT p.id, p.company_name, p.phone, p.address,
                          COALESCE(p.services_offered, '') AS services_provided
                   FROM private_cleaning_companies p
-                  WHERE p.contact_person = @Name AND COALESCE(p.is_active, 1) = 1
-                  LIMIT 1",
+                  WHERE p.contact_person = @Name AND COALESCE(p.is_active, 1) = 1",
                 new { Name = (string)userInfo.name });
 
             if (company != null)
@@ -494,8 +508,7 @@ namespace CleaningManagmentSystem.Controllers
             var company = await connection.QueryFirstOrDefaultAsync<dynamic>(
                 @"SELECT p.id, p.company_name 
                   FROM private_cleaning_companies p
-                  WHERE p.rep_user_id = @Uid AND COALESCE(p.is_active, 1) = 1
-                  LIMIT 1",
+                  WHERE p.rep_user_id = @Uid AND COALESCE(p.is_active, 1) = 1",
                 new { Uid = req.UserId });
 
             if (company == null)
@@ -504,8 +517,7 @@ namespace CleaningManagmentSystem.Controllers
                     @"SELECT p.id, p.company_name
                       FROM private_cleaning_companies p
                       JOIN users u ON u.email = p.email
-                      WHERE u.id = @Uid AND COALESCE(p.is_active, 1) = 1
-                      LIMIT 1",
+                      WHERE u.id = @Uid AND COALESCE(p.is_active, 1) = 1",
                     new { Uid = req.UserId });
 
                 // Auto-fix rep_user_id so next call is fast
@@ -581,11 +593,11 @@ namespace CleaningManagmentSystem.Controllers
             var receipts = await connection.QueryAsync<dynamic>(
                 @"SELECT id, company_name, wereda_name, plate_number, driver_name,
                          DATE_FORMAT(receipt_date, '%Y-%m-%d') AS receipt_date,
-                         TIME_FORMAT(receipt_time, '%H:%i')    AS receipt_time,
+                         TIME_FORMAT(receipt_time, '%H:%i:%s')    AS receipt_time,
                          kilogram, price, total_amount, status, registered_at
                   FROM private_company_receipts
                   WHERE driver_id = @UserId
-                  ORDER BY registered_at DESC LIMIT 100",
+                  ORDER BY registered_at DESC",
                 new { UserId = userId });
             return Ok(receipts);
         }

@@ -202,7 +202,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                 if (!string.IsNullOrEmpty(FilterStatus)) { q += " AND status=@St"; p.Add("St", FilterStatus); }
                 if (FilterStartDate.HasValue)   { q += " AND receipt_date>=@S"; p.Add("S", FilterStartDate.Value); }
                 if (FilterEndDate.HasValue)     { q += " AND receipt_date<=@E"; p.Add("E", FilterEndDate.Value); }
-                q += " ORDER BY registered_at DESC LIMIT 100";
+                q += " ORDER BY registered_at DESC";
 
                 RecentReceipts = conn.Query<dynamic>(q, p).ToList();
             }

@@ -43,9 +43,16 @@
                                      || IsActive("/Dashboard/Staff/PrivateCompanyReceipt");
             }
             <li class="nav-item">
-                <a class="nav-link @(isReceiptsActive ? "active" : "")" data-bs-toggle="collapse" href="#receiptsCollapse" role="button" aria-expanded="@(isReceiptsActive ? "true" : "false")" aria-controls="receiptsCollapse">
-                    <i class="bi bi-journal-plus me-2"></i> Register Receipt <i class="bi bi-chevron-down ms-auto"></i>
-                </a>
+                <button type="button"
+                        class="nav-link w-100 text-start border-0 bg-transparent d-flex align-items-center @(isReceiptsActive ? "active" : "")"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#receiptsCollapse"
+                        aria-expanded="@(isReceiptsActive ? "true" : "false")"
+                        aria-controls="receiptsCollapse">
+                    <i class="bi bi-journal-plus me-2 flex-shrink-0"></i>
+                    <span class="nav-label flex-fill">Register Receipt</span>
+                    <i class="bi bi-chevron-down flex-shrink-0" style="font-size:.7rem;transition:transform .25s;@(isReceiptsActive ? "transform:rotate(-180deg);" : "")"></i>
+                </button>
                 <div class="collapse @(isReceiptsActive ? "show" : "")" id="receiptsCollapse">
                     <ul class="nav flex-column ms-3">
                         <li class="nav-item">
@@ -72,23 +79,24 @@
                     <i class="bi bi-check2-square me-2"></i> Approvals
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="/Dashboard/Staff/TransportPayments" class="nav-link @(IsActive("/Dashboard/Staff/TransportPayments") ? "active" : "")">
-                    <i class="bi bi-truck me-2"></i> Transport Payments
-                </a>
-            </li>
 
             <!-- Reports Section -->
             @{
                 bool isReportsActive = IsActive("/Dashboard/Staff/AgencyReport") || 
                                      IsActive("/Dashboard/Staff/StaffReport") || 
-                                     IsActive("/Dashboard/Staff/Checklist") || 
                                      IsActive("/Dashboard/Staff/YakaReport");
             }
             <li class="nav-item">
-                <a class="nav-link @(isReportsActive ? "active" : "")" data-bs-toggle="collapse" href="#reportsCollapse" role="button" aria-expanded="@(isReportsActive ? "true" : "false")" aria-controls="reportsCollapse">
-                    <i class="bi bi-file-earmark-text me-2"></i> Reports <i class="bi bi-chevron-down ms-auto"></i>
-                </a>
+                <button type="button"
+                        class="nav-link w-100 text-start border-0 bg-transparent d-flex align-items-center @(isReportsActive ? "active" : "")"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#reportsCollapse"
+                        aria-expanded="@(isReportsActive ? "true" : "false")"
+                        aria-controls="reportsCollapse">
+                    <i class="bi bi-file-earmark-text me-2 flex-shrink-0"></i>
+                    <span class="nav-label flex-fill">Reports</span>
+                    <i class="bi bi-chevron-down flex-shrink-0" style="font-size:.7rem;transition:transform .25s;@(isReportsActive ? "transform:rotate(-180deg);" : "")"></i>
+                </button>
                 <div class="collapse @(isReportsActive ? "show" : "")" id="reportsCollapse">
                     <ul class="nav flex-column ms-3">
                         <li class="nav-item">
@@ -102,63 +110,8 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="/Dashboard/Staff/Checklist" class="nav-link @(IsActive("/Dashboard/Staff/Checklist") ? "active" : "")">
-                                <i class="bi bi-check-square me-2"></i> Checklist
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a href="/Dashboard/Staff/YakaReport" class="nav-link @(IsActive("/Dashboard/Staff/YakaReport") ? "active" : "")">
                                 <i class="bi bi-file-earmark me-2"></i> Yaka Report
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-
-            <!-- Personnel Section -->
-            @{
-                bool isPersonnelActive = IsActive("/Dashboard/Staff/SubcityOfficer") || 
-                                        IsActive("/Dashboard/Staff/WeredaOfficer") || 
-                                        IsActive("/Dashboard/Staff/SubcityDriver");
-            }
-            <li class="nav-item">
-                <a class="nav-link @(isPersonnelActive ? "active" : "")" data-bs-toggle="collapse" href="#personnelCollapse" role="button" aria-expanded="@(isPersonnelActive ? "true" : "false")" aria-controls="personnelCollapse">
-                    <i class="bi bi-people me-2"></i> Personnel <i class="bi bi-chevron-down ms-auto"></i>
-                </a>
-                <div class="collapse @(isPersonnelActive ? "show" : "")" id="personnelCollapse">
-                    <ul class="nav flex-column ms-3">
-                        <li class="nav-item">
-                            <a href="/Dashboard/Staff/SubcityOfficer" class="nav-link @(IsActive("/Dashboard/Staff/SubcityOfficer") ? "active" : "")">
-                                <i class="bi bi-person-badge me-2"></i> Subcity Officer
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/Dashboard/Staff/WeredaOfficer" class="nav-link @(IsActive("/Dashboard/Staff/WeredaOfficer") ? "active" : "")">
-                                <i class="bi bi-person-rolodex me-2"></i> Wereda Mahberat
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/Dashboard/Staff/SubcityDriver" class="nav-link @(IsActive("/Dashboard/Staff/SubcityDriver") ? "active" : "")">
-                                <i class="bi bi-person-badge me-2"></i> Subcity Driver
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-
-            <!-- Operations Section -->
-            @{
-                bool isOperationsActive = IsActive("/Dashboard/Staff/DispatchSchedule");
-            }
-            <li class="nav-item">
-                <a class="nav-link @(isOperationsActive ? "active" : "")" data-bs-toggle="collapse" href="#operationsCollapse" role="button" aria-expanded="@(isOperationsActive ? "true" : "false")" aria-controls="operationsCollapse">
-                    <i class="bi bi-gear me-2"></i> Operations <i class="bi bi-chevron-down ms-auto"></i>
-                </a>
-                <div class="collapse @(isOperationsActive ? "show" : "")" id="operationsCollapse">
-                    <ul class="nav flex-column ms-3">
-                        <li class="nav-item">
-                            <a href="/Dashboard/Staff/DispatchSchedule" class="nav-link @(IsActive("/Dashboard/Staff/DispatchSchedule") ? "active" : "")">
-                                <i class="bi bi-calendar-check me-2"></i> Dispatch Schedule
                             </a>
                         </li>
                     </ul>
@@ -175,9 +128,17 @@
                                         IsActive("/Dashboard/Staff/OfficeRecognition");
             }
             <li class="nav-item">
-                <a class="nav-link @(isResourcesActive ? "active" : "")" data-bs-toggle="collapse" href="#resourcesCollapse" role="button" aria-expanded="@(isResourcesActive ? "true" : "false")" aria-controls="resourcesCollapse">
-                    <i class="bi bi-box me-2"></i> Resources <i class="bi bi-chevron-down ms-auto"></i>
-                </a>
+                <button type="button"
+                        class="nav-link w-100 text-start border-0 bg-transparent d-flex align-items-center @(isResourcesActive ? "active" : "")"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#resourcesCollapse"
+                        aria-expanded="@(isResourcesActive ? "true" : "false")"
+                        aria-controls="resourcesCollapse"
+                        id="resourcesToggleBtn">
+                    <i class="bi bi-box me-2 flex-shrink-0"></i>
+                    <span class="nav-label flex-fill">Resources</span>
+                    <i class="bi bi-chevron-down flex-shrink-0 resources-arrow" style="font-size:.7rem;transition:transform .25s;@(isResourcesActive ? "transform:rotate(-180deg);" : "")"></i>
+                </button>
                 <div class="collapse @(isResourcesActive ? "show" : "")" id="resourcesCollapse">
                     <ul class="nav flex-column ms-3">
                         <li class="nav-item">
@@ -244,13 +205,29 @@
 <!-- Auto-close sidebar dropdowns when clicking other links -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // ── Rotate chevron arrows on collapse open/close ─────────────────────
+        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(btn) {
+            var targetId = btn.getAttribute('data-bs-target');
+            var collapseEl = document.querySelector(targetId);
+            if (!collapseEl) return;
+            var arrow = btn.querySelector('.bi-chevron-down');
+
+            collapseEl.addEventListener('show.bs.collapse', function() {
+                if (arrow) arrow.style.transform = 'rotate(-180deg)';
+            });
+            collapseEl.addEventListener('hide.bs.collapse', function() {
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            });
+        });
+
+        // ── Auto-close other dropdowns when opening one ───────────────────────
         const navLinks = document.querySelectorAll('.sidebar .nav-link:not([data-bs-toggle="collapse"])');
         navLinks.forEach(link => {
             link.addEventListener('click', function() {
                 const collapses = document.querySelectorAll('.sidebar .collapse.show');
                 collapses.forEach(c => {
                     if (!c.contains(link)) {
-                        const bsCollapse = bootstrap.Collapse.getInstance(c);
+                        var bsCollapse = bootstrap.Collapse.getInstance(c);
                         if (bsCollapse) bsCollapse.hide();
                     }
                 });

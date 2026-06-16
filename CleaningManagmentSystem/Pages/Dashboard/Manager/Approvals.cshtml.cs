@@ -51,7 +51,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time, '%H:%i') as time,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at
                     FROM staff_receipts
 
@@ -62,7 +62,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time, '%H:%i') as time,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at
                     FROM outsource_receipts
                 ) as combined
@@ -83,7 +83,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time, '%H:%i') as time,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at
                     FROM staff_receipts
 
@@ -94,7 +94,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
                         driver_name as driverName, plate_number as vehicleName,
                         kilogram, price as total,
                         DATE_FORMAT(receipt_date, '%Y-%m-%d') as date,
-                        TIME_FORMAT(receipt_time, '%H:%i') as time,
+                        TIME_FORMAT(receipt_time, '%H:%i:%s') as time,
                         status, notes, image_url as imageUrl, registered_at
                     FROM outsource_receipts
                 ) as combined
@@ -102,7 +102,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
 
             if (!string.IsNullOrEmpty(HistorySearch))
                 historyQuery += " AND (weredaName LIKE @HSearch OR driverName LIKE @HSearch OR vehicleName LIKE @HSearch OR mahberatName LIKE @HSearch)";
-            historyQuery += " ORDER BY registered_at DESC LIMIT 200";
+            historyQuery += " ORDER BY registered_at DESC";
 
             HistorySubmissions = (await connection.QueryAsync(historyQuery,
                 new { HSearch = "%" + HistorySearch + "%" })).ToList();
@@ -113,7 +113,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
                        paid_amount as paidAmount, balance, status, source, created_at as createdAt
                 FROM monthly_receipts
                 WHERE status IN ('Level 1 Approved', 'Paid')
-                ORDER BY created_at DESC LIMIT 100";
+                ORDER BY created_at DESC";
             MonthlyReceipts = (await connection.QueryAsync(monthlyQuery)).ToList();
         }
 

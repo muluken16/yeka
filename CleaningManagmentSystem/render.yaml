@@ -1,4 +1,5 @@
 services:
+  # ── .NET Web Application ─────────────────────────────────────────────────
   - type: web
     name: yeka-cleaning-web
     runtime: docker
@@ -8,5 +9,34 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
-      - key: ConnectionStrings__DefaultConnection
-        sync: false   # set manually in Render dashboard
+      - key: DB_HOST
+        value: yeka-mysql          # internal Render hostname of the MySQL service
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        value: yeka_cleaning
+      - key: DB_USER
+        value: yeka_user
+      - key: DB_PASSWORD
+        value: yeka_pass123
+
+  # ── MySQL Private Service ─────────────────────────────────────────────────
+  - type: pserv
+    name: yeka-mysql
+    runtime: docker
+    dockerfilePath: ./CleaningManagmentSystem/mysql.Dockerfile
+    dockerContext: ./CleaningManagmentSystem
+    plan: free
+    disk:
+      name: mysql-data
+      mountPath: /var/lib/mysql
+      sizeGB: 1
+    envVars:
+      - key: MYSQL_DATABASE
+        value: yeka_cleaning
+      - key: MYSQL_USER
+        value: yeka_user
+      - key: MYSQL_PASSWORD
+        value: yeka_pass123
+      - key: MYSQL_ROOT_PASSWORD
+        value: root_yeka_2026

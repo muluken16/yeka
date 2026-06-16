@@ -1,138 +1,450 @@
 @page
+@using MySqlConnector
+@using Dapper
+@inject IConfiguration _cfg
 @{
     var userName = HttpContext.Session.GetString("UserName");
-    var userRole = HttpContext.Session.GetString("UserRole")?.ToLower() ?? "manager";
-    
-    if (userName == null)
-    {
-        Response.Redirect("/Login");
-        return;
+    if (userName == null) { Response.Redirect("/Login"); return; }
+
+    var cs = _cfg.GetConnectionString("DefaultConnection") ?? "";
+
+    // ── Load all real stats in one block ─────────────────────────────────────
+    int totalStaff=0, activeStaff=0, driverCount=0;
+    int totalVehicles=0, availableVehicles=0;
+    int totalWeredas=0, totalMahberats=0;
+    int pendingApprovals=0, totalReceiptsToday=0;
+    decimal totalKgToday=0, totalKgMonth=0, totalAmtMonth=0;
+    int mahberatCount=0, outsourceCount=0, privateCount=0;
+    int pendingTransport=0, paidTransport=0;
+    var recentReceipts = new List<dynamic>();
+    var chartDates     = new List<string>();
+    var chartKg        = new List<decimal>();
+    string dbError     = "";
+
+    try {
+        using var db = new MySqlConnection(cs);
+
+        totalStaff       = db.QueryFirstOrDefault<int>("SELECT COUNT(*) FROM users WHERE role != 'superadmin'");
+        activeStaff      = db.QueryFirstOrDefault<int>("SELECT COUNT(*) FROM users WHERE role != 'superadmin' AND is_active=1");
+        driverCount      = db.QueryFirstOrDefault<int>("SELECT COUNT(*) FROM users WHERE role='driver' AND is_active=1");
+        totalVehicles    = db.QueryFirstOrDefault<int>("SELECT COUNT(*) FROM vehicles");
+        availableVehicles= db.QueryFirstOrDefault<int>("SELECT COUNT(*) FROM vehicles WHERE status='Available'");
+        totalWeredas     = db.QueryFirstOrDefault<int>("SELECT COUNT(*) FROM weredas WHERE is_active=1");
+        totalMahberats   = db.QueryFirstOrDefault<int>("SELECT COUNT(*) FROM mahberats WHERE is_active=1");
+
+        pendingApprovals = db.QueryFirstOrDefault<int>(
+            "SELECT COUNT(*) FROM staff_receipts WHERE status='Pending' AND mahberat_approved=1");
+
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        var m1    = DateTime.Today.AddMonths(-1).ToString("yyyy-MM-dd");
+        var m0    = DateTime.Today.ToString("yyyy-MM-dd");
+
+        totalReceiptsToday = db.QueryFirstOrDefault<int>(
+            "SELECT COUNT(*) FROM staff_receipts WHERE DATE(registered_at)=CURDATE()");
+        totalKgToday = db.QueryFirstOrDefault<decimal>(
+            "SELECT COALESCE(SUM(kilogram),0) FROM staff_receipts WHERE DATE(registered_at)=CURDATE()");
+
+        totalKgMonth = db.QueryFirstOrDefault<decimal>($@"
+            SELECT COALESCE(SUM(k),0) FROM (
+                SELECT kilogram AS k FROM staff_receipts WHERE receipt_date BETWEEN @s AND @e
+                UNION ALL
+                SELECT kilogram FROM outsource_receipts WHERE receipt_date BETWEEN @s AND @e
+                UNION ALL
+                SELECT kilogram FROM private_company_receipts WHERE receipt_date BETWEEN @s AND @e
+            ) t", new { s=m1, e=m0 });
+
+        totalAmtMonth = db.QueryFirstOrDefault<decimal>($@"
+            SELECT COALESCE(SUM(a),0) FROM (
+                SELECT kilogram*price AS a FROM staff_receipts WHERE receipt_date BETWEEN @s AND @e
+                UNION ALL
+                SELECT kilogram*price FROM outsource_receipts WHERE receipt_date BETWEEN @s AND @e
+                UNION ALL
+                SELECT COALESCE(NULLIF(total_amount,0),kilogram*price) FROM private_company_receipts WHERE receipt_date BETWEEN @s AND @e
+            ) t", new { s=m1, e=m0 });
+
+        mahberatCount  = db.QueryFirstOrDefault<int>($"SELECT COUNT(*) FROM staff_receipts WHERE receipt_date BETWEEN @s AND @e", new{s=m1,e=m0});
+        outsourceCount = db.QueryFirstOrDefault<int>($"SELECT COUNT(*) FROM outsource_receipts WHERE receipt_date BETWEEN @s AND @e", new{s=m1,e=m0});
+        privateCount   = db.QueryFirstOrDefault<int>($"SELECT COUNT(*) FROM private_company_receipts WHERE receipt_date BETWEEN @s AND @e", new{s=m1,e=m0});
+
+        pendingTransport = db.QueryFirstOrDefault<int>(
+            "SELECT COUNT(*) FROM transport_requests WHERE status='ReceiptVerified'");
+        paidTransport    = db.QueryFirstOrDefault<int>(
+            "SELECT COUNT(*) FROM transport_requests WHERE status='Paid'");
+
+        recentReceipts = db.Query<dynamic>(@"
+            SELECT wereda_name, mahberat_name AS entity, driver_name, kilogram,
+                   kilogram*price AS total, status,
+                   DATE_FORMAT(registered_at,'%d %b %H:%i') AS ts,
+                   'Mahberat' AS rtype
+            FROM staff_receipts ORDER BY registered_at DESC LIMIT 8").ToList();
+
+        // Chart: daily KG last 14 days
+        var chart = db.Query<dynamic>($@"
+            SELECT DATE_FORMAT(d,'%d/%m') AS lbl, ROUND(SUM(kg),1) AS kg FROM (
+                SELECT receipt_date AS d, kilogram AS kg FROM staff_receipts   WHERE receipt_date BETWEEN @s AND @e
+                UNION ALL
+                SELECT receipt_date, kilogram FROM outsource_receipts          WHERE receipt_date BETWEEN @s AND @e
+                UNION ALL
+                SELECT receipt_date, kilogram FROM private_company_receipts    WHERE receipt_date BETWEEN @s AND @e
+            ) t GROUP BY d ORDER BY d ASC",
+            new { s = DateTime.Today.AddDays(-13).ToString("yyyy-MM-dd"), e = m0 }).ToList();
+        chartDates = chart.Select(r => (string)(r.lbl ?? "")).ToList();
+        chartKg    = chart.Select(r => (decimal)(r.kg  ?? 0m)).ToList();
     }
+    catch (Exception ex) { dbError = ex.Message; }
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title data-i18n-title="dashboard_manager_page_title">Manager Dashboard - Yeka Cleaning</title>
+    <title>Manager Dashboard — Yeka Cleaning</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/dashboard.css" />
+    <style>
+        .kpi-card { border-radius:16px; border:none; transition:transform .18s,box-shadow .18s; }
+        .kpi-card:hover { transform:translateY(-3px); box-shadow:0 8px 28px rgba(0,0,0,.12)!important; }
+        .kpi-icon { width:52px;height:52px;border-radius:14px;display:flex;align-items:center;
+                    justify-content:center;font-size:1.5rem;flex-shrink:0; }
+        .quick-link { border-radius:14px; border:1px solid #e8ecef; transition:all .18s;
+                      text-decoration:none; color:inherit; display:block; }
+        .quick-link:hover { border-color:#0d6efd; background:#f0f5ff; color:#0d6efd; }
+        .chart-box { height:200px;position:relative; }
+        .badge-type-m { background:#0d6efd; }
+        .badge-type-o { background:#6f42c1; }
+        .badge-type-p { background:#0dcaf0;color:#000; }
+        .section-title { font-size:.7rem;font-weight:700;text-transform:uppercase;
+                         letter-spacing:.08em;color:#8a9bb0;margin-bottom:.75rem; }
+    </style>
 </head>
 <body>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
-    <!-- Desktop Navbar -->
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-            <div class="nav-user">
-                <select id="languageSelect" class="form-select form-select-sm border-light text-dark" style="width: auto; display: inline-block; margin-right: 1rem;"></select>
-                <span data-i18n="dashboard_welcome">Welcome,</span> @userName
-                <a class="btn-logout" href="/Login?logout=1" data-i18n="nav_logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
-            </div>
+<nav class="navbar navbar-dark dashboard-navbar fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
+        <div class="nav-user">
+            <span>Welcome, <strong>@userName</strong></span>
+            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
         </div>
-    </nav>
+    </div>
+</nav>
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
+    <div class="container-fluid">
+        <button class="navbar-toggler" onclick="toggleSidebar()"><span class="navbar-toggler-icon"></span></button>
+        <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka</a>
+        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
+    </div>
+</nav>
+<nav id="sidebarMenu" class="sidebar d-lg-none">
+    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
+</nav>
+<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
+    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
+</nav>
 
-    <!-- Mobile Navbar -->
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
-        <div class="container-fluid">
-            <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <a class="navbar-brand" href="/Dashboard/Manager" data-i18n="nav_brand"><i class="bi bi-droplet-fill"></i> Yeka</a>
-            <a class="btn-logout" href="/Login?logout=1" data-i18n="nav_logout"><i class="bi bi-box-arrow-right"></i></a>
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom flex-wrap gap-2">
+        <div>
+            <h1 class="h3 fw-bold mb-0">Manager Dashboard</h1>
+            <small class="text-muted">Real-time overview · @DateTime.Now.ToString("dddd, dd MMMM yyyy")</small>
         </div>
-    </nav>
-
-    <!-- Mobile Sidebar -->
-    <nav id="sidebarMenu" class="sidebar d-lg-none">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
-    <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform: none; padding-top: 56px;">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
-
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top: 56px;">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2"><span data-i18n="dashboard_welcome">Welcome,</span> @userName</h1>
-            <span class="badge bg-primary" data-i18n="manager_role_badge">Manager</span>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/Dashboard/Manager/Reports" class="btn btn-primary btn-sm">
+                <i class="bi bi-file-earmark-bar-graph me-1"></i>Full Report
+            </a>
+            <a href="/Dashboard/Manager/Approvals" class="btn btn-warning btn-sm">
+                <i class="bi bi-check2-square me-1"></i>Approvals
+                @if (pendingApprovals > 0)
+                {
+                    <span class="badge bg-danger ms-1">@pendingApprovals</span>
+                }
+            </a>
         </div>
+    </div>
 
-        <div class="row g-4">
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-geo-alt display-4 text-primary"></i>
-                        <h3 class="mt-2" data-i18n="manager_card_weredas">Weredas</h3>
-                        <p class="text-muted" data-i18n="manager_card_manage_districts">Manage districts</p>
-                        <a href="/Dashboard/Manager/Weredas" class="btn btn-sm btn-outline-primary" data-i18n="manager_card_manage">Manage</a>
+    @if (!string.IsNullOrEmpty(dbError))
+    {
+        <div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>DB Error: @dbError</div>
+    }
+
+    <!-- ════ ROW 1 — KPI CARDS ═══════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+
+        <!-- Total Receipts This Month -->
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <div>
+                        <div class="fs-2 fw-bold lh-1">@(mahberatCount + outsourceCount + privateCount)</div>
+                        <div class="small text-muted">Receipts / Month</div>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-people display-4 text-success"></i>
-                        <h3 class="mt-2" data-i18n="manager_card_mahberats">Mahberats</h3>
-                        <p class="text-muted" data-i18n="manager_card_manage_associations">Manage associations</p>
-                        <a href="/Dashboard/Manager/Mahberats" class="btn btn-sm btn-outline-success" data-i18n="manager_card_manage">Manage</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-truck display-4 text-warning"></i>
-                        <h3 class="mt-2" data-i18n="manager_card_vehicles">Vehicles</h3>
-                        <p class="text-muted" data-i18n="manager_card_manage_fleet">Manage fleet</p>
-                        <a href="/Dashboard/Manager/Vehicles" class="btn btn-sm btn-outline-warning" data-i18n="manager_card_manage">Manage</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-person-badge display-4 text-info"></i>
-                        <h3 class="mt-2" data-i18n="manager_card_drivers">Drivers</h3>
-                        <p class="text-muted" data-i18n="manager_card_manage_drivers">Manage drivers</p>
-                        <a href="/Dashboard/Manager/Drivers" class="btn btn-sm btn-outline-info" data-i18n="manager_card_manage">Manage</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <i class="bi bi-check2-square display-4 text-danger"></i>
-                        <h3 class="mt-2" data-i18n="manager_card_approvals">Approvals</h3>
-                        <p class="text-muted" data-i18n="manager_card_pending_requests">Pending driver requests</p>
-                        <a href="/Dashboard/Manager/Approvals" class="btn btn-sm btn-outline-danger" data-i18n="manager_card_review">Review</a>
-                    </div>
+                <div class="d-flex gap-1 mt-2 flex-wrap">
+                    <span class="badge badge-type-m small">@mahberatCount M</span>
+                    <span class="badge badge-type-o small">@outsourceCount O</span>
+                    <span class="badge badge-type-p small">@privateCount P</span>
                 </div>
             </div>
         </div>
 
-        <div class="mt-4 text-center py-5 bg-white rounded shadow-sm">
-            <i class="bi bi-inbox display-4 text-muted mb-3"></i>
-            <h4 data-i18n="manager_dashboard_driver_requests">Driver Requests</h4>
-            <p class="text-muted" data-i18n="manager_dashboard_review_copy">Review and approve daily work submissions from drivers and staff.</p>
-            <a href="/Dashboard/Manager/Approvals" class="btn btn-primary px-4 mt-2" data-i18n="manager_dashboard_go_to_approvals">Go to Approvals Page</a>
+        <!-- Total KG This Month -->
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon bg-info bg-opacity-10 text-info">
+                        <i class="bi bi-boxes"></i>
+                    </div>
+                    <div>
+                        <div class="fs-2 fw-bold lh-1">@totalKgMonth.ToString("N0")</div>
+                        <div class="small text-muted">Total KG / Month</div>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="bi bi-calendar-day me-1 text-warning"></i>Today: <strong>@totalKgToday.ToString("N1") kg</strong>
+                </div>
+            </div>
         </div>
-    </main>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/translation.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebarMenu').classList.toggle('show');
-            document.getElementById('sidebarBackdrop').classList.toggle('show');
+        <!-- Total Amount This Month -->
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                    <div>
+                        <div class="fs-3 fw-bold lh-1">@totalAmtMonth.ToString("N0")</div>
+                        <div class="small text-muted">ETB / Month</div>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="bi bi-truck me-1 text-primary"></i>Transport paid: <strong>@paidTransport</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Approvals -->
+        <div class="col-6 col-md-3">
+            <div class="card kpi-card shadow-sm p-3 h-100 @(pendingApprovals > 0 ? "border-warning" : "")">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon bg-warning bg-opacity-10 text-warning">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div>
+                        <div class="fs-2 fw-bold lh-1 @(pendingApprovals > 0 ? "text-warning" : "")">@pendingApprovals</div>
+                        <div class="small text-muted">Pending Approvals</div>
+                    </div>
+                </div>
+                <div class="small mt-2">
+                    <a href="/Dashboard/Manager/Approvals" class="text-decoration-none text-warning">
+                        <i class="bi bi-arrow-right-circle me-1"></i>Review now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ ROW 2 — CHART + TRANSPORT ══════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+
+        <!-- Daily KG Chart -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-3 pb-0">
+                    <span class="fw-semibold"><i class="bi bi-bar-chart-line me-1 text-info"></i>Daily KG — Last 14 Days</span>
+                    <a href="/Dashboard/Manager/Reports" class="btn btn-outline-secondary btn-sm py-0">
+                        Full Report <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="chart-box"><canvas id="chartKg"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transport + Staff stats -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 fw-semibold pt-3 pb-0">
+                    <i class="bi bi-grid-3x3-gap me-1 text-primary"></i>Quick Stats
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="bg-light rounded-3 p-2 text-center">
+                                <div class="fs-4 fw-bold text-primary">@activeStaff</div>
+                                <div style="font-size:.72rem" class="text-muted">Active Staff</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded-3 p-2 text-center">
+                                <div class="fs-4 fw-bold text-success">@driverCount</div>
+                                <div style="font-size:.72rem" class="text-muted">Drivers</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded-3 p-2 text-center">
+                                <div class="fs-4 fw-bold text-info">@availableVehicles</div>
+                                <div style="font-size:.72rem" class="text-muted">Vehicles Free</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded-3 p-2 text-center">
+                                <div class="fs-4 fw-bold text-secondary">@totalWeredas</div>
+                                <div style="font-size:.72rem" class="text-muted">Weredas</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded-3 p-2 text-center">
+                                <div class="fs-4 fw-bold" style="color:#6f42c1">@totalMahberats</div>
+                                <div style="font-size:.72rem" class="text-muted">Mahberats</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-light rounded-3 p-2 text-center">
+                                <div class="fs-4 fw-bold text-warning">@pendingTransport</div>
+                                <div style="font-size:.72rem" class="text-muted">Transport Pending</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ ROW 3 — QUICK LINKS ═════════════════════════════════════════ -->
+    <div class="mb-2 section-title">Quick Access</div>
+    <div class="row g-2 mb-4">
+        @{
+            var links = new[] {
+                ("/Dashboard/Manager/Staff",               "bi-people",              "bg-primary bg-opacity-10 text-primary",  "My Staff",           totalStaff + " users"),
+                ("/Dashboard/Manager/Drivers",             "bi-person-badge",        "bg-success bg-opacity-10 text-success",  "Drivers",            driverCount + " active"),
+                ("/Dashboard/Manager/Vehicles",            "bi-truck",               "bg-warning bg-opacity-10 text-warning",  "Vehicles",           availableVehicles + " available"),
+                ("/Dashboard/Manager/Weredas",             "bi-geo-alt",             "bg-info bg-opacity-10 text-info",        "Weredas",            totalWeredas + " active"),
+                ("/Dashboard/Manager/Mahberats",           "bi-building",            "bg-secondary bg-opacity-10 text-secondary","Mahberats",        totalMahberats + " active"),
+                ("/Dashboard/Manager/Approvals",           "bi-check2-square",       "bg-danger bg-opacity-10 text-danger",    "Approvals",          pendingApprovals + " pending"),
+                ("/Dashboard/Manager/Reports",             "bi-file-earmark-bar-graph","bg-primary bg-opacity-10 text-primary","Receipts Report",    "All data"),
+                ("/Dashboard/Manager/OutsourceCompany",    "bi-building-add",        "bg-success bg-opacity-10 text-success",  "Outsource Co.",      "Manage"),
+                ("/Dashboard/Manager/PrivateCleaningCompany","bi-briefcase",         "bg-warning bg-opacity-10 text-warning",  "Private Co.",        "Manage"),
+                ("/Dashboard/Manager/Tasks",               "bi-clipboard-check",     "bg-info bg-opacity-10 text-info",        "Tasks",              "View all"),
+                ("/Dashboard/Manager/Settings",            "bi-gear",                "bg-secondary bg-opacity-10 text-secondary","Settings",         "Configure"),
+            };
         }
-        document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(link) {
-            link.addEventListener('click', function() {
-                if (window.innerWidth < 992) toggleSidebar();
-            });
-        });
-    </script>
+        @foreach (var lnk in links)
+        {
+            <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                <a href="@lnk.Item1" class="quick-link p-3">
+                    <div class="kpi-icon @lnk.Item3 mb-2" style="width:38px;height:38px;font-size:1.1rem;border-radius:10px">
+                        <i class="bi @lnk.Item2"></i>
+                    </div>
+                    <div class="fw-semibold small">@lnk.Item4</div>
+                    <div style="font-size:.72rem" class="text-muted">@lnk.Item5</div>
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- ════ ROW 4 — RECENT RECEIPTS ════════════════════════════════════ -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-3 pb-0">
+            <span class="fw-semibold"><i class="bi bi-clock-history me-1 text-secondary"></i>Recent Receipts</span>
+            <a href="/Dashboard/Manager/Reports" class="btn btn-outline-primary btn-sm py-0">View All</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:.83rem">
+                <thead class="table-light">
+                    <tr>
+                        <th>Wereda</th>
+                        <th>Mahberat</th>
+                        <th>Driver</th>
+                        <th class="text-end">KG</th>
+                        <th class="text-end">ETB</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!recentReceipts.Any())
+                {
+                    <tr><td colspan="7" class="text-center py-4 text-muted">No receipts yet today.</td></tr>
+                }
+                @foreach (dynamic r in recentReceipts)
+                {
+                    string st = Convert.ToString(r.status) ?? "";
+                    string sc = st switch {
+                        "Approved" or "Billed" => "bg-success",
+                        "Paid"                 => "bg-primary",
+                        "Pending"              => "bg-warning text-dark",
+                        "Registered"           => "bg-info text-dark",
+                        "Rejected"             => "bg-danger",
+                        _                      => "bg-secondary"
+                    };
+                    decimal kg  = (decimal)(r.kilogram ?? 0m);
+                    decimal tot = (decimal)(r.total    ?? 0m);
+                    <tr>
+                        <td>@(string.IsNullOrEmpty(Convert.ToString(r.wereda_name)) ? "—" : (object)r.wereda_name)</td>
+                        <td class="fw-semibold">@(string.IsNullOrEmpty(Convert.ToString(r.entity)) ? "—" : (object)r.entity)</td>
+                        <td>@(string.IsNullOrEmpty(Convert.ToString(r.driver_name)) ? "—" : (object)r.driver_name)</td>
+                        <td class="text-end">@kg.ToString("N1")</td>
+                        <td class="text-end text-success fw-semibold">@tot.ToString("N0")</td>
+                        <td><span class="badge @sc">@st</span></td>
+                        <td class="text-muted">@r.ts</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebarMenu').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(l) {
+    l.addEventListener('click', function() { if (window.innerWidth < 992) toggleSidebar(); });
+});
+
+var labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartDates));
+var kgVals = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartKg));
+
+if (labels.length > 0) {
+    new Chart(document.getElementById('chartKg'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'KG',
+                data: kgVals,
+                backgroundColor: '#0d6efd55',
+                borderColor: '#0d6efd',
+                borderWidth: 1.5,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { font: { size: 10 } } },
+                y: { beginAtZero: true, ticks: { font: { size: 10 } } }
+            }
+        }
+    });
+}
+</script>
 </body>
 </html>

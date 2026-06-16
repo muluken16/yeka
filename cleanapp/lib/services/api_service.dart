@@ -10,12 +10,14 @@ class ApiService {
   static const String _serverIp =
       '192.168.137.1'; // PC hotspot IP (device is 192.168.137.104)
   static const String _serverHost = 'localhost';
+  static const String _emulatorHost = '10.0.2.2'; // Android emulator → host PC
   static const int _serverPort = 5000;
 
   static String get _host {
     // Web (Chrome) and Windows desktop use localhost
     if (kIsWeb) return _serverHost;
-    return _serverIp; // Physical Android phone on hotspot
+    // Android emulator uses 10.0.2.2 to reach the host machine
+    return _emulatorHost;
   }
 
   static String get baseUrl => 'http://$_host:$_serverPort/api/mobile';
@@ -236,6 +238,18 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       print('Mark notification as read error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> markAllNotificationsRead(int userId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$transportApiBaseUrl/notifications/read-all/$userId'),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Mark all notifications read error: $e');
       return false;
     }
   }

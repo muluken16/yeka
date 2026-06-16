@@ -242,7 +242,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Driver
                 @"SELECT * FROM messages 
                 WHERE sender_id = @UserId OR recipient_phone IN 
                     (SELECT phone FROM contacts WHERE driver_id = @UserId)
-                ORDER BY sent_at DESC LIMIT 50",
+                ORDER BY sent_at DESC",
                 new { UserId = userId });
         }
     }
