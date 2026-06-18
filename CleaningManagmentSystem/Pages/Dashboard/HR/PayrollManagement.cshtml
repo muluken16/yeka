@@ -1,0 +1,258 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.HR.PayrollManagementModel
+@{
+    Layout = "_HRLayout";
+    ViewData["Title"] = "Payroll Management";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-cash-stack text-success me-2"></i>Payroll Management</h4>
+        <p class="text-muted mb-0">Calculate salaries, allowances, deductions, and generate payroll summaries.</p>
+    </div>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPayrollModal">
+        <i class="bi bi-plus-circle me-1"></i> Process Payroll
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>@Model.ErrorMessage<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3 bg-success-subtle">
+            <div class="fs-4 fw-bold text-success">@Model.Records.Sum(r => r.NetSalary).ToString("N0") ETB</div>
+            <div class="text-muted small">Total Net Payroll</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-4 fw-bold text-primary">@Model.Records.Sum(r => r.BasicSalary).ToString("N0") ETB</div>
+            <div class="text-muted small">Total Basic Salaries</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-4 fw-bold text-warning">@Model.Records.Sum(r => r.Deductions + r.Tax).ToString("N0") ETB</div>
+            <div class="text-muted small">Total Deductions & Tax</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-4 fw-bold text-info">@Model.Records.Count</div>
+            <div class="text-muted small">Payroll Records</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Month</label>
+                <select name="month" class="form-select">
+                    <option value="">All Months</option>
+                    @foreach (var m in new[] {"January","February","March","April","May","June","July","August","September","October","November","December"})
+                    {
+                        <option value="@m" selected="@(Model.MonthFilter == m)">@m</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Year</label>
+                <input type="number" name="year" value="@Model.YearFilter" class="form-control" placeholder="2026">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Employee</label>
+                <select name="empId" class="form-select">
+                    <option value="">All Employees</option>
+                    @foreach (var e in Model.AllEmployees)
+                    {
+                        <option value="@e.Id" selected="@(Model.EmpFilter == e.Id)">@e.FirstName @e.LastName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-outline-primary me-2"><i class="bi bi-search me-1"></i>Filter</button>
+                <a href="/Dashboard/HR/PayrollManagement" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Payroll Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Employee</th>
+                        <th>Period</th>
+                        <th>Basic Salary</th>
+                        <th>Allowances</th>
+                        <th>Overtime</th>
+                        <th>Bonuses</th>
+                        <th>Deductions</th>
+                        <th>Tax</th>
+                        <th class="text-success">Net Salary</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Records.Any())
+                    {
+                        <tr><td colspan="11" class="text-center py-4 text-muted">No payroll records. Click "Process Payroll" to begin.</td></tr>
+                    }
+                    @foreach (var (pr, i) in Model.Records.Select((r, i) => (r, i + 1)))
+                    {
+                        <tr>
+                            <td class="text-muted small">@i</td>
+                            <td>
+                                <div class="fw-semibold">@pr.EmployeeName</div>
+                                <div class="text-muted small">@pr.Department</div>
+                            </td>
+                            <td class="small"><span class="badge bg-light text-dark border">@pr.Month @pr.Year</span></td>
+                            <td class="small">@pr.BasicSalary.ToString("N0")</td>
+                            <td class="small text-success">+@pr.Allowances.ToString("N0")</td>
+                            <td class="small text-info">+@pr.OvertimePay.ToString("N0")</td>
+                            <td class="small text-warning">+@pr.Bonuses.ToString("N0")</td>
+                            <td class="small text-danger">-@pr.Deductions.ToString("N0")</td>
+                            <td class="small text-danger">-@pr.Tax.ToString("N0")</td>
+                            <td class="fw-bold text-success">@pr.NetSalary.ToString("N0") <small class="text-muted">ETB</small></td>
+                            <td>
+                                @{
+                                    var sc = pr.Status switch { "Paid" => "bg-success-subtle text-success border border-success", _ => "bg-warning-subtle text-warning border border-warning" };
+                                }
+                                <span class="badge @sc">@pr.Status</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Records.Any())
+                {
+                    <tfoot class="table-secondary fw-bold">
+                        <tr>
+                            <td colspan="3" class="text-end">TOTALS:</td>
+                            <td>@Model.Records.Sum(r => r.BasicSalary).ToString("N0")</td>
+                            <td class="text-success">+@Model.Records.Sum(r => r.Allowances).ToString("N0")</td>
+                            <td class="text-info">+@Model.Records.Sum(r => r.OvertimePay).ToString("N0")</td>
+                            <td class="text-warning">+@Model.Records.Sum(r => r.Bonuses).ToString("N0")</td>
+                            <td class="text-danger">-@Model.Records.Sum(r => r.Deductions).ToString("N0")</td>
+                            <td class="text-danger">-@Model.Records.Sum(r => r.Tax).ToString("N0")</td>
+                            <td class="text-success fs-6">@Model.Records.Sum(r => r.NetSalary).ToString("N0") ETB</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Payroll Modal -->
+<div class="modal fade" id="addPayrollModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-calculator me-2"></i>Process Payroll</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="Add">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Employee *</label>
+                            <select name="EmployeeId" id="pEmpSel" class="form-select" required onchange="loadSalary(this)">
+                                <option value="">Select Employee</option>
+                                @foreach (var e in Model.AllEmployees)
+                                {
+                                    <option value="@e.Id" data-salary="@e.Salary">@e.FirstName @e.LastName — @e.Department</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Month *</label>
+                            <select name="Month" class="form-select" required>
+                                @foreach (var m in new[] {"January","February","March","April","May","June","July","August","September","October","November","December"})
+                                {
+                                    <option value="@m" selected="@(m == DateTime.Now.ToString("MMMM"))">@m</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Year *</label>
+                            <input type="number" name="Year" class="form-control" value="@DateTime.Now.Year" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Basic Salary (ETB)</label>
+                            <input type="number" name="BasicSalary" id="pBasic" class="form-control" step="0.01" value="0" onchange="calcNet()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Allowances (ETB)</label>
+                            <input type="number" name="Allowances" id="pAllow" class="form-control" step="0.01" value="0" onchange="calcNet()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Overtime Pay (ETB)</label>
+                            <input type="number" name="OvertimePay" id="pOvt" class="form-control" step="0.01" value="0" onchange="calcNet()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Bonuses (ETB)</label>
+                            <input type="number" name="Bonuses" id="pBonus" class="form-control" step="0.01" value="0" onchange="calcNet()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Deductions (ETB)</label>
+                            <input type="number" name="Deductions" id="pDeduct" class="form-control" step="0.01" value="0" onchange="calcNet()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Income Tax (ETB)</label>
+                            <input type="number" name="Tax" id="pTax" class="form-control" step="0.01" value="0" onchange="calcNet()">
+                        </div>
+                        <div class="col-12">
+                            <div class="alert alert-success d-flex align-items-center justify-content-between mb-0">
+                                <div><i class="bi bi-calculator me-2"></i><strong>Net Salary:</strong> Basic + Allowances + Overtime + Bonuses − Deductions − Tax</div>
+                                <div class="fs-5 fw-bold" id="netDisplay">0 ETB</div>
+                            </div>
+                            <input type="hidden" name="NetSalary" id="pNet" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-save me-1"></i>Save Payroll</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function loadSalary(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    var sal = parseFloat(opt.dataset.salary) || 0;
+    document.getElementById('pBasic').value = sal.toFixed(2);
+    calcNet();
+}
+function calcNet() {
+    var b  = parseFloat(document.getElementById('pBasic').value)  || 0;
+    var a  = parseFloat(document.getElementById('pAllow').value)  || 0;
+    var o  = parseFloat(document.getElementById('pOvt').value)    || 0;
+    var bn = parseFloat(document.getElementById('pBonus').value)  || 0;
+    var d  = parseFloat(document.getElementById('pDeduct').value) || 0;
+    var t  = parseFloat(document.getElementById('pTax').value)    || 0;
+    var net = b + a + o + bn - d - t;
+    document.getElementById('netDisplay').textContent = net.toLocaleString('en-ET', {minimumFractionDigits:2}) + ' ETB';
+    document.getElementById('pNet').value = net.toFixed(2);
+}
+</script>
+}

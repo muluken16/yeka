@@ -18,14 +18,15 @@
         </div>
     </div>
     <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer",true)?"active":"")" href="/Dashboard/DispatchOfficer" title="Home"><i class="bi bi-house flex-shrink-0"></i><span class="nav-label ms-2">Home</span></a></li>
+        <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer",true)?"active":"")" href="/Dashboard/DispatchOfficer/Index" title="Home"><i class="bi bi-house flex-shrink-0"></i><span class="nav-label ms-2">Home</span></a></li>
         <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/MeetingRoom")?"active":"")" href="/Dashboard/DispatchOfficer/MeetingRoom" title="Meeting Room"><i class="bi bi-calendar-event flex-shrink-0"></i><span class="nav-label ms-2">Meeting Room</span></a></li>
         <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/AllMahberatReport")?"active":"")" href="/Dashboard/DispatchOfficer/AllMahberatReport" title="All Mahberat Report"><i class="bi bi-file-earmark-text flex-shrink-0"></i><span class="nav-label ms-2">All Mahberat Report</span></a></li>
         <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/TransportRequests")?"active":"")" href="/Dashboard/DispatchOfficer/TransportRequests" title="Transport Requests"><i class="bi bi-truck flex-shrink-0"></i><span class="nav-label ms-2">Transport Requests</span></a></li>
-        <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/Requests")?"active":"")" href="/Dashboard/DispatchOfficer/Requests" title="WMRAS Requests"><i class="bi bi-ui-checks-grid flex-shrink-0"></i><span class="nav-label ms-2">WMRAS Requests</span></a></li>
+        <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/Vehicles")?"active":"")" href="/Dashboard/DispatchOfficer/Vehicles" title="Vehicles"><i class="bi bi-truck-front flex-shrink-0"></i><span class="nav-label ms-2">Vehicles</span></a></li>
         <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/CreateDispatch")?"active":"")" href="/Dashboard/DispatchOfficer/CreateDispatch" title="Create Dispatch"><i class="bi bi-send flex-shrink-0"></i><span class="nav-label ms-2">Create Dispatch</span></a></li>
         <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/Gallery")?"active":"")" href="/Dashboard/DispatchOfficer/Gallery" title="Gallery"><i class="bi bi-images flex-shrink-0"></i><span class="nav-label ms-2">Gallery</span></a></li>
         <li class="nav-item"><a class="nav-link @(IsActive("/Dashboard/DispatchOfficer/Contact")?"active":"")" href="/Dashboard/DispatchOfficer/Contact" title="Contact"><i class="bi bi-envelope flex-shrink-0"></i><span class="nav-label ms-2">Contact</span></a></li>
+        <li class="nav-item border-top mt-2 pt-2"><a class="nav-link @(IsActive("/Dashboard/Profile")?"active":"")" href="/Dashboard/Profile" title="My Profile"><i class="bi bi-person-circle flex-shrink-0"></i><span class="nav-label ms-2">My Profile</span></a></li>
         <li class="nav-item mt-3"><a class="nav-link text-warning fw-semibold" href="/Login?logout=1" title="Logout"><i class="bi bi-box-arrow-left flex-shrink-0"></i><span class="nav-label ms-2">Logout</span></a></li>
     </ul>
 </div>

@@ -1,0 +1,378 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer.IndexModel
+@{
+    Layout = null;
+    var userName = HttpContext.Session.GetString("UserName") ?? "Dispatch Officer";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Dispatch Officer Dashboard — Yeka Cleaning</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet" href="~/css/dashboard.css"/>
+    <style>
+        body { background:#f4f6fb !important; }
+        .hero-bar {
+            background: linear-gradient(135deg,#1d4ed8 0%,#0891b2 100%);
+            border-radius:0 0 28px 28px;
+            padding:28px 32px 24px;
+            margin-bottom:28px;
+            color:#fff;
+        }
+        .stat-card {
+            background:#fff; border-radius:16px;
+            box-shadow:0 1px 4px rgba(0,0,0,.07);
+            padding:20px 18px; height:100%;
+            border-left:4px solid var(--accent,#1d4ed8);
+            transition:transform .15s;
+        }
+        .stat-card:hover { transform:translateY(-2px); }
+        .stat-card .val {
+            font-size:2.2rem; font-weight:900;
+            color:var(--accent,#1d4ed8); line-height:1;
+        }
+        .stat-card .lbl {
+            font-size:.75rem; color:#6b7280;
+            text-transform:uppercase; letter-spacing:.5px; margin-top:4px;
+        }
+        .stat-card .ico {
+            width:44px; height:44px; border-radius:12px;
+            background:var(--ico-bg,#dbeafe);
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.3rem; color:var(--accent,#1d4ed8); flex-shrink:0;
+        }
+        .section-card {
+            background:#fff; border-radius:16px;
+            box-shadow:0 1px 4px rgba(0,0,0,.07);
+            margin-bottom:24px; overflow:hidden;
+        }
+        .section-card .card-head {
+            padding:14px 20px; font-weight:700; font-size:.9rem;
+            border-bottom:1px solid #f1f5f9;
+            display:flex; align-items:center; gap:8px;
+        }
+        .section-card table { margin:0; }
+        .section-card td, .section-card th { font-size:.8rem; padding:10px 20px !important; }
+        .status-pill {
+            padding:3px 10px; border-radius:20px; font-size:.68rem;
+            font-weight:700; white-space:nowrap; display:inline-block;
+        }
+        .pill-pending  { background:#fef3c7; color:#92400e; }
+        .pill-active   { background:#dbeafe; color:#1e40af; }
+        .pill-done     { background:#d1fae5; color:#065f46; }
+        .pill-rejected { background:#fee2e2; color:#7f1d1d; }
+        .quick-btn {
+            display:flex; align-items:center; gap:10px;
+            padding:14px 18px; background:#fff; border-radius:14px;
+            border:1.5px solid #e2e8f0; text-decoration:none; color:#1e293b;
+            font-weight:600; font-size:.85rem; transition:all .15s;
+            box-shadow:0 1px 3px rgba(0,0,0,.05);
+        }
+        .quick-btn:hover { border-color:#1d4ed8; color:#1d4ed8; background:#eff6ff; }
+        .quick-btn .qico {
+            width:36px; height:36px; border-radius:10px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.1rem; flex-shrink:0;
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-none d-lg-flex">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/Dashboard/DispatchOfficer"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
+        <div class="nav-user">
+            <span>Welcome, @userName</span>
+            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+    </div>
+</nav>
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
+    <div class="container-fluid">
+        <button class="navbar-toggler" onclick="toggleSidebar()"><span class="navbar-toggler-icon"></span></button>
+        <a class="navbar-brand" href="/Dashboard/DispatchOfficer"><i class="bi bi-droplet-fill"></i> Yeka</a>
+        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
+    </div>
+</nav>
+
+<!-- Mobile sidebar -->
+<nav id="sidebarMenu" class="sidebar d-lg-none">
+    @await Html.PartialAsync("~/Pages/Dashboard/DispatchOfficer/_Sidebar.cshtml")
+</nav>
+<!-- Desktop sidebar -->
+<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
+    @await Html.PartialAsync("~/Pages/Dashboard/DispatchOfficer/_Sidebar.cshtml")
+</nav>
+
+<!-- Main -->
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4" style="margin-top:56px">
+
+    <!-- Hero -->
+    <div class="hero-bar">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <div style="width:40px;height:40px;background:rgba(255,255,255,.15);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem">
+                        <i class="bi bi-alt-route"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0">Dispatch Officer Dashboard</h4>
+                        <div style="font-size:.8rem;opacity:.75">@DateTime.Now.ToString("dddd, MMMM dd yyyy")</div>
+                    </div>
+                </div>
+                <div style="font-size:.85rem;opacity:.8">Welcome back, <strong>@userName</strong> — here's today's overview.</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="/Dashboard/DispatchOfficer/TransportRequests" class="btn btn-light btn-sm rounded-pill fw-semibold">
+                    <i class="bi bi-truck me-1"></i>Transport
+                </a>
+                <a href="/Dashboard/DispatchOfficer/CreateDispatch" class="btn btn-warning btn-sm rounded-pill fw-semibold text-dark">
+                    <i class="bi bi-send me-1"></i>New Dispatch
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="--accent:#f59e0b;--ico-bg:#fef3c7">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="ico"><i class="bi bi-hourglass-split"></i></div>
+                </div>
+                <div class="val">@Model.PendingTransport</div>
+                <div class="lbl">Pending Transport</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="--accent:#1d4ed8;--ico-bg:#dbeafe">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="ico"><i class="bi bi-truck"></i></div>
+                </div>
+                <div class="val">@Model.TotalTransport</div>
+                <div class="lbl">Total Transport</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="--accent:#8b5cf6;--ico-bg:#ede9fe">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="ico"><i class="bi bi-send"></i></div>
+                </div>
+                <div class="val">@Model.ActiveDispatches</div>
+                <div class="lbl">Active Dispatches</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="--accent:#059669;--ico-bg:#d1fae5">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="ico"><i class="bi bi-check2-circle"></i></div>
+                </div>
+                <div class="val">@Model.CompletedToday</div>
+                <div class="lbl">Completed Today</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="--accent:#0891b2;--ico-bg:#cffafe">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="ico"><i class="bi bi-person-badge"></i></div>
+                </div>
+                <div class="val">@Model.TotalDrivers</div>
+                <div class="lbl">Active Drivers</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="--accent:#ec4899;--ico-bg:#fce7f3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="ico"><i class="bi bi-calendar-event"></i></div>
+                </div>
+                <div class="val">@Model.MeetingRoomsToday</div>
+                <div class="lbl">Meetings Today</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div style="font-weight:700;font-size:.88rem;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+                <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Quick Actions
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/Dashboard/DispatchOfficer/TransportRequests" class="quick-btn">
+                <div class="qico" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-truck"></i></div>
+                Transport Requests
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/Dashboard/DispatchOfficer/CreateDispatch" class="quick-btn">
+                <div class="qico" style="background:#fef3c7;color:#d97706"><i class="bi bi-send"></i></div>
+                Create Dispatch
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/Dashboard/DispatchOfficer/MeetingRoom" class="quick-btn">
+                <div class="qico" style="background:#fce7f3;color:#db2777"><i class="bi bi-calendar-event"></i></div>
+                Meeting Room
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/Dashboard/DispatchOfficer/AllMahberatReport" class="quick-btn">
+                <div class="qico" style="background:#d1fae5;color:#059669"><i class="bi bi-file-earmark-bar-graph"></i></div>
+                Mahberat Report
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Recent Transport Requests -->
+        <div class="col-lg-7">
+            <div class="section-card">
+                <div class="card-head">
+                    <i class="bi bi-truck text-primary"></i> Recent Transport Requests
+                    <a href="/Dashboard/DispatchOfficer/TransportRequests" class="btn btn-sm btn-outline-primary rounded-pill ms-auto" style="font-size:.72rem">View All</a>
+                </div>
+                @if (Model.RecentTransport.Any())
+                {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Request #</th>
+                                <th>From → To</th>
+                                <th>Requestor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.RecentTransport)
+                            {
+                                string st = (string)(r.status ?? "");
+                                string pillCls = st switch {
+                                    "PendingDispatcher" => "pill-pending",
+                                    "DriverAssigned" or "DriverAccepted" or "PickedUp" => "pill-active",
+                                    "Paid" or "StaffApproved" => "pill-done",
+                                    var s when s.Contains("Rejected") => "pill-rejected",
+                                    _ => "pill-active"
+                                };
+                                string stLabel = st switch {
+                                    "PendingDispatcher" => "Pending",
+                                    "DriverAssigned"    => "Assigned",
+                                    "DriverAccepted"    => "Accepted",
+                                    "PickedUp"          => "Picked Up",
+                                    "MahberatApprovedPickup" => "Pickup OK",
+                                    "ReceiptSubmitted"  => "Receipt",
+                                    "MahberatVerified"  => "Verified",
+                                    "StaffApproved"     => "Approved",
+                                    "Paid"              => "Paid ✓",
+                                    _ => st
+                                };
+                                <tr>
+                                    <td><span style="font-family:monospace;font-weight:700;color:#1d4ed8">@r.request_number</span></td>
+                                    <td style="max-width:160px">
+                                        <div style="font-size:.76rem;font-weight:600">@(((string?)r.pickup_location ?? "")?.Length > 18 ? ((string)r.pickup_location)[..18] + "…" : (string?)r.pickup_location ?? "")</div>
+                                        <div style="font-size:.7rem;color:#94a3b8">→ @(((string?)r.destination ?? "")?.Length > 18 ? ((string)r.destination)[..18] + "…" : (string?)r.destination ?? "")</div>
+                                    </td>
+                                    <td style="font-size:.76rem">@r.mahberat_user_name</td>
+                                    <td><span class="status-pill @pillCls">@stLabel</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-2 opacity-25 d-block mb-2"></i>
+                        No transport requests yet
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Recent Dispatches -->
+        <div class="col-lg-5">
+            <div class="section-card">
+                <div class="card-head">
+                    <i class="bi bi-send text-warning"></i> Recent Dispatches
+                    <a href="/Dashboard/DispatchOfficer/CreateDispatch" class="btn btn-sm btn-outline-warning rounded-pill ms-auto" style="font-size:.72rem">View All</a>
+                </div>
+                @if (Model.RecentDispatches.Any())
+                {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Dispatch #</th>
+                                <th>Driver</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in Model.RecentDispatches)
+                            {
+                                string ds = (string)(d.status ?? "");
+                                string dCls = ds switch {
+                                    "Completed" => "pill-done",
+                                    "Pending"   => "pill-pending",
+                                    _           => "pill-active"
+                                };
+                                <tr>
+                                    <td>
+                                        <div style="font-family:monospace;font-weight:700;font-size:.78rem;color:#7c3aed">@d.dispatch_number</div>
+                                        <div style="font-size:.7rem;color:#94a3b8">@(((string?)d.destination ?? "")?.Length > 20 ? ((string)d.destination)[..20] + "…" : (string?)d.destination ?? "")</div>
+                                    </td>
+                                    <td style="font-size:.78rem">@(d.driver_name ?? "—")</td>
+                                    <td><span class="status-pill @dCls">@ds</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-2 opacity-25 d-block mb-2"></i>
+                        No dispatches yet
+                    </div>
+                }
+            </div>
+
+            <!-- Pending alert -->
+            @if (Model.PendingTransport > 0)
+            {
+            <div class="alert border-0 rounded-3" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-left:4px solid #f59e0b !important">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                    <div>
+                        <div class="fw-bold" style="font-size:.85rem">@Model.PendingTransport request(s) waiting</div>
+                        <div style="font-size:.75rem;color:#78716c">Assign a driver to proceed</div>
+                    </div>
+                    <a href="/Dashboard/DispatchOfficer/TransportRequests" class="btn btn-sm btn-warning ms-auto rounded-pill fw-semibold">
+                        Assign Now
+                    </a>
+                </div>
+            </div>
+            }
+        </div>
+
+    </div>
+</main>
+
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebarMenu').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+</script>
+</body>
+</html>

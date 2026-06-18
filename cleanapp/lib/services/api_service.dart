@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
@@ -6,18 +7,36 @@ import '../models/submission_model.dart';
 import '../models/notification_model.dart';
 
 class ApiService {
-  // ── Change this IP to your PC's hotspot/WiFi IP ──────────────
-  static const String _serverIp =
-      '192.168.137.1'; // PC hotspot IP (device is 192.168.137.104)
   static const String _serverHost = 'localhost';
   static const String _emulatorHost = '10.0.2.2'; // Android emulator → host PC
+
+  // ── YOUR PC's LAN IP ──────────────────────────────────────────────────────
+  // Run `ipconfig` on your PC and set this to the IPv4 address shown under
+  // your active WiFi adapter (e.g. 192.168.1.105).
+  // The phone and PC must be on the same WiFi network.
+  static const String _lanHost = '10.0.26.234';
+  // ─────────────────────────────────────────────────────────────────────────
+
   static const int _serverPort = 5000;
 
   static String get _host {
-    // Web (Chrome) and Windows desktop use localhost
-    if (kIsWeb) return _serverHost;
-    // Android emulator uses 10.0.2.2 to reach the host machine
-    return _emulatorHost;
+    if (kIsWeb) return _serverHost;           // browser → localhost
+    if (!Platform.isAndroid) return _serverHost; // Windows/macOS desktop
+    // Android: emulator uses 10.0.2.2; real device uses LAN IP
+    // We detect emulator by checking for the special host fingerprint.
+    return _isEmulator ? _emulatorHost : _lanHost;
+  }
+
+  /// Simple emulator detection: the emulator's hostname contains 'generic'
+  /// or the model contains 'sdk'. Falls back to LAN IP if uncertain.
+  static bool get _isEmulator {
+    // This is a best-effort check. If unsure, set [_lanHost] and this will
+    // always return false for physical devices.
+    try {
+      return Platform.environment['HOME']?.contains('buildbot') == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   static String get baseUrl => 'http://$_host:$_serverPort/api/mobile';
@@ -31,14 +50,11 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
-
       if (response.statusCode == 200) {
         return UserModel.fromJson(jsonDecode(response.body));
       }
-      print('Login failed: ${response.statusCode} - ${response.body}');
       return null;
-    } catch (e) {
-      print('Login error: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -50,8 +66,7 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
       return [];
-    } catch (e) {
-      print('Get Weredas error: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -63,8 +78,7 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
       return [];
-    } catch (e) {
-      print('Get Mahberats error: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -76,8 +90,7 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
       return [];
-    } catch (e) {
-      print('Get Companies error: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -89,8 +102,7 @@ class ApiService {
         return List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
       return [];
-    } catch (e) {
-      print('Get Vehicles error: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -103,8 +115,7 @@ class ApiService {
         body: jsonEncode(submission.toJson()),
       );
       return response.statusCode == 200 || response.statusCode == 201;
-    } catch (e) {
-      print('Submit error (saving offline): $e');
+    } catch (_) {
       return false;
     }
   }
@@ -117,10 +128,8 @@ class ApiService {
       );
 
       if (imageFile is String) {
-        // File path
         request.files.add(await http.MultipartFile.fromPath('file', imageFile));
       } else {
-        // XFile - read bytes
         final bytes = await imageFile.readAsBytes();
         final fileName = imageFile.name ?? 'image.jpg';
         request.files.add(
@@ -133,14 +142,11 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Return full URL with base
         final serverBase = baseUrl.replaceAll('/api/mobile', '');
         return '$serverBase${data['url']}';
       }
-      print('Upload failed: ${response.statusCode} - ${response.body}');
       return null;
-    } catch (e) {
-      print('Upload image error: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -160,8 +166,7 @@ class ApiService {
         }).toList();
       }
       return [];
-    } catch (e) {
-      print('Get history error: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -172,7 +177,6 @@ class ApiService {
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
         return data.map((json) {
-          // Add dummy fields required by model if not returned
           json['userId'] = 0;
           json['role'] = '';
           json['weredaId'] = 0;
@@ -182,8 +186,7 @@ class ApiService {
         }).toList();
       }
       return [];
-    } catch (e) {
-      print('Get pending error: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -200,8 +203,7 @@ class ApiService {
         body: jsonEncode({'status': status, 'receiptType': receiptType}),
       );
       return response.statusCode == 200;
-    } catch (e) {
-      print('Update status error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -212,20 +214,15 @@ class ApiService {
 
   Future<List<NotificationModel>> getNotifications(int userId) async {
     try {
-      final url = '$transportApiBaseUrl/notifications/$userId';
-      print('[ApiService] 🔍 GET $url');
-      final response = await http.get(Uri.parse(url));
-      print('[ApiService] Status: ${response.statusCode}');
+      final response = await http.get(
+        Uri.parse('$transportApiBaseUrl/notifications/$userId'),
+      );
       if (response.statusCode == 200) {
         List<dynamic> data = jsonDecode(response.body);
-        print('[ApiService] ✅ Received ${data.length} notifications');
         return data.map((json) => NotificationModel.fromJson(json)).toList();
-      } else {
-        print('[ApiService] ❌ Error ${response.statusCode}: ${response.body}');
-        return [];
       }
-    } catch (e) {
-      print('[ApiService] ❌ Get notifications error: $e');
+      return [];
+    } catch (_) {
       return [];
     }
   }
@@ -233,11 +230,12 @@ class ApiService {
   Future<bool> markNotificationAsRead(int notificationId) async {
     try {
       final response = await http.post(
-        Uri.parse('$transportApiBaseUrl/notifications/$notificationId/read'),
+        Uri.parse(
+          '$transportApiBaseUrl/notifications/$notificationId/read',
+        ),
       );
       return response.statusCode == 200;
-    } catch (e) {
-      print('Mark notification as read error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -248,8 +246,7 @@ class ApiService {
         Uri.parse('$transportApiBaseUrl/notifications/read-all/$userId'),
       );
       return response.statusCode == 200;
-    } catch (e) {
-      print('Mark all notifications read error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -266,7 +263,9 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$transportApiBaseUrl/requests/$requestId/driver-action'),
+        Uri.parse(
+          '$transportApiBaseUrl/requests/$requestId/driver-action',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'Accept',
@@ -276,8 +275,7 @@ class ApiService {
         }),
       );
       return response.statusCode == 200;
-    } catch (e) {
-      print('Accept transport request error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -290,7 +288,9 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$transportApiBaseUrl/requests/$requestId/driver-action'),
+        Uri.parse(
+          '$transportApiBaseUrl/requests/$requestId/driver-action',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'Reject',
@@ -300,8 +300,7 @@ class ApiService {
         }),
       );
       return response.statusCode == 200;
-    } catch (e) {
-      print('Reject transport request error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -321,8 +320,7 @@ class ApiService {
         return jsonDecode(response.body);
       }
       return {'data': [], 'startDate': '', 'endDate': ''};
-    } catch (e) {
-      print('Get report data error: $e');
+    } catch (_) {
       return {'data': [], 'startDate': '', 'endDate': ''};
     }
   }
@@ -332,14 +330,15 @@ class ApiService {
   ) async {
     try {
       final response = await http.get(
-        Uri.parse('$transportApiBaseUrl/requests?userId=$userId&role=driver'),
+        Uri.parse(
+          '$transportApiBaseUrl/requests?userId=$userId&role=driver',
+        ),
       );
       if (response.statusCode == 200) {
         return List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
       return [];
-    } catch (e) {
-      print('Get driver transport requests error: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -361,8 +360,7 @@ class ApiService {
         }),
       );
       return response.statusCode == 200;
-    } catch (e) {
-      print('Mark transport picked up error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -379,7 +377,9 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$transportApiBaseUrl/requests/$requestId/submit-receipt'),
+        Uri.parse(
+          '$transportApiBaseUrl/requests/$requestId/submit-receipt',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'driverId': driverId,
@@ -392,8 +392,7 @@ class ApiService {
         }),
       );
       return response.statusCode == 200;
-    } catch (e) {
-      print('Submit transport receipt error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -403,11 +402,11 @@ class ApiService {
   Future<Map<String, dynamic>?> getPrivateCompanyInfo(int userId) async {
     try {
       final r = await http.get(Uri.parse('$baseUrl/private-company/$userId'));
-      if (r.statusCode == 200)
+      if (r.statusCode == 200) {
         return jsonDecode(r.body) as Map<String, dynamic>;
+      }
       return null;
-    } catch (e) {
-      print('Get private company info error: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -440,8 +439,7 @@ class ApiService {
         }),
       );
       return r.statusCode == 200;
-    } catch (e) {
-      print('Submit private receipt error: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -449,11 +447,11 @@ class ApiService {
   Future<List<Map<String, dynamic>>> getPrivateReceipts(int userId) async {
     try {
       final r = await http.get(Uri.parse('$baseUrl/private-receipts/$userId'));
-      if (r.statusCode == 200)
+      if (r.statusCode == 200) {
         return List<Map<String, dynamic>>.from(jsonDecode(r.body));
+      }
       return [];
-    } catch (e) {
-      print('Get private receipts error: $e');
+    } catch (_) {
       return [];
     }
   }

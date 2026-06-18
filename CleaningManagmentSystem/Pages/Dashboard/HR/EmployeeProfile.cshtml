@@ -1,0 +1,429 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.HR.EmployeeProfileModel
+@{
+    Layout = "_HRLayout";
+    ViewData["Title"] = "Employee Profile";
+    var e = Model.Employee;
+    var hasPhoto = !string.IsNullOrEmpty(e.PhotoUrl);
+    var initials = (e.FirstName.Length > 0 ? e.FirstName[0].ToString() : "")
+                 + (e.LastName.Length  > 0 ? e.LastName[0].ToString()  : "");
+    var yearsService = (DateTime.Today - e.HireDate).Days / 365;
+}
+@section Styles {
+<style>
+@@media print {
+  .no-print { display:none!important; }
+  .card { box-shadow:none!important; border:1px solid #dee2e6!important; }
+  body { font-size:11pt; }
+  .profile-hero { background:#1a56db!important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+.profile-hero { background:linear-gradient(135deg,#1a56db 0%,#0b5ed7 60%,#0d6efd 100%); }
+.info-row { display:flex; align-items:flex-start; padding:.5rem 0; border-bottom:1px solid #f0f2f5; }
+.info-row:last-child { border-bottom:none; }
+.info-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#6c757d; min-width:130px; flex-shrink:0; padding-top:.15rem; }
+.info-value { font-size:.88rem; color:#212529; font-weight:500; }
+.section-head { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#0d6efd; border-bottom:2px solid #e7f0ff; padding-bottom:.4rem; margin-bottom:.8rem; margin-top:1.2rem; }
+.section-head:first-child { margin-top:0; }
+.stat-pill { background:#f0f5ff; border-radius:12px; padding:.5rem 1rem; text-align:center; }
+.badge-status-active   { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
+.badge-status-inactive { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+.badge-status-leave    { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+.photo-wrap { width:110px; height:110px; border-radius:50%; border:4px solid rgba(255,255,255,.3); overflow:hidden; flex-shrink:0; }
+.photo-initials { width:110px; height:110px; border-radius:50%; border:4px solid rgba(255,255,255,.3); display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.15); font-size:2.4rem; font-weight:700; color:#fff; flex-shrink:0; }
+</style>
+}
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center justify-content-between mb-4 no-print">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <a href="/Dashboard/HR/Employees" class="text-muted text-decoration-none me-2">
+                <i class="bi bi-arrow-left"></i>
+            </a>Employee Profile
+        </h4>
+        <p class="text-muted mb-0 small">Full employment record and history for @e.FullName</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-printer me-1"></i> Print
+        </button>
+        <a href="/Dashboard/HR/Employees" class="btn btn-outline-primary rounded-pill px-3">
+            <i class="bi bi-pencil me-1"></i> Edit
+        </a>
+    </div>
+</div>
+
+<!-- ── Hero Card ────────────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+    <div class="profile-hero p-4 text-white">
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+            @if (hasPhoto) {
+                <div class="photo-wrap">
+                    <img src="@e.PhotoUrl" alt="@e.FullName" style="width:100%;height:100%;object-fit:cover;">
+                </div>
+            } else {
+                <div class="photo-initials">@initials</div>
+            }
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <h3 class="fw-bold mb-0">@e.FirstName @(string.IsNullOrEmpty(e.MiddleName) ? "" : e.MiddleName + " ")@e.LastName</h3>
+                    @{ var stCls = e.EmploymentStatus == "Active" ? "badge-status-active"
+                                 : e.EmploymentStatus == "Inactive" ? "badge-status-inactive"
+                                 : "badge-status-leave"; }
+                    <span class="badge @stCls px-3 py-1 rounded-pill fw-semibold" style="font-size:.78rem">@e.EmploymentStatus</span>
+                </div>
+                <p class="mb-2 opacity-90">@e.Position &nbsp;·&nbsp; @e.Department</p>
+                <div class="d-flex flex-wrap gap-3" style="font-size:.82rem;opacity:.85">
+                    <span><i class="bi bi-hash me-1"></i>@e.EmployeeCode</span>
+                    @if (!string.IsNullOrEmpty(e.JobGrade)) {
+                        <span><i class="bi bi-award me-1"></i>Grade: @e.JobGrade</span>
+                    }
+                    <span><i class="bi bi-briefcase me-1"></i>@e.EmploymentType</span>
+                    <span><i class="bi bi-calendar-event me-1"></i>Hired @e.HireDate.ToString("MMM dd, yyyy")</span>
+                    <span><i class="bi bi-clock-history me-1"></i>@yearsService yr@(yearsService != 1 ? "s" : "") of service</span>
+                    @if (!string.IsNullOrEmpty(e.WorkLocation)) {
+                        <span><i class="bi bi-geo-alt me-1"></i>@e.WorkLocation</span>
+                    }
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0 no-print">
+                @if (!string.IsNullOrEmpty(e.EmailAddress)) {
+                    <a href="mailto:@e.EmailAddress" class="btn btn-light btn-sm rounded-circle" title="Email @e.EmailAddress" style="width:36px;height:36px;padding:0;line-height:36px;text-align:center;"><i class="bi bi-envelope"></i></a>
+                }
+                @if (!string.IsNullOrEmpty(e.PhoneNumber)) {
+                    <a href="tel:@e.PhoneNumber" class="btn btn-light btn-sm rounded-circle" title="Call @e.PhoneNumber" style="width:36px;height:36px;padding:0;line-height:36px;text-align:center;"><i class="bi bi-telephone"></i></a>
+                }
+            </div>
+        </div>
+    </div>
+    <!-- Quick stats bar -->
+    <div class="card-body bg-white px-4 py-3">
+        <div class="row g-3 text-center">
+            <div class="col-6 col-md-3">
+                <div class="stat-pill">
+                    <div class="fw-bold text-primary fs-5">@Model.RecentAttendance.Count(a => a.AttendanceStatus == "Present")</div>
+                    <div class="text-muted" style="font-size:.75rem">Present (last 10)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-pill">
+                    <div class="fw-bold text-warning fs-5">@Model.Leaves.Count(l => l.ApprovalStatus == "Pending")</div>
+                    <div class="text-muted" style="font-size:.75rem">Pending Leaves</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-pill">
+                    <div class="fw-bold text-success fs-5">@Model.Payrolls.Count(p => p.Status == "Paid")</div>
+                    <div class="text-muted" style="font-size:.75rem">Payrolls Paid</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-pill">
+                    <div class="fw-bold text-info fs-5">@(Model.PerformanceReviews.Any() ? Model.PerformanceReviews.First().FinalRating + "/5" : "—")</div>
+                    <div class="text-muted" style="font-size:.75rem">Latest Rating</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Main Content ──────────────────────────────────────────────────────── -->
+<div class="row g-4">
+
+    <!-- LEFT COLUMN: all detail sections -->
+    <div class="col-lg-4">
+
+        <!-- Personal Details -->
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-4">
+                <div class="section-head"><i class="bi bi-person-vcard me-1"></i>Personal Details</div>
+                <div class="info-row"><span class="info-label">Full Name</span><span class="info-value">@e.FirstName @(e.MiddleName) @e.LastName</span></div>
+                <div class="info-row"><span class="info-label">Gender</span><span class="info-value">@(string.IsNullOrEmpty(e.Gender) ? "—" : e.Gender)</span></div>
+                <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-value">@(e.DateOfBirth?.ToString("MMMM dd, yyyy") ?? "—")</span></div>
+                <div class="info-row"><span class="info-label">Nationality</span><span class="info-value">@(string.IsNullOrEmpty(e.Nationality) ? "—" : e.Nationality)</span></div>
+                <div class="info-row"><span class="info-label">Religion</span><span class="info-value">@(string.IsNullOrEmpty(e.Religion) ? "—" : e.Religion)</span></div>
+                <div class="info-row"><span class="info-label">Marital Status</span><span class="info-value">@(string.IsNullOrEmpty(e.MaritalStatus) ? "—" : e.MaritalStatus)</span></div>
+                <div class="info-row"><span class="info-label">Blood Type</span><span class="info-value">@(string.IsNullOrEmpty(e.BloodType) ? "—" : e.BloodType)</span></div>
+                <div class="info-row"><span class="info-label">National ID</span><span class="info-value">@(string.IsNullOrEmpty(e.NationalId) ? "—" : e.NationalId)</span></div>
+                <div class="info-row"><span class="info-label">Disability</span><span class="info-value">@(string.IsNullOrEmpty(e.DisabilityStatus) || e.DisabilityStatus == "None" ? "None" : e.DisabilityStatus)</span></div>
+
+                <div class="section-head"><i class="bi bi-telephone me-1"></i>Contact</div>
+                <div class="info-row"><span class="info-label">Phone</span><span class="info-value">@(string.IsNullOrEmpty(e.PhoneNumber) ? "—" : e.PhoneNumber)</span></div>
+                <div class="info-row"><span class="info-label">Email</span><span class="info-value" style="word-break:break-all">@(string.IsNullOrEmpty(e.EmailAddress) ? "—" : e.EmailAddress)</span></div>
+
+                <div class="section-head"><i class="bi bi-geo-alt me-1"></i>Address</div>
+                <div class="info-row"><span class="info-label">Region</span><span class="info-value">@(string.IsNullOrEmpty(e.Region) ? "—" : e.Region)</span></div>
+                <div class="info-row"><span class="info-label">City</span><span class="info-value">@(string.IsNullOrEmpty(e.City) ? "—" : e.City)</span></div>
+                <div class="info-row"><span class="info-label">Subcity</span><span class="info-value">@(string.IsNullOrEmpty(e.Subcity) ? "—" : e.Subcity)</span></div>
+                <div class="info-row"><span class="info-label">Address</span><span class="info-value">@(string.IsNullOrEmpty(e.Address) ? "—" : e.Address)</span></div>
+            </div>
+        </div>
+
+        <!-- Emergency Contacts -->
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-4">
+                <div class="section-head"><i class="bi bi-heart-pulse me-1 text-danger"></i>Emergency Contacts</div>
+                <p class="mb-1 small fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.5px">Contact #1</p>
+                <div class="info-row"><span class="info-label">Name</span><span class="info-value">@(string.IsNullOrEmpty(e.EmergencyContact) ? "—" : e.EmergencyContact)</span></div>
+                <div class="info-row"><span class="info-label">Phone</span><span class="info-value">@(string.IsNullOrEmpty(e.EmergencyContactPhone) ? "—" : e.EmergencyContactPhone)</span></div>
+                <div class="info-row"><span class="info-label">Relation</span><span class="info-value">@(string.IsNullOrEmpty(e.EmergencyContactRelation) ? "—" : e.EmergencyContactRelation)</span></div>
+                @if (!string.IsNullOrEmpty(e.SecondEmergencyContact)) {
+                    <p class="mb-1 mt-3 small fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.5px">Contact #2</p>
+                    <div class="info-row"><span class="info-label">Name</span><span class="info-value">@e.SecondEmergencyContact</span></div>
+                    <div class="info-row"><span class="info-label">Phone</span><span class="info-value">@(string.IsNullOrEmpty(e.SecondEmergencyPhone) ? "—" : e.SecondEmergencyPhone)</span></div>
+                    <div class="info-row"><span class="info-label">Relation</span><span class="info-value">@(string.IsNullOrEmpty(e.SecondEmergencyRelation) ? "—" : e.SecondEmergencyRelation)</span></div>
+                }
+            </div>
+        </div>
+
+        <!-- Employment & Financial -->
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-4">
+                <div class="section-head"><i class="bi bi-briefcase me-1"></i>Employment</div>
+                <div class="info-row"><span class="info-label">Emp. Code</span><span class="info-value fw-bold text-primary">@e.EmployeeCode</span></div>
+                <div class="info-row"><span class="info-label">Department</span><span class="info-value">@e.Department</span></div>
+                <div class="info-row"><span class="info-label">Position</span><span class="info-value">@e.Position</span></div>
+                <div class="info-row"><span class="info-label">Job Grade</span><span class="info-value">@(string.IsNullOrEmpty(e.JobGrade) ? "—" : e.JobGrade)</span></div>
+                <div class="info-row"><span class="info-label">Type</span><span class="info-value"><span class="badge bg-light text-dark border">@e.EmploymentType</span></span></div>
+                <div class="info-row"><span class="info-label">Hire Date</span><span class="info-value">@e.HireDate.ToString("MMM dd, yyyy")</span></div>
+                @if (e.ContractEndDate.HasValue) {
+                    <div class="info-row"><span class="info-label">Contract End</span><span class="info-value">@e.ContractEndDate.Value.ToString("MMM dd, yyyy")</span></div>
+                }
+                <div class="info-row"><span class="info-label">Work Location</span><span class="info-value">@(string.IsNullOrEmpty(e.WorkLocation) ? "—" : e.WorkLocation)</span></div>
+                <div class="info-row"><span class="info-label">Status</span>
+                    <span class="info-value">
+                        @{ var sc = e.EmploymentStatus == "Active" ? "badge-status-active" : e.EmploymentStatus == "Inactive" ? "badge-status-inactive" : "badge-status-leave"; }
+                        <span class="badge @sc">@e.EmploymentStatus</span>
+                    </span>
+                </div>
+                <div class="info-row"><span class="info-label">Registered</span><span class="info-value text-muted" style="font-size:.8rem">@e.CreatedAt.ToString("MMM dd, yyyy")</span></div>
+
+                <div class="section-head"><i class="bi bi-cash-stack me-1"></i>Financial</div>
+                <div class="info-row"><span class="info-label">Base Salary</span><span class="info-value fw-bold text-success">@e.Salary.ToString("N2") ETB</span></div>
+                <div class="info-row"><span class="info-label">Bank Name</span><span class="info-value">@(string.IsNullOrEmpty(e.BankName) ? "—" : e.BankName)</span></div>
+                <div class="info-row"><span class="info-label">Bank Account</span><span class="info-value">@(string.IsNullOrEmpty(e.BankAccount) ? "—" : e.BankAccount)</span></div>
+                <div class="info-row"><span class="info-label">Tax ID (TIN)</span><span class="info-value">@(string.IsNullOrEmpty(e.TaxId) ? "—" : e.TaxId)</span></div>
+                <div class="info-row"><span class="info-label">Pension ID</span><span class="info-value">@(string.IsNullOrEmpty(e.PensionId) ? "—" : e.PensionId)</span></div>
+            </div>
+        </div>
+
+        <!-- Education -->
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-4">
+                <div class="section-head"><i class="bi bi-mortarboard me-1"></i>Education & Skills</div>
+                <div class="info-row"><span class="info-label">Education</span><span class="info-value">@(string.IsNullOrEmpty(e.HighestEducation) ? "—" : e.HighestEducation)</span></div>
+                <div class="info-row"><span class="info-label">Field</span><span class="info-value">@(string.IsNullOrEmpty(e.FieldOfStudy) ? "—" : e.FieldOfStudy)</span></div>
+                <div class="info-row"><span class="info-label">Institution</span><span class="info-value">@(string.IsNullOrEmpty(e.Institution) ? "—" : e.Institution)</span></div>
+                <div class="info-row"><span class="info-label">Grad. Year</span><span class="info-value">@(e.GraduationYear.HasValue ? e.GraduationYear.ToString() : "—")</span></div>
+                @if (!string.IsNullOrEmpty(e.Skills)) {
+                    <div class="mt-2">
+                        <span class="info-label d-block mb-1">Skills</span>
+                        <p class="mb-0" style="font-size:.85rem;white-space:pre-wrap">@e.Skills</p>
+                    </div>
+                }
+
+                @if (Model.Documents.Any()) {
+                    <div class="section-head mt-3"><i class="bi bi-paperclip me-1"></i>Education Documents</div>
+                    <ul class="list-unstyled mb-0">
+                    @foreach (var doc in Model.Documents) {
+                        <li class="d-flex align-items-center gap-2 py-2 border-bottom" style="font-size:.85rem">
+                            <i class="bi @doc.Icon fs-5 flex-shrink-0"></i>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-semibold text-truncate" title="@doc.DocLabel">@doc.DocLabel</div>
+                                <div class="text-muted" style="font-size:.75rem">@doc.FileName &nbsp;·&nbsp; @(doc.FileSizeKb > 0 ? doc.FileSizeKb + " KB" : "") &nbsp;·&nbsp; @doc.UploadedAt.ToString("MMM dd, yyyy")</div>
+                            </div>
+                            <a href="@doc.FileUrl" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill no-print" title="Download / View">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            <form method="post" asp-page-handler="DeleteDocument" class="d-inline no-print"
+                                  onsubmit="return confirm('Delete this document?')">
+                                <input type="hidden" name="docId"  value="@doc.Id">
+                                <input type="hidden" name="empId"  value="@e.Id">
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" title="Delete">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </li>
+                    }
+                    </ul>
+                } else {
+                    <p class="text-muted small mt-3 mb-0"><i class="bi bi-paperclip me-1"></i>No documents uploaded yet.</p>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(e.Notes)) {
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body p-4">
+                <div class="section-head"><i class="bi bi-journal-text me-1"></i>Notes</div>
+                <p class="mb-0" style="font-size:.88rem;white-space:pre-wrap">@e.Notes</p>
+            </div>
+        </div>
+        }
+    </div>
+
+    <!-- RIGHT COLUMN: tabs for history -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-transparent border-bottom-0 pt-4 px-4 no-print">
+                <ul class="nav nav-pills gap-2 flex-wrap" id="profileTabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active rounded-pill px-4" data-bs-toggle="tab" data-bs-target="#tab-attendance"><i class="bi bi-clock-history me-1"></i>Attendance</button></li>
+                    <li class="nav-item"><button class="nav-link rounded-pill px-4" data-bs-toggle="tab" data-bs-target="#tab-leaves"><i class="bi bi-calendar2-check me-1"></i>Leaves</button></li>
+                    <li class="nav-item"><button class="nav-link rounded-pill px-4" data-bs-toggle="tab" data-bs-target="#tab-payroll"><i class="bi bi-cash-stack me-1"></i>Payroll</button></li>
+                    <li class="nav-item"><button class="nav-link rounded-pill px-4" data-bs-toggle="tab" data-bs-target="#tab-perf"><i class="bi bi-graph-up-arrow me-1"></i>Performance</button></li>
+                </ul>
+            </div>
+            <div class="card-body p-4">
+                <div class="tab-content">
+
+                    <!-- ── ATTENDANCE ── -->
+                    <div class="tab-pane fade show active" id="tab-attendance">
+                        <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+                            <h6 class="fw-bold mb-0">Recent Attendance (last 10 records)</h6>
+                            <a href="/Dashboard/HR/Attendance?empId=@e.Id" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-plus me-1"></i>Log Attendance</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle table-hover" style="font-size:.875rem">
+                                <thead class="table-light"><tr><th>Date</th><th>Status</th><th>Check-In</th><th>Check-Out</th><th>Hours</th><th>Overtime</th></tr></thead>
+                                <tbody>
+                                @if (!Model.RecentAttendance.Any()) {
+                                    <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-clock-history fs-3 d-block mb-2 opacity-25"></i>No attendance records found.</td></tr>
+                                }
+                                @foreach (var a in Model.RecentAttendance) {
+                                    <tr>
+                                        <td class="fw-semibold">@a.Date.ToString("MMM dd, yyyy")</td>
+                                        <td>
+                                            @if (a.AttendanceStatus == "Present") { <span class="badge bg-success-subtle text-success border border-success">Present</span> }
+                                            else if (a.AttendanceStatus == "Absent") { <span class="badge bg-danger-subtle text-danger border border-danger">Absent</span> }
+                                            else { <span class="badge bg-warning-subtle text-warning border border-warning">@a.AttendanceStatus</span> }
+                                        </td>
+                                        <td class="text-muted">@a.CheckInTime.ToString(@"hh\:mm")</td>
+                                        <td class="text-muted">@a.CheckOutTime.ToString(@"hh\:mm")</td>
+                                        <td>@a.WorkingHours.ToString("0.0") h</td>
+                                        <td>@(a.OvertimeHours > 0 ? $"+{a.OvertimeHours:0.0} h" : "—")</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ── LEAVES ── -->
+                    <div class="tab-pane fade" id="tab-leaves">
+                        <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+                            <h6 class="fw-bold mb-0">Leave History</h6>
+                            <a href="/Dashboard/HR/LeaveManagement" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-plus me-1"></i>New Leave Request</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle table-hover" style="font-size:.875rem">
+                                <thead class="table-light"><tr><th>Type</th><th>Start</th><th>End</th><th>Days</th><th>Reason</th><th>Status</th></tr></thead>
+                                <tbody>
+                                @if (!Model.Leaves.Any()) {
+                                    <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-calendar2-x fs-3 d-block mb-2 opacity-25"></i>No leave records found.</td></tr>
+                                }
+                                @foreach (var l in Model.Leaves) {
+                                    <tr>
+                                        <td><span class="badge bg-light text-dark border">@l.LeaveType</span></td>
+                                        <td>@l.StartDate.ToString("MMM dd, yyyy")</td>
+                                        <td>@l.EndDate.ToString("MMM dd, yyyy")</td>
+                                        <td class="fw-semibold">@l.NumberOfDays</td>
+                                        <td class="text-muted" style="max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="@l.Reason">@(string.IsNullOrEmpty(l.Reason) ? "—" : l.Reason)</td>
+                                        <td>
+                                            @{ var lc = l.ApprovalStatus == "Approved" ? "text-success" : l.ApprovalStatus == "Rejected" ? "text-danger" : "text-warning"; }
+                                            <span class="fw-semibold @lc">@l.ApprovalStatus</span>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ── PAYROLL ── -->
+                    <div class="tab-pane fade" id="tab-payroll">
+                        <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+                            <h6 class="fw-bold mb-0">Payroll History</h6>
+                            <a href="/Dashboard/HR/PayrollManagement?empId=@e.Id" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-calculator me-1"></i>Process Payroll</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle table-hover text-nowrap" style="font-size:.84rem">
+                                <thead class="table-light"><tr><th>Period</th><th>Basic</th><th>Allow.</th><th>O/T</th><th>Bonus</th><th>Deduct.</th><th>Tax</th><th>Net Pay</th><th>Status</th></tr></thead>
+                                <tbody>
+                                @if (!Model.Payrolls.Any()) {
+                                    <tr><td colspan="9" class="text-center text-muted py-4"><i class="bi bi-cash fs-3 d-block mb-2 opacity-25"></i>No payroll records found.</td></tr>
+                                }
+                                @foreach (var p in Model.Payrolls) {
+                                    <tr>
+                                        <td class="fw-semibold"><span class="badge bg-light text-dark border">@p.Month @p.Year</span></td>
+                                        <td>@p.BasicSalary.ToString("N0")</td>
+                                        <td class="text-success">+@p.Allowances.ToString("N0")</td>
+                                        <td class="text-info">+@p.OvertimePay.ToString("N0")</td>
+                                        <td class="text-warning">+@p.Bonuses.ToString("N0")</td>
+                                        <td class="text-danger">-@p.Deductions.ToString("N0")</td>
+                                        <td class="text-danger">-@p.Tax.ToString("N0")</td>
+                                        <td class="fw-bold text-primary">@p.NetSalary.ToString("N0") ETB</td>
+                                        <td>
+                                            @{ var pc = p.Status == "Paid" ? "bg-success-subtle text-success border-success" : "bg-warning-subtle text-warning border-warning"; }
+                                            <span class="badge @pc border">@p.Status</span>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (Model.Payrolls.Any()) {
+                        <div class="mt-3 p-3 bg-light rounded-3">
+                            <div class="row g-2 text-center" style="font-size:.82rem">
+                                <div class="col-4"><strong class="d-block text-primary">@Model.Payrolls.Sum(p => p.NetSalary).ToString("N0") ETB</strong><span class="text-muted">Total Net Paid</span></div>
+                                <div class="col-4"><strong class="d-block text-danger">@Model.Payrolls.Sum(p => p.Tax).ToString("N0") ETB</strong><span class="text-muted">Total Tax</span></div>
+                                <div class="col-4"><strong class="d-block text-success">@Model.Payrolls.Count(p => p.Status == "Paid")</strong><span class="text-muted">Months Paid</span></div>
+                            </div>
+                        </div>
+                        }
+                    </div>
+
+                    <!-- ── PERFORMANCE ── -->
+                    <div class="tab-pane fade" id="tab-perf">
+                        <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+                            <h6 class="fw-bold mb-0">Performance Reviews</h6>
+                            <a href="/Dashboard/HR/PerformanceReview?empId=@e.Id" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-plus me-1"></i>Add Review</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle table-hover" style="font-size:.875rem">
+                                <thead class="table-light"><tr><th>Period</th><th>KPI</th><th>Goals %</th><th>Rating</th><th>Promotion</th><th>Comments</th></tr></thead>
+                                <tbody>
+                                @if (!Model.PerformanceReviews.Any()) {
+                                    <tr><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-graph-up fs-3 d-block mb-2 opacity-25"></i>No performance reviews found.</td></tr>
+                                }
+                                @foreach (var pr in Model.PerformanceReviews) {
+                                    <tr>
+                                        <td class="fw-semibold">@pr.ReviewPeriod</td>
+                                        <td>@pr.KpiScore.ToString("0.0")</td>
+                                        <td>@pr.GoalsAchieved.ToString("0.0")%</td>
+                                        <td>
+                                            @for (int s = 1; s <= 5; s++) {
+                                                <i class="bi @(s <= pr.FinalRating ? "bi-star-fill text-warning" : "bi-star text-muted")" style="font-size:.8rem"></i>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (pr.PromotionRecommendation == "Yes") {
+                                                <span class="badge bg-success-subtle text-success border border-success">Yes</span>
+                                            } else {
+                                                <span class="badge bg-secondary-subtle text-secondary">No</span>
+                                            }
+                                        </td>
+                                        <td class="text-muted" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="@pr.ManagerComments">
+                                            @(string.IsNullOrEmpty(pr.ManagerComments) ? "—" : pr.ManagerComments)
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -9,20 +9,13 @@ public class ResetPasswordModel : PageModel
 {
     private readonly string _connectionString;
 
-    [BindProperty]
-    public string Email { get; set; } = "";
+    [BindProperty] public string Email       { get; set; } = "";
+    [BindProperty] public string Token       { get; set; } = "";
+    [BindProperty] public string NewPassword { get; set; } = "";
+    [BindProperty] public string ConfirmPassword { get; set; } = "";
 
-    [BindProperty]
-    public string Token { get; set; } = "";
-
-    [BindProperty]
-    public string NewPassword { get; set; } = "";
-
-    [BindProperty]
-    public string ConfirmPassword { get; set; } = "";
-
-    public string Message { get; set; } = "";
-    public bool IsSuccess { get; set; }
+    public string Message   { get; set; } = "";
+    public bool   IsSuccess { get; set; }
 
     public ResetPasswordModel(IConfiguration configuration)
     {
@@ -35,9 +28,7 @@ public class ResetPasswordModel : PageModel
         Token = Request.Query["token"].ToString();
 
         if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Token))
-        {
             return RedirectToPage("/Login");
-        }
 
         return Page();
     }
@@ -49,13 +40,11 @@ public class ResetPasswordModel : PageModel
             Message = "Please enter and confirm your new password.";
             return Page();
         }
-
         if (NewPassword != ConfirmPassword)
         {
             Message = "Passwords do not match.";
             return Page();
         }
-
         if (NewPassword.Length < 6)
         {
             Message = "Password must be at least 6 characters.";
@@ -81,12 +70,11 @@ public class ResetPasswordModel : PageModel
                 new { Password = NewPassword, Email });
 
             IsSuccess = true;
-            Message = "Password reset successful! You can now login with your new password.";
+            Message   = "Password reset successful! You can now login with your new password.";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ResetPassword] Error: {ex.Message}");
-            Message = "An error occurred. Please try again.";
+            Message = $"An error occurred: {ex.Message}. Please try again.";
         }
 
         return Page();

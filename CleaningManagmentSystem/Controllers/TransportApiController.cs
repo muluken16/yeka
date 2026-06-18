@@ -5,1036 +5,540 @@ using System.Data;
 
 namespace CleaningManagmentSystem.Controllers
 {
-    /// <summary>
-    /// REST API for the Mahberat Transport Request & Payment Workflow.
-    /// Base route: /api/transport
-    /// </summary>
-    [Route("api/transport")]
     [ApiController]
+    [Route("api/transport")]
     public class TransportApiController : ControllerBase
     {
-        private readonly string _connectionString;
+        private readonly string _cs;
 
-        public TransportApiController(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string not found.");
-        }
+        public TransportApiController(IConfiguration cfg)
+            => _cs = cfg.GetConnectionString("DefaultConnection") ?? "";
 
-        private IDbConnection CreateConnection() => new MySqlConnection(_connectionString);
-
-        // ─── Helper: generate request number ────────────────────────────────
-        private static string GenerateRequestNumber()
-            => $"TR-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..6].ToUpper()}";
-
-        // ─── Helper: insert notification ────────────────────────────────────
-        private async Task NotifyAsync(IDbConnection conn, int recipientId, int requestId,
-            string requestNumber, string title, string body, string type = "Info")
-        {
-            await conn.ExecuteAsync(
-                @"INSERT INTO transport_notifications
-                  (recipient_user_id, transport_request_id, request_number, title, body, notification_type)
-                  VALUES (@RecipientId, @RequestId, @RequestNumber, @Title, @Body, @Type)",
-                new { RecipientId = recipientId, RequestId = requestId,
-                      RequestNumber = requestNumber, Title = title, Body = body, Type = type });
-        }
-
-        // ─── Helper: log status change ───────────────────────────────────────
-        private async Task LogStatusAsync(IDbConnection conn, int requestId,
-            string fromStatus, string toStatus, int actorId, string actorName,
-            string actorRole, string notes = "")
-        {
-            await conn.ExecuteAsync(
-                @"INSERT INTO transport_request_logs
-                  (transport_request_id, from_status, to_status, actor_user_id, actor_name, actor_role, notes)
-                  VALUES (@RequestId, @From, @To, @ActorId, @ActorName, @ActorRole, @Notes)",
-                new { RequestId = requestId, From = fromStatus, To = toStatus,
-                      ActorId = actorId, ActorName = actorName, ActorRole = actorRole, Notes = notes });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 1 — Mahberat User: Create Transport Request
-        // POST /api/transport/requests
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests")]
-        public async Task<IActionResult> CreateRequest([FromBody] CreateTransportRequestDto dto)
-        {
-            using var conn = CreateConnection();
-            var requestNumber = GenerateRequestNumber();
-
-            var mahberatName = dto.MahberatId.HasValue
-                ? await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT name FROM mahberats WHERE id = @Id", new { Id = dto.MahberatId })
-                : null;
-
-            var id = await conn.QueryFirstAsync<int>(
-                @"INSERT INTO transport_requests
-                  (request_number, mahberat_user_id, mahberat_user_name, mahberat_id, mahberat_name,
-                   pickup_location, destination, passenger_item_details,
-                   requested_date, requested_time, special_instructions, status)
-                  VALUES
-                  (@RequestNumber, @UserId, @UserName, @MahberatId, @MahberatName,
-                   @Pickup, @Destination, @Details,
-                   @Date, @Time, @Instructions, 'PendingDispatcher');
-                  SELECT LAST_INSERT_ID();",
-                new
-                {
-                    RequestNumber = requestNumber,
-                    UserId = dto.UserId, UserName = dto.UserName,
-                    MahberatId = dto.MahberatId, MahberatName = mahberatName,
-                    Pickup = dto.PickupLocation, Destination = dto.Destination,
-                    Details = dto.PassengerItemDetails,
-                    Date = dto.RequestedDate, Time = dto.RequestedTime,
-                    Instructions = dto.SpecialInstructions
-                });
-
-            await LogStatusAsync(conn, id, "", "PendingDispatcher", dto.UserId, dto.UserName, "MahberatUser");
-
-            // Notify all dispatchers
-            var dispatchers = await conn.QueryAsync<int>(
-                "SELECT id FROM users WHERE role = 'DispatchOfficer' AND is_active = TRUE");
-            foreach (var dispId in dispatchers)
-                await NotifyAsync(conn, dispId, id, requestNumber,
-                    "New Transport Request", $"Request {requestNumber} from {dto.UserName} needs review.", "Action");
-
-            return Ok(new { success = true, requestId = id, requestNumber });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 2 — Dispatcher: Approve/Reject + Assign Driver
-        // POST /api/transport/requests/{id}/dispatcher-action
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/dispatcher-action")]
-        public async Task<IActionResult> DispatcherAction(int id, [FromBody] DispatcherActionDto dto)
-        {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, mahberat_user_id, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-            if (req.status != "PendingDispatcher") return BadRequest(new { message = "Request is not pending dispatcher review." });
-
-            string newStatus;
-            if (dto.Action == "Approve")
-            {
-                if (!dto.DriverId.HasValue) return BadRequest(new { message = "DriverId is required for approval." });
-                var driverName = await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT name FROM users WHERE id = @Id", new { Id = dto.DriverId });
-                var vehiclePlate = dto.VehicleId.HasValue
-                    ? await conn.QueryFirstOrDefaultAsync<string>(
-                        "SELECT plate_number FROM vehicles WHERE id = @Id", new { Id = dto.VehicleId })
-                    : null;
-
-                newStatus = "DriverAssigned";
-                await conn.ExecuteAsync(
-                    @"UPDATE transport_requests SET
-                        status = @Status, dispatcher_id = @DispId, dispatcher_name = @DispName,
-                        dispatcher_notes = @Notes, dispatcher_action_at = NOW(),
-                        driver_id = @DriverId, driver_name = @DriverName,
-                        vehicle_id = @VehicleId, vehicle_plate = @VehiclePlate
-                      WHERE id = @Id",
-                    new { Status = newStatus, DispId = dto.DispatcherId, DispName = dto.DispatcherName,
-                          Notes = dto.Notes, DriverId = dto.DriverId, DriverName = driverName,
-                          VehicleId = dto.VehicleId, VehiclePlate = vehiclePlate, Id = id });
-
-                await NotifyAsync(conn, dto.DriverId.Value, id, (string)req.request_number,
-                    "New Trip Assigned", $"You have been assigned trip {req.request_number}. Please accept or reject.", "Action");
-                await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
-                    "Request Approved", $"Your transport request {req.request_number} has been approved. Driver is being assigned.", "Success");
-            }
-            else
-            {
-                newStatus = "DispatcherRejected";
-                await conn.ExecuteAsync(
-                    @"UPDATE transport_requests SET
-                        status = @Status, dispatcher_id = @DispId, dispatcher_name = @DispName,
-                        dispatcher_notes = @Notes, dispatcher_action_at = NOW()
-                      WHERE id = @Id",
-                    new { Status = newStatus, DispId = dto.DispatcherId, DispName = dto.DispatcherName,
-                          Notes = dto.Notes, Id = id });
-
-                await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
-                    "Request Rejected", $"Your transport request {req.request_number} was rejected. Reason: {dto.Notes}", "Warning");
-            }
-
-            await LogStatusAsync(conn, id, "PendingDispatcher", newStatus, dto.DispatcherId, dto.DispatcherName, "DispatchOfficer", dto.Notes ?? "");
-            return Ok(new { success = true, newStatus });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 3 — Driver: Accept/Reject Trip
-        // POST /api/transport/requests/{id}/driver-action
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/driver-action")]
-        public async Task<IActionResult> DriverAction(int id, [FromBody] DriverActionDto dto)
-        {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, mahberat_user_id, dispatcher_id, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-            if (req.status != "DriverAssigned" && req.status != "DriverAccepted")
-                return BadRequest(new { message = "Trip is not in DriverAssigned status." });
-            // Idempotent — already accepted
-            if ((string)req.status == "DriverAccepted" && dto.Action == "Accept")
-                return Ok(new { success = true, newStatus = "DriverAccepted" });
-
-            string newStatus;
-            if (dto.Action == "Accept")
-            {
-                newStatus = "DriverAccepted";
-                await conn.ExecuteAsync(
-                    @"UPDATE transport_requests SET status = @Status, driver_notes = @Notes, driver_action_at = NOW() WHERE id = @Id",
-                    new { Status = newStatus, Notes = dto.Notes, Id = id });
-
-                await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
-                    "Driver Accepted", $"Driver has accepted your trip {req.request_number}. They are on their way.", "Success");
-            }
-            else
-            {
-                newStatus = "PendingDispatcher";
-                await conn.ExecuteAsync(
-                    @"UPDATE transport_requests SET status = @Status, driver_id = NULL, driver_name = NULL,
-                        vehicle_id = NULL, vehicle_plate = NULL, driver_notes = @Notes, driver_action_at = NOW()
-                      WHERE id = @Id",
-                    new { Status = newStatus, Notes = dto.Notes, Id = id });
-
-                if (req.dispatcher_id != null)
-                    await NotifyAsync(conn, (int)req.dispatcher_id, id, (string)req.request_number,
-                        "Driver Rejected Trip", $"Driver rejected trip {req.request_number}. Please assign another driver.", "Warning");
-            }
-
-            await LogStatusAsync(conn, id, "DriverAssigned", newStatus, dto.DriverId, dto.DriverName, "Driver", dto.Notes ?? "");
-            return Ok(new { success = true, newStatus });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 4 — Driver: Mark as Picked Up
-        // POST /api/transport/requests/{id}/pickup
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/pickup")]
-        public async Task<IActionResult> MarkPickedUp(int id, [FromBody] PickupDto dto)
-        {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, mahberat_user_id, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-            if (req.status != "DriverAccepted") return BadRequest(new { message = "Trip must be in DriverAccepted status." });
-
-            await conn.ExecuteAsync(
-                @"UPDATE transport_requests SET status = 'PickedUp', pickup_confirmed_at = NOW(), pickup_notes = @Notes WHERE id = @Id",
-                new { Notes = dto.Notes, Id = id });
-
-            await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
-                "Pickup Confirmation", $"Driver has arrived and picked up for trip {req.request_number}. Please confirm.", "Action");
-
-            await LogStatusAsync(conn, id, "DriverAccepted", "PickedUp", dto.DriverId, dto.DriverName, "Driver", dto.Notes ?? "");
-            return Ok(new { success = true, newStatus = "PickedUp" });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 5 — Mahberat: Approve/Reject Pickup
-        // POST /api/transport/requests/{id}/mahberat-pickup
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/mahberat-pickup")]
-        public async Task<IActionResult> MahberatPickupApproval(int id, [FromBody] MahberatPickupDto dto)
-        {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, driver_id, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-            if (req.status != "PickedUp") return BadRequest(new { message = "Request must be in PickedUp status." });
-
-            string newStatus = dto.Action == "Approve" ? "MahberatApprovedPickup" : "PickedUp";
-            await conn.ExecuteAsync(
-                @"UPDATE transport_requests SET status = @Status, mahberat_pickup_approved_at = NOW(), mahberat_pickup_notes = @Notes WHERE id = @Id",
-                new { Status = newStatus, Notes = dto.Notes, Id = id });
-
-            if (dto.Action == "Approve" && req.driver_id != null)
-                await NotifyAsync(conn, (int)req.driver_id, id, (string)req.request_number,
-                    "Pickup Approved", $"Mahberat confirmed pickup for trip {req.request_number}. Proceed with the trip.", "Success");
-
-            await LogStatusAsync(conn, id, "PickedUp", newStatus, dto.UserId, dto.UserName, "MahberatUser", dto.Notes ?? "");
-            return Ok(new { success = true, newStatus });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 6 — Driver: Submit Receipt
-        // POST /api/transport/requests/{id}/submit-receipt
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/submit-receipt")]
-        public async Task<IActionResult> SubmitReceipt(int id, [FromBody] SubmitReceiptDto dto)
-        {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, mahberat_user_id, mahberat_id, mahberat_name, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-            // Accept re-submission (ReceiptSubmitted) and all active pickup statuses
-            var submitAllowed = new[] { "PickedUp", "MahberatApprovedPickup", "DriverAccepted", "ReceiptSubmitted" };
-            if (!Array.Exists(submitAllowed, s => s == (string)req.status))
-                return BadRequest(new { message = $"Cannot submit receipt from status: {req.status}" });
-
-            // ── Resolve Wereda / Mahberat names ──────────────────────────
-            int? weredaId   = dto.WeredaId;
-            int? mahberatId = dto.MahberatId ?? (int?)req.mahberat_id;
-
-            string? weredaName = weredaId.HasValue
-                ? await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT name FROM weredas WHERE id = @Id", new { Id = weredaId })
-                : null;
-
-            string? mahberatName = mahberatId.HasValue
-                ? await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT name FROM mahberats WHERE id = @Id", new { Id = mahberatId })
-                : (string?)req.mahberat_name;
-
-            // ── Resolve driver vehicle ────────────────────────────────────
-            string? plateNumber = null;
-            int?    vehicleId   = null;
-            if (dto.DriverId > 0)
-            {
-                var vehicle = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                    "SELECT id, plate_number FROM vehicles WHERE driver_id = @DriverId",
-                    new { DriverId = dto.DriverId });
-                if (vehicle != null)
-                {
-                    vehicleId   = (int?)vehicle.id;
-                    plateNumber = (string?)vehicle.plate_number;
-                }
-            }
-
-            // ── Get default rate from system_settings ─────────────────────
-            decimal rate = 0m;
-            try
-            {
-                var rateStr = await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT setting_value FROM system_settings WHERE setting_key = 'DefaultTransportRatePerKg'");
-                if (rateStr != null) decimal.TryParse(rateStr, out rate);
-                if (rate == 0)
-                {
-                    var fallback = await conn.QueryFirstOrDefaultAsync<string>(
-                        "SELECT setting_value FROM system_settings WHERE setting_key = 'DefaultPricePerKg'");
-                    if (fallback != null) decimal.TryParse(fallback, out rate);
-                }
-            }
-            catch { /* table may not exist yet, use 0 */ }
-
-            decimal kg    = dto.ActualKilogram ?? 0m;
-            decimal total = rate > 0 ? kg * rate : 0m;
-
-            // ── Update transport_requests ─────────────────────────────────
-            await conn.ExecuteAsync(
-                @"UPDATE transport_requests SET
-                    status = 'ReceiptSubmitted', receipt_photo_url = @PhotoUrl,
-                    digital_receipt_url = @DigitalUrl, receipt_notes = @Notes,
-                    receipt_submitted_at = NOW(),
-                    actual_kilogram = @Kg, receipt_wereda_id = @WeredaId,
-                    receipt_mahberat_id = @MahberatId,
-                    transport_cost = COALESCE(NULLIF(@Total, 0), transport_cost)
-                  WHERE id = @Id",
-                new { PhotoUrl = dto.ReceiptPhotoUrl, DigitalUrl = dto.DigitalReceiptUrl,
-                      Notes = dto.Notes, Kg = kg, Total = total,
-                      WeredaId = weredaId, MahberatId = mahberatId, Id = id });
-
-            // ── Auto-insert into staff_receipts so Mahberat approval queue picks it up ──
-            try
-            {
-                // Avoid duplicate if re-submitted
-                var existing = await conn.QueryFirstOrDefaultAsync<int>(
-                    "SELECT COUNT(*) FROM staff_receipts WHERE transport_request_id = @TrId",
-                    new { TrId = id });
-
-                if (existing == 0)
-                {
-                    await conn.ExecuteAsync(
-                        @"INSERT INTO staff_receipts
-                            (wereda_id, wereda_name, mahberat_id, mahberat_name,
-                             vehicle_id, plate_number, driver_id, driver_name,
-                             receipt_time, receipt_date, kilogram, price,
-                             registered_by, status, notes, image_url,
-                             transport_request_id, registered_at)
-                          VALUES
-                            (@WeredaId, @WeredaName, @MahberatId, @MahberatName,
-                             @VehicleId, @PlateNumber, @DriverId, @DriverName,
-                             CAST(NOW() AS TIME), CAST(NOW() AS DATE), @Kg, @Total,
-                             @RegisteredBy, 'Pending', @Notes, @ImageUrl,
-                             @TrId, NOW())",
-                        new
-                        {
-                            WeredaId    = (object?)weredaId   ?? DBNull.Value,
-                            WeredaName  = weredaName  ?? "",
-                            MahberatId  = (object?)mahberatId ?? DBNull.Value,
-                            MahberatName = mahberatName ?? "",
-                            VehicleId   = (object?)vehicleId  ?? DBNull.Value,
-                            PlateNumber = plateNumber ?? "",
-                            DriverId    = dto.DriverId > 0 ? (object)dto.DriverId : DBNull.Value,
-                            DriverName  = dto.DriverName ?? "",
-                            Kg          = kg,
-                            Total       = total,   // kg × rate
-                            RegisteredBy = dto.DriverName ?? "Driver",
-                            Notes       = $"[Transport {(string)req.request_number}] {dto.Notes ?? ""}".Trim(),
-                            ImageUrl    = dto.ReceiptPhotoUrl ?? "",
-                            TrId        = id
-                        });
-                }
-                else
-                {
-                    // Re-submission: update KG, recalculate total, reset approval state
-                    await conn.ExecuteAsync(
-                        @"UPDATE staff_receipts SET
-                            kilogram = @Kg, price = @Total, image_url = @ImageUrl,
-                            notes = @Notes, mahberat_approved = NULL,
-                            mahberat_approved_by = NULL, mahberat_approved_at = NULL,
-                            mahberat_notes = NULL, status = 'Pending'
-                          WHERE transport_request_id = @TrId",
-                        new
-                        {
-                            Kg       = kg,
-                            Total    = total,   // kg × rate
-                            ImageUrl = dto.ReceiptPhotoUrl ?? "",
-                            Notes    = $"[Transport {(string)req.request_number}] {dto.Notes ?? ""}".Trim(),
-                            TrId     = id
-                        });
-                }
-            }
-            catch (Exception ex)
-            {
-                // Column transport_request_id may not exist yet — log and continue
-                Console.WriteLine($"[TransportAPI] staff_receipts insert warning: {ex.Message}");
-            }
-
-            await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
-                "Receipt Submitted", $"Driver submitted receipt for trip {req.request_number}. Please verify in Receipt Approvals.", "Action");
-
-            await LogStatusAsync(conn, id, (string)req.status, "ReceiptSubmitted", dto.DriverId, dto.DriverName ?? "", "Driver", dto.Notes ?? "");
-            return Ok(new { success = true, newStatus = "ReceiptSubmitted" });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 7 — Mahberat: Verify Receipt → feeds existing Staff Approvals queue
-        // POST /api/transport/requests/{id}/mahberat-verify
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/mahberat-verify")]
-        public async Task<IActionResult> MahberatVerifyReceipt(int id, [FromBody] MahberatVerifyDto? dto)
-        {
-            if (dto == null) return BadRequest(new { message = "Request body is required." });
-            if (string.IsNullOrEmpty(dto.Action)) dto.Action = "Verify"; // default to Verify
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, driver_id, mahberat_user_id, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-
-            // Allow approval from any active status after pickup
-            var allowedStatuses = new[]
-            {
-                "PickedUp", "MahberatApprovedPickup",
-                "ReceiptSubmitted", "ReceiptVerified", "MahberatVerified"
-            };
-            if (!Array.Exists(allowedStatuses, s => s == (string)req.status))
-                return BadRequest(new { message = $"Cannot approve from current status: {req.status}" });
-
-            // Idempotent — already approved, just return success
-            if ((string)req.status == "MahberatVerified" && dto.Action == "Verify")
-                return Ok(new { success = true, newStatus = "MahberatVerified",
-                    message = "Already approved by Mahberat." });
-
-            if (dto.Action == "Verify")
-            {
-                // ── Mark Mahberat Level-1 approval on the linked staff_receipts row ──
-                // This makes it appear in Staff Approvals (existing flow).
-                // transport_request stays ReceiptSubmitted until Staff approves it.
-                try
-                {
-                    var srId = await conn.QueryFirstOrDefaultAsync<int?>(
-                        "SELECT id FROM staff_receipts WHERE transport_request_id = @TrId",
-                        new { TrId = id });
-
-                    if (srId.HasValue && srId.Value > 0)
-                    {
-                        await conn.ExecuteAsync(
-                            @"UPDATE staff_receipts
-                              SET mahberat_approved    = 1,
-                                  mahberat_approved_by = @By,
-                                  mahberat_approved_at = NOW(),
-                                  mahberat_notes       = @Notes
-                              WHERE id = @Id",
-                            new { By = dto.UserName, Notes = dto.Notes ?? "", Id = srId.Value });
-                    }
-                    else
-                    {
-                        // No staff_receipts row yet — create one now so it enters the queue
-                        var tr = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                            "SELECT * FROM transport_requests WHERE id = @Id", new { Id = id });
-
-                        if (tr != null)
-                        {
-                            // Resolve names
-                            string? weredaName = tr.receipt_wereda_id != null
-                                ? await conn.QueryFirstOrDefaultAsync<string>(
-                                    "SELECT name FROM weredas WHERE id = @Id", new { Id = (int)tr.receipt_wereda_id })
-                                : null;
-                            string? mahberatName = tr.receipt_mahberat_id != null
-                                ? await conn.QueryFirstOrDefaultAsync<string>(
-                                    "SELECT name FROM mahberats WHERE id = @Id", new { Id = (int)tr.receipt_mahberat_id })
-                                : (string?)tr.mahberat_name;
-
-                            // Rate from settings
-                            decimal rate = 0m;
-                            try
-                            {
-                                var rv = await conn.QueryFirstOrDefaultAsync<string>(
-                                    "SELECT setting_value FROM system_settings WHERE setting_key = 'DefaultTransportRatePerKg'");
-                                if (rv == null) rv = await conn.QueryFirstOrDefaultAsync<string>(
-                                    "SELECT setting_value FROM system_settings WHERE setting_key = 'DefaultPricePerKg'");
-                                if (rv != null) decimal.TryParse(rv, out rate);
-                            }
-                            catch { }
-
-                            string? plateNumber = null;
-                            int?    vehicleId   = null;
-                            if (tr.driver_id != null)
-                            {
-                                var v = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                                    "SELECT id, plate_number FROM vehicles WHERE driver_id = @DId",
-                                    new { DId = (int)tr.driver_id });
-                                if (v != null) { vehicleId = (int?)v.id; plateNumber = (string?)v.plate_number; }
-                            }
-
-                            await conn.ExecuteAsync(
-                                @"INSERT INTO staff_receipts
-                                    (wereda_id, wereda_name, mahberat_id, mahberat_name,
-                                     vehicle_id, plate_number, driver_id, driver_name,
-                                     receipt_time, receipt_date, kilogram, price,
-                                     registered_by, status, notes, image_url,
-                                     transport_request_id, registered_at,
-                                     mahberat_approved, mahberat_approved_by,
-                                     mahberat_approved_at, mahberat_notes)
-                                  VALUES
-                                    (@WeredaId, @WeredaName, @MahberatId, @MahberatName,
-                                     @VehicleId, @PlateNumber, @DriverId, @DriverName,
-                                     CAST(NOW() AS TIME), CAST(NOW() AS DATE), @Kg, @Rate,
-                                     'TransportRequest', 'Pending', @Notes, @ImageUrl,
-                                     @TrId, NOW(),
-                                     1, @By, NOW(), @Notes)",
-                                new
-                                {
-                                    WeredaId     = (object?)(int?)tr.receipt_wereda_id   ?? DBNull.Value,
-                                    WeredaName   = weredaName   ?? "",
-                                    MahberatId   = (object?)(int?)tr.receipt_mahberat_id ?? DBNull.Value,
-                                    MahberatName = mahberatName ?? "",
-                                    VehicleId    = (object?)vehicleId  ?? DBNull.Value,
-                                    PlateNumber  = plateNumber ?? "",
-                                    DriverId     = tr.driver_id  ?? (object)DBNull.Value,
-                                    DriverName   = (string?)tr.driver_name ?? "",
-                                    Kg           = tr.actual_kilogram ?? 0m,
-                                    Rate         = rate,
-                                    Notes        = $"[TR {(string)tr.request_number}] {dto.Notes ?? ""}".Trim(),
-                                    ImageUrl     = (string?)tr.receipt_photo_url ?? "",
-                                    TrId         = id,
-                                    By           = dto.UserName
-                                });
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[mahberat-verify] staff_receipts update warning: {ex.Message}");
-                }
-
-                // Advance transport_request to MahberatVerified so UI reflects the change
-                try
-                {
-                    await conn.ExecuteAsync(
-                        @"UPDATE transport_requests
-                          SET status = 'MahberatVerified',
-                              mahberat_verification_notes = @Notes
-                          WHERE id = @Id",
-                        new { Notes = dto.Notes ?? "", Id = id });
-                }
-                catch
-                {
-                    // Fallback if column missing
-                    await conn.ExecuteAsync(
-                        "UPDATE transport_requests SET status = 'MahberatVerified' WHERE id = @Id",
-                        new { Id = id });
-                }
-
-                // Notify Staff
-                var staffList = await conn.QueryAsync<int>(
-                    "SELECT id FROM users WHERE role IN ('Staff','Finance') AND is_active = TRUE");
-                foreach (var sId in staffList)
-                    await NotifyAsync(conn, sId, id, (string)req.request_number,
-                        "Receipt Awaiting Staff Approval",
-                        $"Trip {req.request_number} receipt approved by Mahberat. Needs staff approval.",
-                        "Action");
-
-                await LogStatusAsync(conn, id, "ReceiptSubmitted", "MahberatVerified",
-                    dto.UserId, dto.UserName, "MahberatUser",
-                    $"Mahberat Level-1 approved. Forwarded to Staff. {dto.Notes ?? ""}");
-
-                return Ok(new { success = true, newStatus = "MahberatVerified",
-                    message = "Approved — forwarded to Staff Approvals queue." });
-            }
-            else
-            {
-                // Correction requested — reset mahberat_approved on staff_receipts row
-                try
-                {
-                    await conn.ExecuteAsync(
-                        @"UPDATE staff_receipts
-                          SET mahberat_approved = NULL,
-                              mahberat_approved_by = NULL,
-                              mahberat_approved_at = NULL,
-                              mahberat_notes = @Notes
-                          WHERE transport_request_id = @TrId",
-                        new { Notes = dto.Notes ?? "", TrId = id });
-                }
-                catch { }
-
-                if (req.driver_id != null)
-                    await NotifyAsync(conn, (int)req.driver_id, id, (string)req.request_number,
-                        "Receipt Correction Requested",
-                        $"Mahberat requested correction for trip {req.request_number}. Notes: {dto.Notes}",
-                        "Warning");
-
-                await LogStatusAsync(conn, id, "ReceiptSubmitted", "ReceiptSubmitted",
-                    dto.UserId, dto.UserName, "MahberatUser", dto.Notes ?? "");
-
-                return Ok(new { success = true, newStatus = "ReceiptSubmitted",
-                    message = "Correction requested — driver notified." });
-            }
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 8 — Staff: Approve/Reject Payment
-        // POST /api/transport/requests/{id}/staff-action
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/staff-action")]
-        public async Task<IActionResult> StaffAction(int id, [FromBody] StaffActionDto dto)
-        {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, mahberat_user_id, driver_id, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-            if (req.status != "ReceiptVerified") return BadRequest(new { message = "Receipt must be verified first." });
-
-            string newStatus = dto.Action == "Approve" ? "StaffApproved" : "StaffRejected";
-            await conn.ExecuteAsync(
-                @"UPDATE transport_requests SET
-                    status = @Status, staff_id = @StaffId, staff_name = @StaffName,
-                    transport_cost = @Cost, staff_notes = @Notes, staff_action_at = NOW()
-                  WHERE id = @Id",
-                new { Status = newStatus, StaffId = dto.StaffId, StaffName = dto.StaffName,
-                      Cost = dto.TransportCost, Notes = dto.Notes, Id = id });
-
-            if (dto.Action == "Approve")
-            {
-                var financeStaff = await conn.QueryAsync<int>(
-                    "SELECT id FROM users WHERE role IN ('Staff','Finance') AND is_active = TRUE");
-                foreach (var fId in financeStaff)
-                    await NotifyAsync(conn, fId, id, (string)req.request_number,
-                        "Payment Approved — Process Payment", $"Trip {req.request_number} approved. Cost: {dto.TransportCost}. Please process payment.", "Action");
-            }
-            else
-            {
-                if (req.mahberat_user_id != null)
-                    await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
-                        "Payment Rejected", $"Payment for trip {req.request_number} was rejected. Reason: {dto.Notes}", "Warning");
-            }
-
-            await LogStatusAsync(conn, id, "ReceiptVerified", newStatus, dto.StaffId, dto.StaffName, "Staff", dto.Notes ?? "");
-            return Ok(new { success = true, newStatus });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // STEP 9 — Finance Staff: Process Payment
-        // POST /api/transport/requests/{id}/process-payment
-        // ════════════════════════════════════════════════════════════════════
-        [HttpPost("requests/{id}/process-payment")]
-        public async Task<IActionResult> ProcessPayment(int id, [FromBody] ProcessPaymentDto dto)
-        {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT id, request_number, mahberat_user_id, driver_id, status FROM transport_requests WHERE id = @Id",
-                new { Id = id });
-            if (req == null) return NotFound();
-            if (req.status != "StaffApproved") return BadRequest(new { message = "Payment must be staff-approved first." });
-
-            await conn.ExecuteAsync(
-                @"UPDATE transport_requests SET
-                    status = 'Paid', finance_staff_id = @FinanceId, finance_staff_name = @FinanceName,
-                    transaction_number = @TxNumber, payment_proof_url = @ProofUrl,
-                    paid_at = NOW(), payment_notes = @Notes
-                  WHERE id = @Id",
-                new { FinanceId = dto.FinanceStaffId, FinanceName = dto.FinanceStaffName,
-                      TxNumber = dto.TransactionNumber, ProofUrl = dto.PaymentProofUrl,
-                      Notes = dto.Notes, Id = id });
-
-            // ── Auto-register a staff_receipt from the transport request ──
-            // Register it after Payment is Done.
-            try
-            {
-                var tripFull = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                    "SELECT * FROM transport_requests WHERE id = @Id", new { Id = id });
-
-                if (tripFull != null)
-                {
-                    string? weredaName = null;
-                    string? mahberatName = null;
-                    int? weredaId   = tripFull.receipt_wereda_id   ?? tripFull.wereda_id;
-                    int? mahberatId = tripFull.receipt_mahberat_id ?? tripFull.mahberat_id;
-
-                    if (weredaId.HasValue)
-                        weredaName = await conn.QueryFirstOrDefaultAsync<string>(
-                            "SELECT name FROM weredas WHERE id = @Id", new { Id = weredaId });
-                    if (mahberatId.HasValue)
-                        mahberatName = await conn.QueryFirstOrDefaultAsync<string>(
-                            "SELECT name FROM mahberats WHERE id = @Id", new { Id = mahberatId });
-
-                    string? driverName = null;
-                    string? plateNumber = null;
-                    int? vehicleId = null;
-                    if (tripFull.driver_id != null)
-                    {
-                        driverName = await conn.QueryFirstOrDefaultAsync<string>(
-                            "SELECT name FROM users WHERE id = @Id", new { Id = (int)tripFull.driver_id });
-                        var vehicle = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                            "SELECT id, plate_number FROM vehicles WHERE driver_id = @DriverId",
-                            new { DriverId = (int)tripFull.driver_id });
-                        if (vehicle != null)
-                        {
-                            vehicleId   = vehicle.id;
-                            plateNumber = vehicle.plate_number;
-                        }
-                    }
-
-                    decimal kg = tripFull.actual_kilogram ?? 0m;
-                    decimal cost = tripFull.transport_cost ?? 0m;
-                    string  photoUrl = tripFull.receipt_photo_url ?? "";
-                    string  notes    = $"Auto-registered from Transport Request {tripFull.request_number}. Tx: {dto.TransactionNumber}. {tripFull.receipt_notes ?? ""}".Trim();
-
-                    var existing = await conn.QueryFirstOrDefaultAsync<int>(
-                        "SELECT COUNT(*) FROM staff_receipts WHERE notes LIKE @Pattern",
-                        new { Pattern = $"%{tripFull.request_number}%" });
-
-                    if (existing == 0)
-                    {
-                        await conn.ExecuteAsync(
-                            @"INSERT INTO staff_receipts
-                              (wereda_id, wereda_name, mahberat_id, mahberat_name,
-                               vehicle_id, plate_number, driver_id, driver_name,
-                               receipt_time, receipt_date, kilogram, price,
-                               registered_by, status, notes, image_url,
-                               mahberat_approved, mahberat_approved_by, mahberat_approved_at, mahberat_notes,
-                               registered_at)
-                              VALUES
-                              (@WeredaId, @WeredaName, @MahberatId, @MahberatName,
-                               @VehicleId, @PlateNumber, @DriverId, @DriverName,
-                               CAST(NOW() AS TIME), CAST(NOW() AS DATE), @Kg, @Cost,
-                               'TransportRequest', 'Approved', @Notes, @ImageUrl,
-                               1, @MahberatUser, NOW(), @MahberatNotes,
-                               NOW())",
-                            new
-                            {
-                                WeredaId   = (object?)weredaId   ?? DBNull.Value,
-                                WeredaName = weredaName   ?? "",
-                                MahberatId = (object?)mahberatId ?? DBNull.Value,
-                                MahberatName = mahberatName ?? "",
-                                VehicleId  = (object?)vehicleId  ?? DBNull.Value,
-                                PlateNumber = plateNumber ?? "",
-                                DriverId   = tripFull.driver_id  ?? (object)DBNull.Value,
-                                DriverName = driverName  ?? "",
-                                Kg         = kg,
-                                Cost       = cost,
-                                Notes      = notes,
-                                ImageUrl   = photoUrl,
-                                MahberatUser  = tripFull.mahberat_user_name ?? "System",
-                                MahberatNotes = "Verified by Mahberat and Paid by Staff"
-                            });
-
-                        Console.WriteLine($"[TransportAPI] Auto-registered staff_receipt for trip {tripFull.request_number}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[TransportAPI] Warning: Could not auto-register receipt: {ex.Message}");
-            }
-
-            if (req.mahberat_user_id != null)
-                await NotifyAsync(conn, (int)req.mahberat_user_id, id, (string)req.request_number,
-                    "Payment Processed", $"Payment for trip {req.request_number} has been processed. Tx: {dto.TransactionNumber}", "Success");
-            if (req.driver_id != null)
-                await NotifyAsync(conn, (int)req.driver_id, id, (string)req.request_number,
-                    "Payment Processed", $"Payment for your trip {req.request_number} has been processed.", "Success");
-
-            await LogStatusAsync(conn, id, "StaffApproved", "Paid", dto.FinanceStaffId, dto.FinanceStaffName, "Finance", dto.Notes ?? "");
-            return Ok(new { success = true, newStatus = "Paid" });
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // QUERY ENDPOINTS
-        // ════════════════════════════════════════════════════════════════════
-
-        // GET /api/transport/requests?userId=&role=&status=
+        // ─────────────────────────────────────────────────────────────────────
+        // GET /api/transport/requests?userId=X&role=WeredaMahberat|DispatchOfficer
+        // ─────────────────────────────────────────────────────────────────────
         [HttpGet("requests")]
-        public async Task<IActionResult> GetRequests([FromQuery] int? userId, [FromQuery] string? role, [FromQuery] string? status)
+        public IActionResult GetRequests([FromQuery] int? userId, [FromQuery] string? role, [FromQuery] string? status)
         {
-            using var conn = CreateConnection();
-            var where = new List<string>();
-            var param = new DynamicParameters();
+            using var db = new MySqlConnection(_cs);
+            var conditions = new List<string>();
+            var param = new Dapper.DynamicParameters();
 
-            if (!string.IsNullOrEmpty(status)) { where.Add("tr.status = @Status"); param.Add("Status", status); }
-
-            if (userId.HasValue && !string.IsNullOrEmpty(role))
+            if (role?.ToLower() == "weredamahberat" && userId.HasValue)
             {
-                var r = role.ToLower();
-                if (r == "mahberatuser" || r == "weredamahberat")
-                    { where.Add("tr.mahberat_user_id = @UserId"); param.Add("UserId", userId); }
-                else if (r == "driver")
-                    { where.Add("tr.driver_id = @UserId"); param.Add("UserId", userId); }
-                else if (r == "dispatchofficer")
-                    { /* dispatcher sees all */ }
-                else if (r == "staff" || r == "finance")
-                    { /* staff sees all */ }
+                conditions.Add("tr.mahberat_user_id = @UserId");
+                param.Add("UserId", userId.Value);
             }
 
-            var whereClause = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
-            var sql = $@"SELECT tr.id, tr.request_number, tr.mahberat_user_name,
-                            COALESCE(tr.mahberat_name, m1.name, tr.mahberat_user_name) AS mahberat_name,
-                            tr.pickup_location, tr.destination, tr.passenger_item_details,
-                            tr.requested_date, tr.requested_time, tr.special_instructions,
-                            tr.dispatcher_name, tr.driver_name, tr.vehicle_plate,
-                            tr.transport_cost, tr.transaction_number, tr.status,
-                            tr.actual_kilogram, tr.receipt_wereda_id, tr.receipt_mahberat_id,
-                            COALESCE(m2.name, m1.name, tr.mahberat_name) AS receipt_mahberat_name,
-                            w.name AS receipt_wereda_name,
-                            tr.receipt_photo_url, tr.receipt_notes,
-                            tr.created_at, tr.updated_at
-                         FROM transport_requests tr
-                         LEFT JOIN mahberats m1 ON m1.id = tr.mahberat_id
-                         LEFT JOIN mahberats m2 ON m2.id = tr.receipt_mahberat_id
-                         LEFT JOIN weredas   w  ON w.id  = tr.receipt_wereda_id
-                         {whereClause}
-                         ORDER BY tr.created_at DESC";
+            if (!string.IsNullOrEmpty(status))
+            {
+                conditions.Add("tr.status = @Status");
+                param.Add("Status", status);
+            }
 
-            var results = await conn.QueryAsync(sql, param);
-            return Ok(results);
+            var where = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : "";
+
+            var sql = $@"
+                SELECT tr.*,
+                       COALESCE(tr.driver_name, d.full_name)    AS driver_name,
+                       COALESCE(tr.vehicle_plate, v.plate_number) AS vehicle_plate
+                FROM transport_requests tr
+                LEFT JOIN drivers  d ON d.id = tr.driver_id
+                LEFT JOIN vehicles v ON v.id = tr.vehicle_id
+                {where}
+                ORDER BY tr.created_at DESC";
+
+            var rows = db.Query<dynamic>(sql, param).ToList();
+            return Ok(rows);
         }
 
+        // ─────────────────────────────────────────────────────────────────────
         // GET /api/transport/requests/{id}
-        [HttpGet("requests/{id}")]
-        public async Task<IActionResult> GetRequest(int id)
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpGet("requests/{id:int}")]
+        public IActionResult GetRequest(int id)
         {
-            using var conn = CreateConnection();
-            var req = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT * FROM transport_requests WHERE id = @Id", new { Id = id });
-            if (req == null) return NotFound();
+            using var db = new MySqlConnection(_cs);
 
-            var logs = await conn.QueryAsync(
-                "SELECT * FROM transport_request_logs WHERE transport_request_id = @Id ORDER BY created_at ASC",
-                new { Id = id });
+            var req = db.QueryFirstOrDefault<dynamic>(@"
+                SELECT tr.*,
+                       COALESCE(tr.driver_name, d.full_name)      AS driver_name,
+                       COALESCE(tr.vehicle_plate, v.plate_number)  AS vehicle_plate
+                FROM transport_requests tr
+                LEFT JOIN drivers  d ON d.id = tr.driver_id
+                LEFT JOIN vehicles v ON v.id = tr.vehicle_id
+                WHERE tr.id = @Id", new { Id = id });
 
-            // ── Resolve receipt wereda/mahberat names if only IDs are stored ──
-            string? receiptWeredaName   = null;
-            string? receiptMahberatName = null;
-            string? mahberatName        = null;
-            if (req.receipt_wereda_id != null)
-                receiptWeredaName = await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT name FROM weredas WHERE id = @Id", new { Id = (int)req.receipt_wereda_id });
-            if (req.receipt_mahberat_id != null)
-                receiptMahberatName = await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT name FROM mahberats WHERE id = @Id", new { Id = (int)req.receipt_mahberat_id });
-            // Fallback: resolve from mahberat_id if mahberat_name is null
-            if (string.IsNullOrEmpty((string?)req.mahberat_name) && req.mahberat_id != null)
-                mahberatName = await conn.QueryFirstOrDefaultAsync<string>(
-                    "SELECT name FROM mahberats WHERE id = @Id", new { Id = (int)req.mahberat_id });
+            if (req == null) return NotFound(new { success = false, message = "Not found" });
 
-            // Build response dict so we can add the resolved names
-            var reqDict = new Dictionary<string, object?>();
-            foreach (var prop in ((IDictionary<string, object>)req))
-                reqDict[prop.Key] = prop.Value;
-            reqDict["receipt_wereda_name"]   = receiptWeredaName;
-            reqDict["receipt_mahberat_name"] = receiptMahberatName ?? mahberatName;
-            // Ensure mahberat_name is populated
-            if (reqDict["mahberat_name"] == null || string.IsNullOrEmpty(reqDict["mahberat_name"]?.ToString()))
-                reqDict["mahberat_name"] = receiptMahberatName ?? mahberatName ?? reqDict["mahberat_user_name"];
+            var logs = db.Query<dynamic>(@"
+                SELECT * FROM transport_request_logs
+                WHERE transport_request_id = @Id
+                ORDER BY created_at ASC", new { Id = id }).ToList();
 
-            return Ok(new { request = reqDict, logs });
+            return Ok(new { request = req, logs });
         }
 
-        // GET /api/transport/notifications/{userId}
-        [HttpGet("notifications/{userId}")]
-        public async Task<IActionResult> GetNotifications(int userId)
+        // ─────────────────────────────────────────────────────────────────────
+        // GET /api/transport/stats?userId=X&role=WeredaMahberat
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpGet("stats")]
+        public IActionResult GetStats([FromQuery] int? userId, [FromQuery] string? role)
         {
-            using var conn = CreateConnection();
-            var notifs = await conn.QueryAsync(
-                @"SELECT id, transport_request_id, request_number, title, body, notification_type, is_read, created_at
-                  FROM transport_notifications WHERE recipient_user_id = @UserId
-                  ORDER BY created_at DESC",
-                new { UserId = userId });
-            return Ok(notifs);
+            using var db = new MySqlConnection(_cs);
+            string where = "";
+            object param = new { UserId = userId ?? 0 };
+
+            if (role?.ToLower() == "weredamahberat" && userId.HasValue)
+                where = "AND mahberat_user_id = @UserId";
+
+            var rows = db.Query<dynamic>(
+                $"SELECT status, COUNT(*) AS cnt FROM transport_requests WHERE 1=1 {where} GROUP BY status",
+                param).ToList();
+
+            var map = rows.ToDictionary(
+                r => (string)r.status,
+                r => (int)r.cnt);
+
+            int Get(params string[] keys) => keys.Sum(k => map.TryGetValue(k, out var v) ? v : 0);
+
+            return Ok(new
+            {
+                pending         = Get("PendingDispatcher"),
+                assigned        = Get("DriverAssigned"),
+                accepted        = Get("DriverAccepted"),
+                pickedUp        = Get("PickedUp"),
+                mahberatApproved= Get("MahberatApprovedPickup"),
+                receiptSubmitted= Get("ReceiptSubmitted"),
+                receiptVerified = Get("ReceiptVerified", "MahberatVerified"),
+                staffApproved   = Get("StaffApproved"),
+                paid            = Get("Paid"),
+                rejected        = Get("DispatcherRejected","DriverRejected","StaffRejected"),
+                total           = map.Values.Sum()
+            });
         }
 
-        // POST /api/transport/notifications/{id}/read
-        [HttpPost("notifications/{id}/read")]
-        public async Task<IActionResult> MarkNotificationRead(int id)
-        {
-            using var conn = CreateConnection();
-            await conn.ExecuteAsync("UPDATE transport_notifications SET is_read = 1 WHERE id = @Id", new { Id = id });
-            return Ok(new { success = true });
-        }
-
+        // ─────────────────────────────────────────────────────────────────────
         // GET /api/transport/drivers/available
+        // ─────────────────────────────────────────────────────────────────────
         [HttpGet("drivers/available")]
-        public async Task<IActionResult> GetAvailableDrivers()
+        public IActionResult GetAvailableDrivers()
         {
-            using var conn = CreateConnection();
-            var drivers = await conn.QueryAsync(
-                @"SELECT u.id, u.name, u.phone,
-                         v.id as vehicleId, v.plate_number as vehiclePlate, v.model as vehicleModel
-                  FROM users u
-                  LEFT JOIN vehicles v ON v.driver_id = u.id AND v.status = 'Available'
-                  WHERE u.role = 'Driver' AND u.is_active = TRUE
-                  ORDER BY u.name ASC");
+            using var db = new MySqlConnection(_cs);
+            var drivers = db.Query<dynamic>(@"
+                SELECT d.id,
+                       d.full_name  AS name,
+                       d.phone,
+                       v.id         AS vehicleId,
+                       v.plate_number AS vehiclePlate,
+                       v.vehicle_type AS vehicleType
+                FROM drivers d
+                LEFT JOIN vehicles v ON v.driver_id = d.id AND v.status = 'Assigned'
+                WHERE d.is_active = 1
+                ORDER BY d.full_name").ToList();
             return Ok(drivers);
         }
 
-        // GET /api/transport/stats?userId=&role=
-        [HttpGet("stats")]
-        public async Task<IActionResult> GetStats([FromQuery] int? userId, [FromQuery] string? role)
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests   — Mahberat creates a new request
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests")]
+        public IActionResult CreateRequest([FromBody] CreateRequestDto dto)
         {
-            using var conn = CreateConnection();
-            var r = role?.ToLower() ?? "";
-            string filter = "";
-            var param = new DynamicParameters();
+            if (dto.UserId <= 0 || string.IsNullOrWhiteSpace(dto.PickupLocation) || string.IsNullOrWhiteSpace(dto.Destination))
+                return BadRequest(new { success = false, message = "Missing required fields." });
 
-            if (userId.HasValue && (r == "mahberatuser" || r == "weredamahberat"))
-            { filter = "WHERE mahberat_user_id = @UserId"; param.Add("UserId", userId); }
-            else if (userId.HasValue && r == "driver")
-            { filter = "WHERE driver_id = @UserId"; param.Add("UserId", userId); }
+            using var db = new MySqlConnection(_cs);
 
-            var stats = await conn.QueryFirstAsync(
-                $@"SELECT
-                    COUNT(*) as total,
-                    SUM(status = 'PendingDispatcher') as pending,
-                    SUM(status = 'DriverAssigned') as assigned,
-                    SUM(status = 'DriverAccepted') as accepted,
-                    SUM(status = 'PickedUp') as pickedUp,
-                    SUM(status = 'ReceiptSubmitted') as receiptSubmitted,
-                    SUM(status = 'ReceiptVerified') as receiptVerified,
-                    SUM(status = 'StaffApproved') as staffApproved,
-                    SUM(status = 'Paid') as paid,
-                    SUM(status IN ('DispatcherRejected','StaffRejected')) as rejected
-                  FROM transport_requests {filter}", param);
-            return Ok(stats);
+            string reqNum = $"TR-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}";
+
+            db.Execute(@"
+                INSERT INTO transport_requests
+                    (request_number, mahberat_user_id, mahberat_user_name,
+                     pickup_location, destination, passenger_item_details,
+                     requested_date, requested_time, special_instructions,
+                     status, created_at, updated_at)
+                VALUES
+                    (@Num, @Uid, @UName,
+                     @Pickup, @Dest, @Details,
+                     @Date, @Time, @Instructions,
+                     'PendingDispatcher', NOW(), NOW())",
+                new
+                {
+                    Num          = reqNum,
+                    Uid          = dto.UserId,
+                    UName        = dto.UserName ?? "",
+                    Pickup       = dto.PickupLocation,
+                    Dest         = dto.Destination,
+                    Details      = dto.PassengerItemDetails ?? "",
+                    Date         = dto.RequestedDate,
+                    Time         = dto.RequestedTime ?? "",
+                    Instructions = dto.SpecialInstructions ?? ""
+                });
+
+            var newId = db.ExecuteScalar<int>("SELECT LAST_INSERT_ID()");
+            Log(db, newId, "", "PendingDispatcher", dto.UserId, dto.UserName ?? "", "WeredaMahberat", "Request created");
+
+            return Ok(new { success = true, requestNumber = reqNum, id = newId });
         }
 
-        // POST /api/transport/upload
-        [HttpPost("upload")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadFile([FromForm] IFormFile file)
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/dispatcher-action
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/dispatcher-action")]
+        public IActionResult DispatcherAction(int id, [FromBody] ActionDto dto)
         {
-            if (file == null || file.Length == 0) return BadRequest(new { message = "No file provided" });
-            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "transport-uploads");
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            var filePath = Path.Combine(folder, fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-                await file.CopyToAsync(stream);
-            return Ok(new { url = $"/transport-uploads/{fileName}" });
+            using var db = new MySqlConnection(_cs);
+            var req = db.QueryFirstOrDefault<dynamic>(
+                "SELECT status FROM transport_requests WHERE id=@Id", new { Id = id });
+            if (req == null) return NotFound(new { success = false, message = "Not found" });
+
+            if ((string)req.status != "PendingDispatcher")
+                return BadRequest(new { success = false, message = "Request is not pending." });
+
+            if (dto.Action == "Approve")
+            {
+                if (dto.DriverId <= 0)
+                    return BadRequest(new { success = false, message = "Driver is required." });
+
+                // Get driver + vehicle info
+                var driver = db.QueryFirstOrDefault<dynamic>(
+                    "SELECT full_name, phone FROM drivers WHERE id=@Id", new { Id = dto.DriverId });
+                string driverName = driver?.full_name ?? "";
+
+                string vehiclePlate = "";
+                if (dto.VehicleId.HasValue && dto.VehicleId > 0)
+                {
+                    vehiclePlate = db.ExecuteScalar<string>(
+                        "SELECT plate_number FROM vehicles WHERE id=@Id", new { Id = dto.VehicleId }) ?? "";
+                }
+
+                db.Execute(@"
+                    UPDATE transport_requests
+                    SET status='DriverAssigned', dispatcher_id=@Did, dispatcher_name=@DName,
+                        dispatcher_notes=@Notes, dispatcher_action_at=NOW(),
+                        driver_id=@DrvId, driver_name=@DrvName,
+                        vehicle_id=@VehId, vehicle_plate=@VehPlate,
+                        updated_at=NOW()
+                    WHERE id=@Id",
+                    new { Did = dto.DispatcherId, DName = dto.DispatcherName, Notes = dto.Notes ?? "",
+                          DrvId = dto.DriverId, DrvName = driverName,
+                          VehId = dto.VehicleId, VehPlate = vehiclePlate, Id = id });
+
+                Log(db, id, "PendingDispatcher", "DriverAssigned", dto.DispatcherId, dto.DispatcherName ?? "", "DispatchOfficer", dto.Notes ?? "");
+            }
+            else
+            {
+                db.Execute(@"
+                    UPDATE transport_requests
+                    SET status='DispatcherRejected', dispatcher_id=@Did, dispatcher_name=@DName,
+                        dispatcher_notes=@Notes, dispatcher_action_at=NOW(), updated_at=NOW()
+                    WHERE id=@Id",
+                    new { Did = dto.DispatcherId, DName = dto.DispatcherName, Notes = dto.Notes ?? "", Id = id });
+
+                Log(db, id, "PendingDispatcher", "DispatcherRejected", dto.DispatcherId, dto.DispatcherName ?? "", "DispatchOfficer", dto.Notes ?? "");
+            }
+
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/driver-action
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/driver-action")]
+        public IActionResult DriverAction(int id, [FromBody] ActionDto dto)
+        {
+            using var db = new MySqlConnection(_cs);
+            var req = db.QueryFirstOrDefault<dynamic>(
+                "SELECT status FROM transport_requests WHERE id=@Id", new { Id = id });
+            if (req == null) return NotFound(new { success = false, message = "Not found" });
+
+            string from = (string)req.status;
+            string to   = dto.Action == "Accept" ? "DriverAccepted" : "DriverRejected";
+
+            db.Execute(@"
+                UPDATE transport_requests
+                SET status=@To, driver_notes=@Notes, driver_action_at=NOW(), updated_at=NOW()
+                WHERE id=@Id",
+                new { To = to, Notes = dto.Notes ?? "", Id = id });
+
+            Log(db, id, from, to, dto.DriverId > 0 ? dto.DriverId : dto.DispatcherId,
+                dto.DriverName ?? dto.DispatcherName ?? "", "Driver", dto.Notes ?? "");
+
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/driver-pickup
+        //   Driver marks the item as picked up and submits receipt
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/driver-pickup")]
+        public IActionResult DriverPickup(int id, [FromBody] DriverPickupDto dto)
+        {
+            using var db = new MySqlConnection(_cs);
+            var req = db.QueryFirstOrDefault<dynamic>(
+                "SELECT status FROM transport_requests WHERE id=@Id", new { Id = id });
+            if (req == null) return NotFound(new { success = false, message = "Not found" });
+
+            db.Execute(@"
+                UPDATE transport_requests
+                SET status='PickedUp',
+                    pickup_confirmed_at=NOW(),
+                    pickup_notes=@Notes,
+                    receipt_photo_url=@Photo,
+                    receipt_notes=@RNotes,
+                    actual_kilogram=@Kg,
+                    updated_at=NOW()
+                WHERE id=@Id",
+                new { Notes = dto.Notes ?? "", Photo = dto.ReceiptPhotoUrl ?? "",
+                      RNotes = dto.ReceiptNotes ?? "", Kg = dto.ActualKilogram, Id = id });
+
+            Log(db, id, "DriverAccepted", "PickedUp", dto.DriverId, dto.DriverName ?? "", "Driver", dto.Notes ?? "");
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/mahberat-pickup
+        //   Mahberat confirms or rejects the pickup
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/mahberat-pickup")]
+        public IActionResult MahberatPickup(int id, [FromBody] ActionDto dto)
+        {
+            using var db = new MySqlConnection(_cs);
+            var req = db.QueryFirstOrDefault<dynamic>(
+                "SELECT status FROM transport_requests WHERE id=@Id", new { Id = id });
+            if (req == null) return NotFound(new { success = false, message = "Not found" });
+
+            if (dto.Action == "Approve")
+            {
+                db.Execute(@"
+                    UPDATE transport_requests
+                    SET status='MahberatApprovedPickup',
+                        mahberat_pickup_approved_at=NOW(),
+                        mahberat_pickup_notes=@Notes,
+                        updated_at=NOW()
+                    WHERE id=@Id",
+                    new { Notes = dto.Notes ?? "", Id = id });
+
+                Log(db, id, "PickedUp", "MahberatApprovedPickup", dto.UserId, dto.UserName ?? "", "WeredaMahberat", dto.Notes ?? "");
+            }
+            else
+            {
+                // Reject: revert to DriverAccepted so driver can retry
+                db.Execute(@"
+                    UPDATE transport_requests
+                    SET status='DriverAccepted',
+                        mahberat_pickup_notes=@Notes,
+                        updated_at=NOW()
+                    WHERE id=@Id",
+                    new { Notes = dto.Notes ?? "", Id = id });
+
+                Log(db, id, "PickedUp", "DriverAccepted", dto.UserId, dto.UserName ?? "", "WeredaMahberat", $"Pickup rejected: {dto.Notes}");
+            }
+
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/receipt-submit
+        //   Driver submits receipt after delivery
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/receipt-submit")]
+        public IActionResult ReceiptSubmit(int id, [FromBody] ReceiptSubmitDto dto)
+        {
+            using var db = new MySqlConnection(_cs);
+            var req = db.QueryFirstOrDefault<dynamic>(
+                "SELECT status FROM transport_requests WHERE id=@Id", new { Id = id });
+            if (req == null) return NotFound(new { success = false, message = "Not found" });
+
+            db.Execute(@"
+                UPDATE transport_requests
+                SET status='ReceiptSubmitted',
+                    receipt_photo_url=@Photo,
+                    receipt_notes=@Notes,
+                    actual_kilogram=@Kg,
+                    receipt_submitted_at=NOW(),
+                    updated_at=NOW()
+                WHERE id=@Id",
+                new { Photo = dto.ReceiptPhotoUrl ?? "", Notes = dto.Notes ?? "",
+                      Kg = dto.ActualKilogram, Id = id });
+
+            Log(db, id, "MahberatApprovedPickup", "ReceiptSubmitted", dto.DriverId, dto.DriverName ?? "", "Driver", dto.Notes ?? "");
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/mahberat-verify
+        //   Mahberat level-1 verifies the receipt and forwards to Staff
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/mahberat-verify")]
+        public IActionResult MahberatVerify(int id, [FromBody] ActionDto dto)
+        {
+            using var db = new MySqlConnection(_cs);
+            var req = db.QueryFirstOrDefault<dynamic>(
+                "SELECT status FROM transport_requests WHERE id=@Id", new { Id = id });
+            if (req == null) return NotFound(new { success = false, message = "Not found" });
+
+            string from = (string)req.status;
+
+            if (dto.Action == "Verify")
+            {
+                db.Execute(@"
+                    UPDATE transport_requests
+                    SET status='MahberatVerified',
+                        mahberat_verified_at=NOW(),
+                        mahberat_verification_notes=@Notes,
+                        level_1_mahberat_status='Approved',
+                        level_1_date=NOW(),
+                        updated_at=NOW()
+                    WHERE id=@Id",
+                    new { Notes = dto.Notes ?? "", Id = id });
+
+                Log(db, id, from, "MahberatVerified", dto.UserId, dto.UserName ?? "", "WeredaMahberat", dto.Notes ?? "");
+            }
+            else // RequestCorrection
+            {
+                db.Execute(@"
+                    UPDATE transport_requests
+                    SET status='ReceiptSubmitted',
+                        mahberat_verification_notes=@Notes,
+                        updated_at=NOW()
+                    WHERE id=@Id",
+                    new { Notes = dto.Notes ?? "", Id = id });
+
+                Log(db, id, from, "ReceiptSubmitted", dto.UserId, dto.UserName ?? "", "WeredaMahberat", $"Correction requested: {dto.Notes}");
+            }
+
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/staff-approve
+        //   Staff final approval — sets cost and advances to StaffApproved
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/staff-approve")]
+        public IActionResult StaffApprove(int id, [FromBody] StaffApproveDto dto)
+        {
+            using var db = new MySqlConnection(_cs);
+            db.Execute(@"
+                UPDATE transport_requests
+                SET status='StaffApproved',
+                    staff_id=@StaffId, staff_name=@StaffName,
+                    transport_cost=@Cost,
+                    staff_notes=@Notes,
+                    staff_action_at=NOW(),
+                    level_2_manager_status='Approved',
+                    level_2_date=NOW(),
+                    updated_at=NOW()
+                WHERE id=@Id",
+                new { StaffId = dto.StaffId, StaffName = dto.StaffName ?? "",
+                      Cost = dto.TransportCost, Notes = dto.Notes ?? "", Id = id });
+
+            Log(db, id, "MahberatVerified", "StaffApproved", dto.StaffId, dto.StaffName ?? "", "Staff", dto.Notes ?? "");
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // POST /api/transport/requests/{id}/mark-paid
+        // ─────────────────────────────────────────────────────────────────────
+        [HttpPost("requests/{id:int}/mark-paid")]
+        public IActionResult MarkPaid(int id, [FromBody] MarkPaidDto dto)
+        {
+            using var db = new MySqlConnection(_cs);
+            db.Execute(@"
+                UPDATE transport_requests
+                SET status='Paid',
+                    transport_cost=COALESCE(@Cost, transport_cost),
+                    transaction_number=@TxNum,
+                    paid_at=NOW(),
+                    updated_at=NOW()
+                WHERE id=@Id",
+                new { Cost = dto.TransportCost, TxNum = dto.TransactionNumber ?? $"TXN-{DateTime.Now:yyyyMMddHHmmss}", Id = id });
+
+            Log(db, id, "StaffApproved", "Paid", dto.StaffId, dto.StaffName ?? "", "Staff", dto.Notes ?? "");
+            return Ok(new { success = true });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Helpers
+        // ─────────────────────────────────────────────────────────────────────
+        private void Log(IDbConnection db, int requestId, string from, string to,
+                         int actorId, string actorName, string actorRole, string notes)
+        {
+            try
+            {
+                db.Execute(@"
+                    INSERT INTO transport_request_logs
+                        (transport_request_id, from_status, to_status,
+                         actor_user_id, actor_name, actor_role, notes, created_at)
+                    VALUES
+                        (@Rid, @From, @To, @Aid, @AName, @ARole, @Notes, NOW())",
+                    new { Rid = requestId, From = from, To = to,
+                          Aid = actorId, AName = actorName, ARole = actorRole, Notes = notes });
+            }
+            catch { /* non-critical */ }
         }
     }
 
-    // ─── DTOs ────────────────────────────────────────────────────────────────
-
-    public class CreateTransportRequestDto
+    // ── DTOs ─────────────────────────────────────────────────────────────────
+    public class CreateRequestDto
     {
-        public int UserId { get; set; }
-        public string UserName { get; set; } = "";
-        public int? MahberatId { get; set; }
-        public string PickupLocation { get; set; } = "";
-        public string Destination { get; set; } = "";
-        public string PassengerItemDetails { get; set; } = "";
-        public string RequestedDate { get; set; } = "";
-        public string RequestedTime { get; set; } = "";
-        public string SpecialInstructions { get; set; } = "";
+        public int     UserId               { get; set; }
+        public string? UserName             { get; set; }
+        public string  PickupLocation       { get; set; } = "";
+        public string  Destination          { get; set; } = "";
+        public string? PassengerItemDetails { get; set; }
+        public string? RequestedDate        { get; set; }
+        public string? RequestedTime        { get; set; }
+        public string? SpecialInstructions  { get; set; }
     }
 
-    public class DispatcherActionDto
+    public class ActionDto
     {
-        public int DispatcherId { get; set; }
-        public string DispatcherName { get; set; } = "";
-        public string Action { get; set; } = ""; // "Approve" | "Reject"
-        public int? DriverId { get; set; }
-        public int? VehicleId { get; set; }
-        public string? Notes { get; set; }
+        public string  Action         { get; set; } = "";
+        public int     UserId         { get; set; }
+        public string? UserName       { get; set; }
+        public int     DispatcherId   { get; set; }
+        public string? DispatcherName { get; set; }
+        public int     DriverId       { get; set; }
+        public string? DriverName     { get; set; }
+        public int?    VehicleId      { get; set; }
+        public string? Notes          { get; set; }
     }
 
-    public class DriverActionDto
+    public class DriverPickupDto
     {
-        public int DriverId { get; set; }
-        public string DriverName { get; set; } = "";
-        public string Action { get; set; } = ""; // "Accept" | "Reject"
-        public string? Notes { get; set; }
-    }
-
-    public class PickupDto
-    {
-        public int DriverId { get; set; }
-        public string DriverName { get; set; } = "";
-        public string? Notes { get; set; }
-    }
-
-    public class MahberatPickupDto
-    {
-        public int UserId { get; set; }
-        public string UserName { get; set; } = "";
-        public string Action { get; set; } = ""; // "Approve" | "Reject"
-        public string? Notes { get; set; }
-    }
-
-    public class SubmitReceiptDto
-    {
-        public int DriverId { get; set; }
-        public string DriverName { get; set; } = "";
+        public int     DriverId        { get; set; }
+        public string? DriverName      { get; set; }
+        public string? Notes           { get; set; }
         public string? ReceiptPhotoUrl { get; set; }
-        public string? DigitalReceiptUrl { get; set; }
-        public string? Notes { get; set; }
-        // Extended receipt fields
+        public string? ReceiptNotes    { get; set; }
         public decimal? ActualKilogram { get; set; }
-        public int? WeredaId { get; set; }
-        public int? MahberatId { get; set; }
     }
 
-    public class MahberatVerifyDto
+    public class ReceiptSubmitDto
     {
-        public int UserId { get; set; }
-        public string UserName { get; set; } = "";
-        public string Action { get; set; } = "";   // "Verify" | "RequestCorrection"
-        public string? Notes { get; set; }
+        public int     DriverId        { get; set; }
+        public string? DriverName      { get; set; }
+        public string? ReceiptPhotoUrl { get; set; }
+        public string? Notes           { get; set; }
+        public decimal? ActualKilogram { get; set; }
     }
 
-    public class StaffActionDto
+    public class StaffApproveDto
     {
-        public int StaffId { get; set; }
-        public string StaffName { get; set; } = "";
-        public string Action { get; set; } = ""; // "Approve" | "Reject"
-        public decimal? TransportCost { get; set; }
-        public string? Notes { get; set; }
+        public int     StaffId        { get; set; }
+        public string? StaffName      { get; set; }
+        public decimal TransportCost  { get; set; }
+        public string? Notes          { get; set; }
     }
 
-    public class ProcessPaymentDto
+    public class MarkPaidDto
     {
-        public int FinanceStaffId { get; set; }
-        public string FinanceStaffName { get; set; } = "";
-        public string TransactionNumber { get; set; } = "";
-        public string? PaymentProofUrl { get; set; }
-        public string? Notes { get; set; }
+        public int     StaffId            { get; set; }
+        public string? StaffName          { get; set; }
+        public decimal? TransportCost     { get; set; }
+        public string? TransactionNumber  { get; set; }
+        public string? Notes              { get; set; }
     }
 }

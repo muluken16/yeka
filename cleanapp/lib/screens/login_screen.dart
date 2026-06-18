@@ -20,26 +20,20 @@ class _LoginScreenState extends State<LoginScreen> {
     {
       'label': 'Driver',
       'icon': Icons.local_shipping_rounded,
-      'email': 'abebe.girma@yeka.et',
+      'email': 'driver1@yeka.et',
       'pass': 'driver123',
     },
     {
       'label': 'Outsource',
       'icon': Icons.business_rounded,
-      'email': 'selamawit.t@yeka.et',
+      'email': 'outsource@yeka.et',
       'pass': 'outsource123',
     },
     {
       'label': 'Private Co.',
       'icon': Icons.cleaning_services_rounded,
-      'email': 'wudueco@gmail.com',
-      'pass': 'Mule@123',
-    },
-    {
-      'label': 'Manager',
-      'icon': Icons.admin_panel_settings_rounded,
-      'email': 'tigist.worku@yeka.et',
-      'pass': 'manager123',
+      'email': 'private@yeka.et',
+      'pass': 'private123',
     },
   ];
 
@@ -186,22 +180,23 @@ class _LoginScreenState extends State<LoginScreen> {
           Expanded(flex: 2, child: _heroSection()),
           Expanded(
             flex: 3,
-            child:
-                Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF0F4F3),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(32),
-                    ),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                  child: _loginFormContent(),
-                ).animate().slideY(
-                  begin: 0.15,
-                  duration: 350.ms,
-                  curve: Curves.easeOut,
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0F4F3),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(32),
                 ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                child: _loginFormContent(),
+              ),
+            ).animate().slideY(
+              begin: 0.15,
+              duration: 350.ms,
+              curve: Curves.easeOut,
+            ),
           ),
         ],
       ),
@@ -355,7 +350,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _statsRow() => Row(
     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
     children: [
-      _statPill('4', 'Roles'),
+      _statPill('5', 'Roles'),
       _statPill('100%', 'Mobile'),
       _statPill('Real-time', 'Sync'),
     ],

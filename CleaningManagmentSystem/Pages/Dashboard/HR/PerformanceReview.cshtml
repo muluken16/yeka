@@ -1,0 +1,204 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.HR.PerformanceReviewModel
+@{
+    Layout = "_HRLayout";
+    ViewData["Title"] = "Performance Reviews";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-star-fill text-warning me-2"></i>Performance Reviews</h4>
+        <p class="text-muted mb-0">Record evaluations, track KPI scores, and manage promotion recommendations.</p>
+    </div>
+    <button class="btn btn-warning text-dark" data-bs-toggle="modal" data-bs-target="#addReviewModal">
+        <i class="bi bi-plus-circle me-1"></i> New Review
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>@Model.ErrorMessage<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-warning">@(Model.Reviews.Any() ? Model.Reviews.Average(r => r.FinalRating).ToString("F1") : "—")</div>
+            <div class="text-muted small">Avg Rating (out of 5)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-success">@Model.Reviews.Count(r => r.PromotionRecommendation == "Yes")</div>
+            <div class="text-muted small">Recommended for Promotion</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-primary">@Model.Reviews.Count</div>
+            <div class="text-muted small">Total Reviews</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-info">@Model.Reviews.Count(r => r.FinalRating >= 4)</div>
+            <div class="text-muted small">High Performers (4+)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Reviews Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between">
+        <h6 class="fw-bold mb-0">Performance Evaluations</h6>
+        <form method="get" class="d-flex gap-2">
+            <input type="text" name="period" value="@Model.PeriodFilter" class="form-control form-control-sm" placeholder="Period e.g. Q1 2026" style="width:160px">
+            <select name="empId" class="form-select form-select-sm" style="width:200px">
+                <option value="">All Employees</option>
+                @foreach (var e in Model.AllEmployees)
+                {
+                    <option value="@e.Id" selected="@(Model.EmpFilter == e.Id)">@e.FirstName @e.LastName</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+            <a href="/Dashboard/HR/PerformanceReview" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </form>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr><th>#</th><th>Employee</th><th>Review Period</th><th>KPI Score</th><th>Rating</th><th>Promotion</th><th>Comments</th><th>Reviewed By</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Reviews.Any())
+                    {
+                        <tr><td colspan="9" class="text-center py-4 text-muted">No performance reviews found.</td></tr>
+                    }
+                    @foreach (var (rv, i) in Model.Reviews.Select((r, i) => (r, i + 1)))
+                    {
+                        <tr>
+                            <td class="text-muted small">@i</td>
+                            <td>
+                                <div class="fw-semibold">@rv.EmployeeName</div>
+                                <div class="text-muted small">@rv.Department</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">@rv.ReviewPeriod</span></td>
+                            <td>
+                                <div class="progress" style="height:8px;width:80px;" title="@rv.KpiScore%">
+                                    <div class="progress-bar @(rv.KpiScore >= 80 ? "bg-success" : rv.KpiScore >= 60 ? "bg-warning" : "bg-danger")" style="width:@rv.KpiScore%"></div>
+                                </div>
+                                <small class="text-muted">@rv.KpiScore%</small>
+                            </td>
+                            <td>
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <i class="bi @(s <= rv.FinalRating ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
+                                }
+                                <small class="text-muted ms-1">(@rv.FinalRating/5)</small>
+                            </td>
+                            <td>
+                                @if (rv.PromotionRecommendation == "Yes")
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success"><i class="bi bi-arrow-up-circle me-1"></i>Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary border">No</span>
+                                }
+                            </td>
+                            <td class="small text-muted" style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@rv.ManagerComments">@rv.ManagerComments</td>
+                            <td class="small">@rv.ReviewerName</td>
+                            <td class="small">@rv.CreatedAt.ToString("MMM dd, yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Review Modal -->
+<div class="modal fade" id="addReviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-star me-2"></i>New Performance Review</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="Add">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Employee *</label>
+                            <select name="EmployeeId" class="form-select" required>
+                                <option value="">Select Employee</option>
+                                @foreach (var e in Model.AllEmployees)
+                                {
+                                    <option value="@e.Id">@e.FirstName @e.LastName — @e.Department</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Review Period *</label>
+                            <input type="text" name="ReviewPeriod" class="form-control" placeholder="e.g. Q1 2026, Annual 2025" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">KPI Score (0–100)</label>
+                            <input type="number" name="KpiScore" class="form-control" min="0" max="100" value="75" id="kpiInput" oninput="suggestRating(this.value)">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Final Rating (1–5 Stars) *</label>
+                            <div class="d-flex align-items-center gap-3 mt-1" id="starRating">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="FinalRating" value="@s" class="d-none" @(s == 3 ? "checked" : "")>
+                                        <i class="bi bi-star-fill fs-4" style="color:@(s <= 3 ? "#ffc107" : "#dee2e6");cursor:pointer;" data-star="@s"
+                                           onmouseover="hoverStar(@s)" onmouseout="resetStars()" onclick="selectStar(@s)"></i>
+                                    </label>
+                                }
+                            </div>
+                            <small class="text-muted" id="ratingLabel">Rating: 3 / 5 — Satisfactory</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Promotion Recommendation</label>
+                            <select name="PromotionRecommendation" class="form-select">
+                                <option value="No">No</option>
+                                <option value="Yes">Yes — Recommend for Promotion</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Goals Achieved (%)</label>
+                            <input type="number" name="GoalsAchieved" class="form-control" min="0" max="100" value="0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Manager Comments *</label>
+                            <textarea name="ManagerComments" class="form-control" rows="3" placeholder="Detailed performance feedback..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning text-dark"><i class="bi bi-save me-1"></i>Save Review</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+var ratingLabels = ['','Poor','Below Average','Satisfactory','Good','Excellent'];
+var selectedRating = 3;
+function selectStar(n){ selectedRating=n; resetStars(); document.querySelector('input[name="FinalRating"][value="'+n+'"]').checked=true; document.getElementById('ratingLabel').textContent='Rating: '+n+' / 5 — '+ratingLabels[n]; }
+function hoverStar(n){ document.querySelectorAll('[data-star]').forEach(function(s){ s.style.color=parseInt(s.dataset.star)<=n?'#ffc107':'#dee2e6'; }); }
+function resetStars(){ document.querySelectorAll('[data-star]').forEach(function(s){ s.style.color=parseInt(s.dataset.star)<=selectedRating?'#ffc107':'#dee2e6'; }); }
+function suggestRating(v){ var n=v>=90?5:v>=75?4:v>=60?3:v>=40?2:1; selectStar(n); }
+</script>
+}

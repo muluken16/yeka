@@ -58,7 +58,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         status, notes, image_url AS imageUrl, registered_at,
                         mahberat_approved, mahberat_approved_by,
                         mahberat_approved_at, mahberat_notes,
-                        ISNULL(transport_request_id, 0) AS transport_request_id
+                        COALESCE(transport_request_id, 0) AS transport_request_id
                     FROM staff_receipts
                     WHERE status = 'Pending' AND mahberat_approved = 1
                     UNION ALL
@@ -92,7 +92,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                         TIME_FORMAT(receipt_time, '%H:%i:%s')    AS time,
                         status, notes, image_url AS imageUrl, registered_at,
                         mahberat_approved, mahberat_notes,
-                        ISNULL(transport_request_id, 0) AS transport_request_id
+                        COALESCE(transport_request_id, 0) AS transport_request_id
                     FROM staff_receipts
                     WHERE status != 'Pending'
                     UNION ALL

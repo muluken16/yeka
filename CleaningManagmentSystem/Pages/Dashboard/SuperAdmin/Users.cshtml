@@ -282,6 +282,16 @@
                             data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body row g-3">
+                    <div class="col-12 mb-2">
+                        <label class="form-label fw-semibold text-info">Link to Registered Employee</label>
+                        <select class="form-select border-info bg-info-subtle" id="employeeSelect" onchange="fillFromEmployee()">
+                            <option value="">— Select an Employee (Optional) —</option>
+                            @foreach(var e in Model.AvailableEmployees) {
+                                <option value="@e.Id" data-name="@e.Name" data-lastname="@e.LastName" data-email="@e.Email" data-phone="@e.Phone">@e.Name (@e.Email)</option>
+                            }
+                        </select>
+                        <div class="form-text">Select an employee registered by HR to automatically fill their details.</div>
+                    </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Full Name *</label>
                         <input class="form-control" name="Name" required/>
@@ -302,6 +312,7 @@
                             <option value="driver">Driver  (Mobile App)</option>
                             <option value="outsource">Outsource  (Mobile App)</option>
                             <option value="manager">Manager  (Mobile App)</option>
+                            <option value="hr">Human Resources  (Web)</option>
                             <option value="superadmin">Super Admin  (Web)</option>
                             <option value="staff">Staff  (Web)</option>
                             <option value="wereda_mahberat">Wereda Mahberat  (Web)</option>
@@ -441,6 +452,7 @@
                             <option value="outsource">Outsource  (Mobile App)</option>
                             <option value="PrivateCompanyRep">Private Company Rep  (Mobile App)</option>
                             <option value="manager">Manager  (Mobile App)</option>
+                            <option value="hr">Human Resources  (Web)</option>
                             <option value="superadmin">Super Admin  (Web)</option>
                             <option value="staff">Staff  (Web)</option>
                             <option value="wereda_mahberat">Wereda Mahberat  (Web)</option>
@@ -530,6 +542,21 @@ function validateAddRole() {
     var v = document.getElementById('addRole').value;
     if (!v) { alert('Please select a Role before creating the user.'); return false; }
     return true;
+}
+
+function fillFromEmployee() {
+    var sel = document.getElementById('employeeSelect');
+    if(sel.selectedIndex > 0) {
+        var opt = sel.options[sel.selectedIndex];
+        document.querySelector('#formAdd input[name="Name"]').value = opt.getAttribute('data-name');
+        document.querySelector('#formAdd input[name="Email"]').value = opt.getAttribute('data-email');
+        document.querySelector('#formAdd input[name="Phone"]').value = opt.getAttribute('data-phone');
+        
+        var lastName = opt.getAttribute('data-lastname');
+        if(lastName) {
+            document.querySelector('#formAdd input[name="Password"]').value = lastName + '@@123';
+        }
+    }
 }
 
 function fillEdit(id, name, email, role, phone, address, isActive) {

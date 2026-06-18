@@ -13,9 +13,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _notifications = true;
-  bool _offlineSync   = false;
-  String _language    = 'English';
+  String _language = 'English';
 
   @override
   Widget build(BuildContext context) {
@@ -120,25 +118,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     secondary: _iconBox(Icons.dark_mode_rounded, Colors.amber, isDark),
                     title: Text('Dark Mode', style: _bold(isDark)),
                     subtitle: Text('Toggle light / dark theme', style: _sub(isDark)),
-                  ),
-                  _divider(isDark),
-                  SwitchListTile(
-                    value: _notifications,
-                    onChanged: (v) => setState(() => _notifications = v),
-                    activeThumbColor: AppColors.primary,
-                    secondary: _iconBox(Icons.notifications_active_rounded,
-                        Colors.purple, isDark),
-                    title: Text('Push Notifications', style: _bold(isDark)),
-                    subtitle: Text('Real-time trip alerts', style: _sub(isDark)),
-                  ),
-                  _divider(isDark),
-                  SwitchListTile(
-                    value: _offlineSync,
-                    onChanged: (v) => setState(() => _offlineSync = v),
-                    activeThumbColor: AppColors.primary,
-                    secondary: _iconBox(Icons.cloud_sync_rounded, Colors.orange, isDark),
-                    title: Text('Offline Sync', style: _bold(isDark)),
-                    subtitle: Text('Save submissions locally', style: _sub(isDark)),
                   ),
                   _divider(isDark),
                   ListTile(

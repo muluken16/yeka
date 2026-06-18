@@ -3,6 +3,7 @@ using MySqlConnector;
 using Dapper;
 using System.Data;
 using Microsoft.Extensions.Configuration;
+using CleaningManagmentSystem.Models;
 
 namespace CleaningManagmentSystem.Controllers
 {
@@ -55,29 +56,7 @@ namespace CleaningManagmentSystem.Controllers
         /// Maps any DB role string to the canonical value the Flutter app expects.
         /// Flutter checks role.toLowerCase() for: driver, outsource, privatecompanyrep, manager
         /// </summary>
-        private static string NormalizeRole(string raw)
-        {
-            return (raw ?? "").Trim().ToLower() switch
-            {
-                "driver"                            => "driver",
-                "outsource"                         => "outsource",
-                "privatecompanyrep"                 => "PrivateCompanyRep",
-                "private_company_rep"               => "PrivateCompanyRep",
-                "private company rep"               => "PrivateCompanyRep",
-                "manager"                           => "manager",
-                "superadmin"                        => "superadmin",
-                "super admin"                       => "superadmin",
-                "super_admin"                       => "superadmin",
-                "staff"                             => "staff",
-                "wereda_mahberat"                   => "WeredaMahberat",
-                "weredamahberat"                    => "WeredaMahberat",
-                "wereda mahberat"                   => "WeredaMahberat",
-                "dispatchofficer"                   => "DispatchOfficer",
-                "dispatch_officer"                  => "DispatchOfficer",
-                "dispatch officer"                  => "DispatchOfficer",
-                _                                   => raw  // keep original for unknown roles
-            };
-        }
+        private static string NormalizeRole(string raw) => RoleHelper.NormalizeRole(raw);
 
         [HttpGet("weredas")]
         public async Task<IActionResult> GetWeredas()
@@ -403,8 +382,6 @@ namespace CleaningManagmentSystem.Controllers
             if (userInfo == null)
                 return NotFound(new { message = "User not found." });
 
-            Console.WriteLine($"[PrivateCompany] Looking up company for user {userId} ({userInfo.email})");
-
             dynamic? company = null;
 
             // 1. Match by rep_user_id
@@ -417,7 +394,6 @@ namespace CleaningManagmentSystem.Controllers
 
             if (company != null)
             {
-                Console.WriteLine($"[PrivateCompany] Found via rep_user_id: {company.company_name}");
                 return Ok(company);
             }
 
@@ -431,7 +407,6 @@ namespace CleaningManagmentSystem.Controllers
 
             if (company != null)
             {
-                Console.WriteLine($"[PrivateCompany] Found via email: {company.company_name}. Auto-linking.");
                 try { await connection.ExecuteAsync(
                     "UPDATE private_cleaning_companies SET rep_user_id=@Uid WHERE id=@Id",
                     new { Uid = userId, Id = (int)company.id }); }
@@ -449,7 +424,6 @@ namespace CleaningManagmentSystem.Controllers
 
             if (company != null)
             {
-                Console.WriteLine($"[PrivateCompany] Found via contact_person: {company.company_name}. Auto-linking.");
                 try { await connection.ExecuteAsync(
                     "UPDATE private_cleaning_companies SET rep_user_id=@Uid WHERE id=@Id",
                     new { Uid = userId, Id = (int)company.id }); }
@@ -458,7 +432,6 @@ namespace CleaningManagmentSystem.Controllers
             }
 
             // 4. Auto-create a placeholder company linked to this user
-            Console.WriteLine($"[PrivateCompany] Auto-creating company for user {userId}...");
             try
             {
                 await connection.ExecuteAsync(
@@ -478,7 +451,6 @@ namespace CleaningManagmentSystem.Controllers
                     });
 
                 var newId = await connection.QueryFirstAsync<long>("SELECT LAST_INSERT_ID()");
-                Console.WriteLine($"[PrivateCompany] Auto-created company ID {newId} for user {userId}.");
 
                 company = await connection.QueryFirstOrDefaultAsync<dynamic>(
                     @"SELECT p.id, p.company_name, p.phone, p.address,
@@ -490,7 +462,6 @@ namespace CleaningManagmentSystem.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[PrivateCompany] Auto-create failed: {ex.Message}");
                 return StatusCode(500, new {
                     message = $"Could not auto-create company. Error: {ex.Message}. " +
                               $"Ask admin to link your account (User ID: {userId}) to a company at Private Cleaning Companies page."

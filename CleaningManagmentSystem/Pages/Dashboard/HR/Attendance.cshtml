@@ -1,0 +1,273 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.HR.AttendanceModel
+@{
+    Layout = "_HRLayout";
+    ViewData["Title"] = "Attendance Management";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-clock-history text-success me-2"></i>Attendance Management</h4>
+        <p class="text-muted mb-0">Track daily check-ins, check-outs, and working hours.</p>
+    </div>
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addAttendanceModal">
+        <i class="bi bi-plus-circle me-1"></i> Record Attendance
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>@Model.ErrorMessage<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+}
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-success">@Model.Records.Count(r => r.AttendanceStatus == "Present")</div>
+            <div class="text-muted small">Present Today</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-danger">@Model.Records.Count(r => r.AttendanceStatus == "Absent")</div>
+            <div class="text-muted small">Absent</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-warning">@Model.Records.Count(r => r.AttendanceStatus == "Late")</div>
+            <div class="text-muted small">Late Arrivals</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+            <div class="fs-2 fw-bold text-info">@Model.Records.Where(r => r.OvertimeHours > 0).Sum(r => r.OvertimeHours).ToString("F1")</div>
+            <div class="text-muted small">Total Overtime Hrs</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Date</label>
+                <input type="date" name="date" value="@Model.DateFilter" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Employee</label>
+                <select name="empId" class="form-select">
+                    <option value="">All Employees</option>
+                    @foreach (var e in Model.AllEmployees)
+                    {
+                        <option value="@e.Id" selected="@(Model.EmpFilter == e.Id)">@e.FirstName @e.LastName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Present" selected="@(Model.StatusFilter == "Present")">Present</option>
+                    <option value="Absent" selected="@(Model.StatusFilter == "Absent")">Absent</option>
+                    <option value="Late" selected="@(Model.StatusFilter == "Late")">Late</option>
+                    <option value="Half Day" selected="@(Model.StatusFilter == "Half Day")">Half Day</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary me-2"><i class="bi bi-search me-1"></i>Filter</button>
+                <a href="/Dashboard/HR/Attendance" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Employee</th>
+                        <th>Date</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
+                        <th>Working Hours</th>
+                        <th>Overtime</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Records.Any())
+                    {
+                        <tr><td colspan="9" class="text-center py-4 text-muted">No attendance records found.</td></tr>
+                    }
+                    @foreach (var (rec, i) in Model.Records.Select((r, i) => (r, i + 1)))
+                    {
+                        <tr>
+                            <td class="text-muted small">@i</td>
+                            <td>
+                                <div class="fw-semibold">@rec.EmployeeName</div>
+                                <div class="text-muted small">@rec.Department</div>
+                            </td>
+                            <td class="small">@rec.Date.ToString("MMM dd, yyyy")</td>
+                            <td class="small fw-semibold text-success">@(rec.CheckInTime != TimeSpan.Zero ? rec.CheckInTime.ToString(@"hh\:mm") : "—")</td>
+                            <td class="small fw-semibold text-danger">@(rec.CheckOutTime != TimeSpan.Zero ? rec.CheckOutTime.ToString(@"hh\:mm") : "—")</td>
+                            <td>
+                                <span class="badge @(rec.WorkingHours >= 8 ? "bg-success" : rec.WorkingHours > 0 ? "bg-warning text-dark" : "bg-secondary")">
+                                    @rec.WorkingHours.ToString("F1") hrs
+                                </span>
+                            </td>
+                            <td class="small text-info fw-semibold">@(rec.OvertimeHours > 0 ? $"+{rec.OvertimeHours:F1} hrs" : "—")</td>
+                            <td>
+                                @{
+                                    var badgeClass = rec.AttendanceStatus switch {
+                                        "Present" => "bg-success-subtle text-success border border-success",
+                                        "Absent"  => "bg-danger-subtle text-danger border border-danger",
+                                        "Late"    => "bg-warning-subtle text-warning border border-warning",
+                                        _         => "bg-secondary-subtle text-secondary border border-secondary"
+                                    };
+                                }
+                                <span class="badge @badgeClass">@rec.AttendanceStatus</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal" data-bs-target="#editAttendanceModal"
+                                        data-id="@rec.Id" data-empid="@rec.EmployeeId"
+                                        data-date="@rec.Date.ToString("yyyy-MM-dd")"
+                                        data-checkin="@rec.CheckInTime.ToString(@"hh\:mm")"
+                                        data-checkout="@rec.CheckOutTime.ToString(@"hh\:mm")"
+                                        data-status="@rec.AttendanceStatus"
+                                        data-notes="@rec.Notes">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Attendance Modal -->
+<div class="modal fade" id="addAttendanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Record Attendance</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="Add">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Employee *</label>
+                        <select name="EmployeeId" class="form-select" required>
+                            <option value="">Select Employee</option>
+                            @foreach (var e in Model.AllEmployees)
+                            {
+                                <option value="@e.Id">@e.FirstName @e.LastName — @e.Department</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date *</label>
+                        <input type="date" name="Date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Check-In Time</label>
+                            <input type="time" name="CheckInTime" class="form-control" value="08:00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Check-Out Time</label>
+                            <input type="time" name="CheckOutTime" class="form-control" value="17:00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="AttendanceStatus" class="form-select">
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Late">Late</option>
+                            <option value="Half Day">Half Day</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="Notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-save me-1"></i>Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Attendance Modal -->
+<div class="modal fade" id="editAttendanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Update Attendance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="Update">
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="eId">
+                    <div class="mb-3">
+                        <label class="form-label">Employee *</label>
+                        <select name="EmployeeId" id="eEmpId" class="form-select" required>
+                            @foreach (var e in Model.AllEmployees)
+                            {
+                                <option value="@e.Id">@e.FirstName @e.LastName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Date</label><input type="date" name="Date" id="eDate" class="form-control"></div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><label class="form-label">Check-In</label><input type="time" name="CheckInTime" id="eIn" class="form-control"></div>
+                        <div class="col-6"><label class="form-label">Check-Out</label><input type="time" name="CheckOutTime" id="eOut" class="form-control"></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Status</label>
+                        <select name="AttendanceStatus" id="eStat" class="form-select">
+                            <option>Present</option><option>Absent</option><option>Late</option><option>Half Day</option>
+                        </select>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Notes</label><textarea name="Notes" id="eNotes" class="form-control" rows="2"></textarea></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-save me-1"></i>Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('editAttendanceModal').addEventListener('show.bs.modal', function(e) {
+        var b = e.relatedTarget;
+        document.getElementById('eId').value     = b.dataset.id;
+        document.getElementById('eEmpId').value  = b.dataset.empid;
+        document.getElementById('eDate').value   = b.dataset.date;
+        document.getElementById('eIn').value     = b.dataset.checkin;
+        document.getElementById('eOut').value    = b.dataset.checkout;
+        document.getElementById('eStat').value   = b.dataset.status;
+        document.getElementById('eNotes').value  = b.dataset.notes;
+    });
+</script>
+}

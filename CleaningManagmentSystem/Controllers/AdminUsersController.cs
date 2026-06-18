@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using Dapper;
+using CleaningManagmentSystem.Models;
 
 namespace CleaningManagmentSystem.Controllers
 {
@@ -36,8 +37,6 @@ namespace CleaningManagmentSystem.Controllers
         {
             var check = RequireAdmin(); if (check != null) return check;
 
-            Console.WriteLine($"[AdminUsers.Create] name={Name} email={Email} role='{Role}' active={IsActive}");
-
             if (string.IsNullOrWhiteSpace(Name))     return Redirect("/Dashboard/SuperAdmin/Users?err=Name+is+required");
             if (string.IsNullOrWhiteSpace(Email))    return Redirect("/Dashboard/SuperAdmin/Users?err=Email+is+required");
             if (string.IsNullOrWhiteSpace(Password)) return Redirect("/Dashboard/SuperAdmin/Users?err=Password+is+required");
@@ -66,7 +65,6 @@ namespace CleaningManagmentSystem.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AdminUsers.Create] ERROR: {ex.Message}");
                 var msg = ex.Message.Contains("Duplicate") ? $"Email '{Email}' already exists" : ex.Message;
                 return Redirect($"/Dashboard/SuperAdmin/Users?err={Uri.EscapeDataString(msg)}");
             }
@@ -119,7 +117,6 @@ namespace CleaningManagmentSystem.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AdminUsers.CreatePrivate] ERROR: {ex.Message}");
                 var msg = ex.Message.Contains("Duplicate") ? $"Email '{Email}' already exists" : ex.Message;
                 return Redirect($"/Dashboard/SuperAdmin/Users?err={Uri.EscapeDataString(msg)}");
             }
@@ -202,22 +199,7 @@ namespace CleaningManagmentSystem.Controllers
             return Redirect("/Dashboard/SuperAdmin/Users?ok=Password+reset");
         }
 
-        // ── Role normalizer ─────────────────────────────────────────────────
-        public static string NormalizeRole(string raw) => (raw ?? "").Trim().ToLower() switch
-        {
-            "driver"            => "driver",
-            "outsource"         => "outsource",
-            "privatecompanyrep" => "PrivateCompanyRep",
-            "manager"           => "manager",
-            "superadmin"        => "superadmin",
-            "super admin"       => "superadmin",
-            "super_admin"       => "superadmin",
-            "staff"             => "staff",
-            "wereda_mahberat"   => "wereda_mahberat",
-            "weredamahberat"    => "wereda_mahberat",
-            "dispatchofficer"   => "DispatchOfficer",
-            "dispatch_officer"  => "DispatchOfficer",
-            _                   => (raw ?? "").Trim()
-        };
+        // ── Role normalizer (delegates to shared RoleHelper) ───────────────
+        public static string NormalizeRole(string raw) => RoleHelper.NormalizeRole(raw);
     }
 }
