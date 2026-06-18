@@ -534,14 +534,14 @@
 function makeEduRow(containerSelector) {
     const row = document.createElement('div');
     row.className = 'edu-file-row d-flex gap-2 align-items-center mb-2';
-    row.innerHTML = `
-        <input type="text"  name="EduFileLabels" class="form-control input-modern"
-               placeholder="Label (e.g. Transcript)" style="max-width:220px">
-        <input type="file"  name="EduFiles" class="form-control input-modern"
-               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" title="Remove">
-            <i class="bi bi-x-lg"></i>
-        </button>`;
+    // Note: HTML built with string concat to avoid Razor tag-helper parsing
+    row.innerHTML =
+        '<input type="text" name="EduFileLabels" class="form-control input-modern"' +
+        ' placeholder="Label (e.g. Transcript)" style="max-width:220px">' +
+        '<input type="file" name="EduFiles" class="form-control input-modern"' +
+        ' accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" title="Remove">' +
+        '<i class="bi bi-x-lg"></i></button>';
     document.querySelector(containerSelector).appendChild(row);
     row.querySelector('.edu-remove-btn').addEventListener('click', () => row.remove());
 }

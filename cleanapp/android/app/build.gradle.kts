@@ -1,6 +1,3 @@
-// Point build output to Flutter's expected location: <project_root>/build/app/
-layout.buildDirectory.set(file("${projectDir}/../../build/app"))
-
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
