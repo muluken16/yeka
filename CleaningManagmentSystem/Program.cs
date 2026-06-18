@@ -57,6 +57,38 @@ catch (Exception ex)
     startupLogger.LogError(ex, "Database initialization failed");
 }
 
+// ── Critical column migrations — run unconditionally on every startup ────────
+// These are fast no-ops if the column already exists (IF NOT EXISTS guard).
+if (!string.IsNullOrEmpty(connectionString))
+{
+    try
+    {
+        using var _db = new MySqlConnector.MySqlConnection(connectionString);
+        await _db.OpenAsync();
+
+        // driver_user_id: links transport_requests to the app users table
+        // so the mobile driver API filter works correctly.
+        await _db.ExecuteAsync(
+            "ALTER TABLE transport_requests ADD COLUMN IF NOT EXISTS driver_user_id INT NULL DEFAULT NULL");
+
+        // Backfill any existing assigned rows where driver_user_id is still NULL
+        await _db.ExecuteAsync(@"
+            UPDATE transport_requests tr
+            INNER JOIN users u ON u.name = tr.driver_name
+                               AND u.role = 'driver'
+                               AND u.is_active = TRUE
+            SET tr.driver_user_id = u.id
+            WHERE tr.driver_name IS NOT NULL
+              AND tr.driver_name != ''
+              AND tr.driver_user_id IS NULL");
+    }
+    catch (Exception ex)
+    {
+        var migLogger = app.Services.GetRequiredService<ILogger<Program>>();
+        migLogger.LogWarning(ex, "Startup migration warning (non-fatal)");
+    }
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");

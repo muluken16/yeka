@@ -132,24 +132,27 @@ namespace CleaningManagmentSystem.Controllers
 
         // ─────────────────────────────────────────────────────────────────────
         // GET /api/transport/drivers/available
+        // Returns all active driver app-accounts so the dispatcher can assign them.
+        // Source: users table (role='driver') — these are the same accounts the
+        // mobile app uses to log in. The legacy `drivers` table is NOT used here
+        // because mobile drivers are registered as app users, not in that table.
         // ─────────────────────────────────────────────────────────────────────
         [HttpGet("drivers/available")]
         public IActionResult GetAvailableDrivers()
         {
             using var db = new MySqlConnection(_cs);
             var drivers = db.Query<dynamic>(@"
-                SELECT d.id,
-                       d.full_name  AS name,
-                       d.phone,
-                       u.id         AS appUserId,
-                       v.id         AS vehicleId,
+                SELECT u.id,
+                       u.name        AS name,
+                       u.phone,
+                       u.id          AS appUserId,
+                       v.id          AS vehicleId,
                        v.plate_number AS vehiclePlate,
                        v.vehicle_type AS vehicleType
-                FROM drivers d
-                LEFT JOIN vehicles v ON v.driver_id = d.id AND v.status = 'Assigned'
-                LEFT JOIN users u ON u.name = d.full_name AND u.role = 'driver' AND u.is_active = TRUE
-                WHERE d.is_active = 1
-                ORDER BY d.full_name").ToList();
+                FROM users u
+                LEFT JOIN vehicles v ON v.driver_id = u.id AND v.status = 'Assigned'
+                WHERE u.role = 'driver' AND u.is_active = TRUE
+                ORDER BY u.name").ToList();
             return Ok(drivers);
         }
 
@@ -207,24 +210,25 @@ namespace CleaningManagmentSystem.Controllers
                 "SELECT status FROM transport_requests WHERE id=@Id", new { Id = id });
             if (req == null) return NotFound(new { success = false, message = "Not found" });
 
-            if ((string)req.status != "PendingDispatcher")
-                return BadRequest(new { success = false, message = "Request is not pending." });
+            string fromStatus = (string)req.status;
+
+            if (fromStatus != "PendingDispatcher" && fromStatus != "DriverAssigned")
+                return BadRequest(new { success = false, message = "Request cannot be modified at this stage." });
 
             if (dto.Action == "Approve")
             {
                 if (dto.DriverId <= 0)
                     return BadRequest(new { success = false, message = "Driver is required." });
 
-                // Get driver + vehicle info
+                // dto.DriverId is now the users.id (app user) since GetAvailableDrivers
+                // returns users directly. Fetch name from users table.
                 var driver = db.QueryFirstOrDefault<dynamic>(
-                    "SELECT full_name, phone FROM drivers WHERE id=@Id", new { Id = dto.DriverId });
-                string driverName = driver?.full_name ?? "";
+                    "SELECT name, phone FROM users WHERE id=@Id AND role='driver' AND is_active=TRUE",
+                    new { Id = dto.DriverId });
+                string driverName = driver?.name ?? "";
 
-                // Resolve the app user_id for this driver (so the mobile app can
-                // filter requests by its own user.id via role=driver).
-                int? driverUserId = db.ExecuteScalar<int?>(
-                    "SELECT id FROM users WHERE name = @Name AND role = 'driver' AND is_active = TRUE LIMIT 1",
-                    new { Name = driverName });
+                // driver_user_id = dto.DriverId (they are the same now)
+                int driverUserId = dto.DriverId;
 
                 string vehiclePlate = "";
                 if (dto.VehicleId.HasValue && dto.VehicleId > 0)
@@ -245,7 +249,7 @@ namespace CleaningManagmentSystem.Controllers
                           DrvId = dto.DriverId, DrvName = driverName, DrvUserId = driverUserId,
                           VehId = dto.VehicleId, VehPlate = vehiclePlate, Id = id });
 
-                Log(db, id, "PendingDispatcher", "DriverAssigned", dto.DispatcherId, dto.DispatcherName ?? "", "DispatchOfficer", dto.Notes ?? "");
+                Log(db, id, fromStatus, "DriverAssigned", dto.DispatcherId, dto.DispatcherName ?? "", "DispatchOfficer", dto.Notes ?? "");
             }
             else
             {
@@ -256,7 +260,7 @@ namespace CleaningManagmentSystem.Controllers
                     WHERE id=@Id",
                     new { Did = dto.DispatcherId, DName = dto.DispatcherName, Notes = dto.Notes ?? "", Id = id });
 
-                Log(db, id, "PendingDispatcher", "DispatcherRejected", dto.DispatcherId, dto.DispatcherName ?? "", "DispatchOfficer", dto.Notes ?? "");
+                Log(db, id, fromStatus, "DispatcherRejected", dto.DispatcherId, dto.DispatcherName ?? "", "DispatchOfficer", dto.Notes ?? "");
             }
 
             return Ok(new { success = true });

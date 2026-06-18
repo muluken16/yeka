@@ -227,8 +227,10 @@ function renderTable(data) {
             <td>
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="showDetail(${r.id})"><i class="bi bi-eye"></i></button>
                 ${r.status === 'PendingDispatcher' ? `
-                    <button class="btn btn-sm btn-success me-1" onclick="openApprove(${r.id})"><i class="bi bi-check"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="openReject(${r.id})"><i class="bi bi-x"></i></button>
+                    <button class="btn btn-sm btn-success me-1" onclick="openApprove(${r.id})"><i class="bi bi-check"></i> Assign</button>
+                    <button class="btn btn-sm btn-danger" onclick="openReject(${r.id})"><i class="bi bi-x"></i> Reject</button>
+                ` : r.status === 'DriverAssigned' ? `
+                    <button class="btn btn-sm btn-outline-warning" onclick="openReassign(${r.id})"><i class="bi bi-arrow-repeat"></i> Re-assign</button>
                 ` : ''}
             </td>
         </tr>
@@ -259,6 +261,17 @@ function openApprove(id) {
     new bootstrap.Modal(document.getElementById('approveModal')).show();
 }
 
+function openReassign(id) {
+    // Reuse the same approve modal — just change the title
+    document.getElementById('approveRequestId').value = id;
+    document.getElementById('approveNotes').value = '';
+    document.getElementById('vehicleDisplay').value = '';
+    document.getElementById('vehicleIdHidden').value = '';
+    document.querySelector('#approveModal .modal-title').innerHTML = '<i class="bi bi-arrow-repeat me-2"></i>Re-assign Driver';
+    loadDrivers();
+    new bootstrap.Modal(document.getElementById('approveModal')).show();
+}
+
 function openReject(id) {
     document.getElementById('rejectRequestId').value = id;
     document.getElementById('rejectNotes').value = '';
@@ -276,7 +289,12 @@ async function submitApprove() {
         body: JSON.stringify({ dispatcherId: userId, dispatcherName: userName, action: 'Approve', driverId: parseInt(driverId), vehicleId: vehicleId ? parseInt(vehicleId) : null, notes })
     });
     const data = await r.json();
-    if (data.success) { bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide(); loadRequests(); loadStats(); }
+    if (data.success) {
+        // Reset modal title
+        document.querySelector('#approveModal .modal-title').innerHTML = '<i class="bi bi-check-circle me-2"></i>Approve & Assign Driver';
+        bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
+        loadRequests(); loadStats();
+    }
     else alert(data.message || 'Error');
 }
 

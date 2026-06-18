@@ -53,9 +53,9 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
                 CompletedToday = db.ExecuteScalar<int>(
                     "SELECT COALESCE(COUNT(*),0) FROM dispatches WHERE status='Completed' AND DATE(created_at)=CURDATE()");
 
-                // Drivers
+                // Drivers — count app users with role='driver'
                 TotalDrivers = db.ExecuteScalar<int>(
-                    "SELECT COALESCE(COUNT(*),0) FROM drivers WHERE is_active=1");
+                    "SELECT COALESCE(COUNT(*),0) FROM users WHERE role='driver' AND is_active=TRUE");
 
                 // Meeting rooms booked today
                 MeetingRoomsToday = db.ExecuteScalar<int>(

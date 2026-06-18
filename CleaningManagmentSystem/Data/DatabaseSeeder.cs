@@ -231,6 +231,7 @@ CREATE TABLE IF NOT EXISTS transport_requests (
     -- Driver / Vehicle
     driver_id                    INT           NULL,
     driver_name                  VARCHAR(255)  DEFAULT '',
+    driver_user_id               INT           NULL,
     vehicle_id                   INT           NULL,
     vehicle_plate                VARCHAR(50)   DEFAULT '',
     driver_notes                 TEXT          DEFAULT '',
@@ -291,6 +292,32 @@ CREATE TABLE IF NOT EXISTS transport_request_logs (
             // ── Add phone column to users if missing (older DBs) ────────────
             try { await db.ExecuteAsync("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50) DEFAULT ''"); }
             catch { /* ignore */ }
+
+            // ── Add driver_user_id to transport_requests if missing ──────────
+            // This links the assigned driver back to the app's users table so
+            // the mobile API can filter requests per-driver correctly.
+            try
+            {
+                await db.ExecuteAsync(@"
+                    ALTER TABLE transport_requests
+                    ADD COLUMN IF NOT EXISTS driver_user_id INT NULL DEFAULT NULL");
+            }
+            catch { /* ignore if column already exists */ }
+
+            // Backfill driver_user_id for any existing assigned requests
+            try
+            {
+                await db.ExecuteAsync(@"
+                    UPDATE transport_requests tr
+                    INNER JOIN users u ON u.name = tr.driver_name
+                                      AND u.role = 'driver'
+                                      AND u.is_active = TRUE
+                    SET tr.driver_user_id = u.id
+                    WHERE tr.driver_name IS NOT NULL
+                      AND tr.driver_name != ''
+                      AND tr.driver_user_id IS NULL");
+            }
+            catch { /* ignore if transport_requests doesn't exist yet */ }
 
             // ── Seed default accounts for every role ─────────────────────────
             // Each account is seeded with INSERT IGNORE so it only runs once.

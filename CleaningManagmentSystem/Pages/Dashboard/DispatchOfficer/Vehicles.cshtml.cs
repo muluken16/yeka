@@ -30,7 +30,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
         public string ErrorMessage   { get; set; } = "";
 
         private bool IsAuthorized() =>
-            HttpContext.Session.GetString("UserRole") is "dispatchofficer" or "DispatchOfficer" or "manager" or "superadmin";
+            (HttpContext.Session.GetString("UserRole") ?? "").ToLower() is "dispatchofficer" or "dispatch_officer" or "manager" or "superadmin";
 
         public IActionResult OnGet()
         {
@@ -49,8 +49,9 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
             try
             {
                 using var db = new MySqlConnection(_cs);
+                // Driver is a users.id — fetch name from users table
                 var driverName = DriverId > 0
-                    ? db.ExecuteScalar<string>("SELECT full_name FROM drivers WHERE id=@Id", new { Id = DriverId }) ?? ""
+                    ? db.ExecuteScalar<string>("SELECT name FROM users WHERE id=@Id AND role='driver'", new { Id = DriverId }) ?? ""
                     : "";
 
                 db.Execute(@"
@@ -58,10 +59,6 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
                     VALUES (@Plate, @Type, @Model, @Color, @DrvId, @DrvName, @Status, NOW(), NOW())",
                     new { Plate = PlateNumber.Trim(), Type = VehicleType, Model = VehicleModel.Trim(),
                           Color, DrvId = DriverId, DrvName = driverName, Status });
-
-                // If assigned to a driver, update vehicle back-reference on drivers table
-                if (DriverId > 0)
-                    db.Execute("UPDATE drivers SET updated_at=NOW() WHERE id=@Id", new { Id = DriverId });
 
                 TempData["Success"] = $"Vehicle {PlateNumber} registered successfully.";
             }
@@ -77,7 +74,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
             {
                 using var db = new MySqlConnection(_cs);
                 var driverName = DriverId > 0
-                    ? db.ExecuteScalar<string>("SELECT full_name FROM drivers WHERE id=@Id", new { Id = DriverId }) ?? ""
+                    ? db.ExecuteScalar<string>("SELECT name FROM users WHERE id=@Id AND role='driver'", new { Id = DriverId }) ?? ""
                     : "";
 
                 db.Execute(@"
@@ -140,12 +137,16 @@ namespace CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer
 
             try
             {
+                // Load drivers from app users table (role='driver') — same source
+                // as the transport assignment so vehicle assignment is consistent.
                 Drivers = db.Query<DriverModel>(@"
-                    SELECT id AS Id, full_name AS FullName, phone AS Phone, email AS Email,
-                           license_number AS LicenseNumber, license_type AS LicenseType,
-                           license_expiry AS LicenseExpiry, address AS Address,
+                    SELECT id AS Id, name AS FullName, phone AS Phone,
+                           '' AS Email, '' AS LicenseNumber, '' AS LicenseType,
+                           CURDATE() AS LicenseExpiry, '' AS Address,
                            is_active AS IsActive, created_at AS CreatedAt
-                    FROM drivers WHERE is_active=1 ORDER BY full_name ASC").ToList();
+                    FROM users
+                    WHERE role = 'driver' AND is_active = TRUE
+                    ORDER BY name ASC").ToList();
             }
             catch { }
         }
