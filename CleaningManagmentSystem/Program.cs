@@ -95,6 +95,8 @@ app.MapGet("/run-migrations", async (IConfiguration config) =>
          "ALTER TABLE employee_leaves ADD COLUMN approved_by INT NULL"),
         ("employee_leaves", "approved_at",
          "ALTER TABLE employee_leaves ADD COLUMN approved_at DATETIME NULL"),
+        ("transport_requests", "driver_user_id",
+         "ALTER TABLE transport_requests ADD COLUMN driver_user_id INT NULL DEFAULT NULL COMMENT 'App user id (users.id) of the assigned driver — used by the mobile API to filter per-driver requests'"),
     };
 
     foreach (var (tbl, col, sql) in migrations)
@@ -119,6 +121,27 @@ app.MapGet("/run-migrations", async (IConfiguration config) =>
         {
             results.AppendLine($"✗  {tbl}.{col} — ERROR: {ex.Message}");
         }
+    }
+
+    results.AppendLine("\nBackfilling driver_user_id for existing assigned requests...");
+    try
+    {
+        // For any transport_requests that already have a driver_name but no driver_user_id,
+        // look up the matching app user and fill it in.
+        var backfilled = await db.ExecuteAsync(@"
+            UPDATE transport_requests tr
+            INNER JOIN users u ON u.name = tr.driver_name
+                               AND u.role = 'driver'
+                               AND u.is_active = TRUE
+            SET tr.driver_user_id = u.id
+            WHERE tr.driver_name IS NOT NULL
+              AND tr.driver_name != ''
+              AND tr.driver_user_id IS NULL");
+        results.AppendLine($"✓  Backfilled driver_user_id for {backfilled} existing request(s).");
+    }
+    catch (Exception ex)
+    {
+        results.AppendLine($"✗  Backfill skipped — column may not exist yet: {ex.Message}");
     }
 
     results.AppendLine("\nDone. You can now use the Leave Management pages.");

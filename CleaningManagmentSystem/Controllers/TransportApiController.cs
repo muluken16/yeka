@@ -15,7 +15,7 @@ namespace CleaningManagmentSystem.Controllers
             => _cs = cfg.GetConnectionString("DefaultConnection") ?? "";
 
         // ─────────────────────────────────────────────────────────────────────
-        // GET /api/transport/requests?userId=X&role=WeredaMahberat|DispatchOfficer
+        // GET /api/transport/requests?userId=X&role=WeredaMahberat|Driver|DispatchOfficer
         // ─────────────────────────────────────────────────────────────────────
         [HttpGet("requests")]
         public IActionResult GetRequests([FromQuery] int? userId, [FromQuery] string? role, [FromQuery] string? status)
@@ -27,6 +27,18 @@ namespace CleaningManagmentSystem.Controllers
             if (role?.ToLower() == "weredamahberat" && userId.HasValue)
             {
                 conditions.Add("tr.mahberat_user_id = @UserId");
+                param.Add("UserId", userId.Value);
+            }
+            else if (role?.ToLower() == "driver" && userId.HasValue)
+            {
+                // Return ONLY requests assigned to this specific driver.
+                // Primary: match on driver_user_id (set when dispatcher assigns).
+                // Fallback: name-match via users table for older records without driver_user_id.
+                conditions.Add(@"(
+                    tr.driver_user_id = @UserId
+                    OR (tr.driver_user_id IS NULL
+                        AND tr.driver_name = (SELECT name FROM users WHERE id = @UserId LIMIT 1))
+                )");
                 param.Add("UserId", userId.Value);
             }
 
@@ -129,11 +141,13 @@ namespace CleaningManagmentSystem.Controllers
                 SELECT d.id,
                        d.full_name  AS name,
                        d.phone,
+                       u.id         AS appUserId,
                        v.id         AS vehicleId,
                        v.plate_number AS vehiclePlate,
                        v.vehicle_type AS vehicleType
                 FROM drivers d
                 LEFT JOIN vehicles v ON v.driver_id = d.id AND v.status = 'Assigned'
+                LEFT JOIN users u ON u.name = d.full_name AND u.role = 'driver' AND u.is_active = TRUE
                 WHERE d.is_active = 1
                 ORDER BY d.full_name").ToList();
             return Ok(drivers);
@@ -206,6 +220,12 @@ namespace CleaningManagmentSystem.Controllers
                     "SELECT full_name, phone FROM drivers WHERE id=@Id", new { Id = dto.DriverId });
                 string driverName = driver?.full_name ?? "";
 
+                // Resolve the app user_id for this driver (so the mobile app can
+                // filter requests by its own user.id via role=driver).
+                int? driverUserId = db.ExecuteScalar<int?>(
+                    "SELECT id FROM users WHERE name = @Name AND role = 'driver' AND is_active = TRUE LIMIT 1",
+                    new { Name = driverName });
+
                 string vehiclePlate = "";
                 if (dto.VehicleId.HasValue && dto.VehicleId > 0)
                 {
@@ -217,12 +237,12 @@ namespace CleaningManagmentSystem.Controllers
                     UPDATE transport_requests
                     SET status='DriverAssigned', dispatcher_id=@Did, dispatcher_name=@DName,
                         dispatcher_notes=@Notes, dispatcher_action_at=NOW(),
-                        driver_id=@DrvId, driver_name=@DrvName,
+                        driver_id=@DrvId, driver_name=@DrvName, driver_user_id=@DrvUserId,
                         vehicle_id=@VehId, vehicle_plate=@VehPlate,
                         updated_at=NOW()
                     WHERE id=@Id",
                     new { Did = dto.DispatcherId, DName = dto.DispatcherName, Notes = dto.Notes ?? "",
-                          DrvId = dto.DriverId, DrvName = driverName,
+                          DrvId = dto.DriverId, DrvName = driverName, DrvUserId = driverUserId,
                           VehId = dto.VehicleId, VehPlate = vehiclePlate, Id = id });
 
                 Log(db, id, "PendingDispatcher", "DriverAssigned", dto.DispatcherId, dto.DispatcherName ?? "", "DispatchOfficer", dto.Notes ?? "");

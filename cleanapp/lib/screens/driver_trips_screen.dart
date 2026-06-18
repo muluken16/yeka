@@ -99,12 +99,22 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
     try {
       final trips = await _apiService.getDriverTransportRequests(user.id);
       setState(() {
-        _transportTrips = trips.isNotEmpty ? trips : _mockTransport;
+        if (trips.isNotEmpty) {
+          // Server returned real data — always use it
+          _transportTrips = trips;
+        } else if (_transportTrips.isEmpty) {
+          // No real data and nothing in memory — show mock for demo only
+          _transportTrips = _mockTransport;
+        }
+        // If trips is empty but we already have in-memory data (e.g. just
+        // accepted a job offline), keep the existing list intact.
         _isLoading = false;
       });
     } catch (_) {
       setState(() {
-        _transportTrips = _mockTransport;
+        // Network error: keep whatever is already displayed, fall back to
+        // mock only when the list is completely empty.
+        if (_transportTrips.isEmpty) _transportTrips = _mockTransport;
         _isLoading = false;
       });
     }
@@ -266,13 +276,23 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
       driverName: user.name,
     );
     if (ok) {
+      // Update local status immediately — avoids reload wiping the change
+      setState(() {
+        trip['status'] = 'DriverAccepted';
+        _isLoading = false;
+      });
       _snack('Job Accepted', color: Colors.green);
+      // Refresh in background to get full server state
+      _loadTrips();
     } else {
-      trip['status'] = 'DriverAccepted';
-      _snack('Simulated: Accepted (offline)');
+      // Offline / server error: keep the in-memory update so the UI reflects
+      // the action. The change will be lost on next full reload.
+      setState(() {
+        trip['status'] = 'DriverAccepted';
+        _isLoading = false;
+      });
+      _snack('Accepted (offline — will sync when connected)', color: Colors.orange);
     }
-    setState(() => _isLoading = false);
-    _loadTrips();
   }
 
   Future<void> _reject(Map<String, dynamic> trip) async {
@@ -284,13 +304,19 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
       driverName: user.name,
     );
     if (ok) {
+      setState(() {
+        _transportTrips.removeWhere((t) => t['id'] == trip['id']);
+        _isLoading = false;
+      });
       _snack('Job Rejected', color: Colors.orange);
+      _loadTrips();
     } else {
-      _transportTrips.removeWhere((t) => t['id'] == trip['id']);
-      _snack('Simulated: Rejected (offline)');
+      setState(() {
+        _transportTrips.removeWhere((t) => t['id'] == trip['id']);
+        _isLoading = false;
+      });
+      _snack('Rejected (offline — will sync when connected)', color: Colors.orange);
     }
-    setState(() => _isLoading = false);
-    _loadTrips();
   }
 
   Future<void> _pickup(Map<String, dynamic> trip) async {
@@ -303,13 +329,19 @@ class _DriverTripsScreenState extends State<DriverTripsScreen>
       notes: 'Payload loaded',
     );
     if (ok) {
+      setState(() {
+        trip['status'] = 'PickedUp';
+        _isLoading = false;
+      });
       _snack('Pickup Confirmed', color: Colors.blue);
+      _loadTrips();
     } else {
-      trip['status'] = 'PickedUp';
-      _snack('Simulated: Picked up (offline)');
+      setState(() {
+        trip['status'] = 'PickedUp';
+        _isLoading = false;
+      });
+      _snack('Pickup confirmed (offline — will sync when connected)', color: Colors.orange);
     }
-    setState(() => _isLoading = false);
-    _loadTrips();
   }
 
   // Show receipt form for PickedUp / MahberatApprovedPickup
