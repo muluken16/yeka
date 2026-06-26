@@ -27,8 +27,7 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="/Dashboard/WeredaMahberat"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
             <div class="nav-user">
-                <span>Welcome, @userName</span>
-                <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
+                @await Html.PartialAsync("~/Pages/Dashboard/WeredaMahberat/_NavProfileDropdown.cshtml")
             </div>
         </div>
     </nav>

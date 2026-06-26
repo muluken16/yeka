@@ -53,14 +53,10 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
 
         public IActionResult OnGet()
         {
-            Console.WriteLine("[OutsourceCompany] OnGet called");
-
-            var userName = HttpContext.Session.GetString("UserName");
-            if (string.IsNullOrEmpty(userName))
-            {
-                Console.WriteLine("[OutsourceCompany] No session, redirecting to Login");
+            var role = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")) ||
+                role is not ("manager" or "superadmin" or "hr"))
                 return RedirectToPage("/Login");
-            }
 
             LoadCompanies();
             return Page();
@@ -68,13 +64,10 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
 
         public IActionResult OnPost()
         {
-            Console.WriteLine($"[OutsourceCompany] OnPost called with action");
-
-            var userName = HttpContext.Session.GetString("UserName");
-            if (string.IsNullOrEmpty(userName))
-            {
+            var role = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")) ||
+                role is not ("manager" or "superadmin" or "hr"))
                 return RedirectToPage("/Login");
-            }
 
             var action = Request.Form["action"];
 

@@ -19,8 +19,63 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="/Dashboard/HR"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
             <div class="nav-user">
-                <span>Welcome, @userName</span>
-                <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
+                @{ var _hrPhoto = Context.Session.GetString("UserPhoto") ?? ""; }
+                @{ var _hrRole  = Context.Session.GetString("UserRole")  ?? "HR"; }
+                @{ var _hrInit  = (userName?.Length > 0 ? userName[0].ToString().ToUpper() : "H"); }
+                <div class="dropdown">
+                    <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="p-wrap">
+                            @if (!string.IsNullOrEmpty(_hrPhoto))
+                            {
+                                <img src="@_hrPhoto" class="p-avatar" alt="@userName"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                <span class="p-initial" style="display:none">@_hrInit</span>
+                            }
+                            else { <span class="p-initial">@_hrInit</span> }
+                            <span class="p-dot"></span>
+                        </span>
+                        <span class="p-name">@userName</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+                        <li>
+                            <div class="pd-header">
+                                <div class="pd-big-wrap">
+                                    @if (!string.IsNullOrEmpty(_hrPhoto))
+                                    {
+                                        <img src="@_hrPhoto" class="pd-big-avatar" alt="@userName"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                        <span class="pd-big-initial" style="display:none">@_hrInit</span>
+                                    }
+                                    else { <span class="pd-big-initial">@_hrInit</span> }
+                                    <span class="pd-online-dot"></span>
+                                </div>
+                                <div class="pd-info">
+                                    <div class="pd-name">@userName</div>
+                                    <div class="pd-role"><span class="pd-role-badge">@_hrRole</span></div>
+                                    <div class="pd-status">Online</div>
+                                </div>
+                            </div>
+                        </li>
+                        <li><div class="pd-section-label">Account</div></li>
+                        <li><a class="dropdown-item" href="/Dashboard/Profile">
+                            <span class="pd-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-person-circle"></i></span>
+                            <span class="pd-item-label">My Profile<br/><span class="pd-item-sub">View &amp; edit your info</span></span>
+                            <i class="bi bi-chevron-right pd-arrow"></i>
+                        </a></li>
+                        <li><a class="dropdown-item" href="/Dashboard/HR">
+                            <span class="pd-icon" style="background:#f0fdf4;color:#16a34a"><i class="bi bi-speedometer2"></i></span>
+                            <span class="pd-item-label">Dashboard</span>
+                            <i class="bi bi-chevron-right pd-arrow"></i>
+                        </a></li>
+                        <li><hr class="dropdown-divider"/></li>
+                        <li><a class="dropdown-item pd-danger" href="/Login?logout=1">
+                            <span class="pd-icon"><i class="bi bi-box-arrow-right"></i></span>
+                            <span class="pd-item-label">Sign Out</span>
+                        </a></li>
+                        <li><div style="padding:6px 16px 10px;font-size:.65rem;color:#94a3b8;text-align:center">Yeka Cleaning v1.0</div></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>

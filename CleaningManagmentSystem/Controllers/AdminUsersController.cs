@@ -33,6 +33,7 @@ namespace CleaningManagmentSystem.Controllers
             [FromForm] string Role,
             [FromForm] string? Phone,
             [FromForm] string? Address,
+            [FromForm] int? EmployeeId,
             [FromForm] bool IsActive = true)
         {
             var check = RequireAdmin(); if (check != null) return check;
@@ -47,11 +48,27 @@ namespace CleaningManagmentSystem.Controllers
             try
             {
                 using var db = new MySqlConnection(_cs);
-                // Check duplicate email
-                var exists = db.QueryFirstOrDefault<int>(
+
+                // ── Check 1: duplicate email ───────────────────────────────
+                var emailExists = db.QueryFirstOrDefault<int>(
                     "SELECT COUNT(*) FROM users WHERE email=@e", new { e = Email });
-                if (exists > 0)
-                    return Redirect($"/Dashboard/SuperAdmin/Users?err=Email+{Uri.EscapeDataString(Email)}+already+registered");
+                if (emailExists > 0)
+                    return Redirect($"/Dashboard/SuperAdmin/Users?err={Uri.EscapeDataString($"Email '{Email}' is already registered to another account.")}");
+
+                // ── Check 2: employee already has a linked user account ────
+                if (EmployeeId.HasValue && EmployeeId.Value > 0)
+                {
+                    var existingUserId = db.QueryFirstOrDefault<int?>(
+                        "SELECT user_id FROM employees WHERE id=@eid", new { eid = EmployeeId.Value });
+                    if (existingUserId.HasValue && existingUserId.Value > 0)
+                    {
+                        var existingUser = db.QueryFirstOrDefault<dynamic>(
+                            "SELECT name, email FROM users WHERE id=@uid", new { uid = existingUserId.Value });
+                        var existingName  = (string?)existingUser?.name  ?? "—";
+                        var existingEmail = (string?)existingUser?.email ?? "—";
+                        return Redirect($"/Dashboard/SuperAdmin/Users?err={Uri.EscapeDataString($"This employee already has an account: '{existingName}' ({existingEmail}). No new account was created.")}");
+                    }
+                }
 
                 var adminId = HttpContext.Session.GetInt32("UserId") ?? 0;
                 db.Execute(
@@ -60,6 +77,15 @@ namespace CleaningManagmentSystem.Controllers
                     new { n = Name, e = Email, pw = Password, r = normalizedRole,
                           ph = Phone ?? "", ad = Address ?? "",
                           act = IsActive, cb = adminId });
+
+                // ── Link the new user back to the employee record ──────────
+                if (EmployeeId.HasValue && EmployeeId.Value > 0)
+                {
+                    var newUserId = db.QueryFirst<long>("SELECT LAST_INSERT_ID()");
+                    db.Execute(
+                        "UPDATE employees SET user_id=@uid WHERE id=@eid",
+                        new { uid = (int)newUserId, eid = EmployeeId.Value });
+                }
 
                 return Redirect($"/Dashboard/SuperAdmin/Users?ok={Uri.EscapeDataString($"User '{Name}' created with role '{normalizedRole}'")}");
             }
@@ -197,6 +223,61 @@ namespace CleaningManagmentSystem.Controllers
             db.Execute("UPDATE users SET password=@pw,updated_at=NOW() WHERE id=@id",
                 new { pw = Password, id = UserId });
             return Redirect("/Dashboard/SuperAdmin/Users?ok=Password+reset");
+        }
+
+        // ── GET /admin/users/search-employees?q=... ────────────────────────
+        // Returns employees matching name or phone for the Add User modal live search
+        [HttpGet("search-employees")]
+        public IActionResult SearchEmployees([FromQuery] string? q)
+        {
+            var check = RequireAdmin(); if (check != null) return check;
+            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+                return Json(new List<object>());
+
+            try
+            {
+                using var db = new MySqlConnection(_cs);
+                var rows = db.Query(
+                    @"SELECT e.id,
+                             e.first_name  AS firstName,
+                             e.last_name   AS lastName,
+                             CONCAT(e.first_name,' ',e.last_name) AS fullName,
+                             COALESCE(e.department,'')     AS department,
+                             COALESCE(e.phone_number,'')   AS phone,
+                             COALESCE(e.email_address,'')  AS email,
+                             e.user_id                     AS userId,
+                             u.name                        AS existingUserName,
+                             u.email                       AS existingUserEmail
+                      FROM employees e
+                      LEFT JOIN users u ON u.id = e.user_id
+                      WHERE e.employment_status = 'Active'
+                        AND (CONCAT(e.first_name,' ',e.last_name) LIKE @s
+                             OR e.phone_number LIKE @s)
+                      ORDER BY e.first_name
+                      LIMIT 15",
+                    new { s = $"%{q}%" });
+
+                // Project into a clean object with a bool hasAccount flag
+                var results = rows.Select(r => new {
+                    id                = (int)r.id,
+                    firstName         = (string?)r.firstName ?? "",
+                    lastName          = (string?)r.lastName  ?? "",
+                    fullName          = (string?)r.fullName  ?? "",
+                    department        = (string?)r.department ?? "",
+                    phone             = (string?)r.phone     ?? "",
+                    email             = (string?)r.email     ?? "",
+                    userId            = (int?)r.userId,
+                    hasAccount        = r.userId != null && (int?)r.userId > 0,
+                    existingUserName  = (string?)r.existingUserName  ?? "",
+                    existingUserEmail = (string?)r.existingUserEmail ?? ""
+                });
+
+                return Json(results);
+            }
+            catch
+            {
+                return Json(new List<object>());
+            }
         }
 
         // ── Role normalizer (delegates to shared RoleHelper) ───────────────

@@ -20,7 +20,9 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
         // ── GET ──────────────────────────────────────────────────────────────
         public IActionResult OnGet()
         {
-            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")))
+            var role = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")) ||
+                role is not ("manager" or "superadmin" or "hr"))
                 return RedirectToPage("/Login");
 
             LoadData();
@@ -30,7 +32,9 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
         // ── POST ─────────────────────────────────────────────────────────────
         public IActionResult OnPost()
         {
-            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")))
+            var role = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")) ||
+                role is not ("manager" or "superadmin" or "hr"))
                 return RedirectToPage("/Login");
 
             string F(string k) => Request.Form[k].ToString().Trim();

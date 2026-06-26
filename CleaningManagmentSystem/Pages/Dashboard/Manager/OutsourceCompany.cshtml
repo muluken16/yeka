@@ -1,94 +1,60 @@
 @page
 @model CleaningManagmentSystem.Pages.Dashboard.Manager.OutsourceCompanyModel
 @{
-    Layout = null;
-    var userName = HttpContext.Session.GetString("UserName");
-    var userRole = HttpContext.Session.GetString("UserRole")?.ToLower();
-    if (userName == null) { Response.Redirect("/Login"); return; }
+    Layout = "_ManagerLayout";
+    ViewData["Title"] = "Outsource Companies";
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Outsource Company - Manager - Yeka Cleaning</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="~/css/dashboard.css" />
-</head>
-<body>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
-    <!-- Desktop Navbar -->
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-            <div class="nav-user">
-                <span>Welcome, @userName</span>
-                <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
-            </div>
-        </div>
-    </nav>
+@section Styles {
+<style>
+.tbl-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; margin-bottom:24px; }
+.tbl-card table th { background:#f8fafc; font-size:.7rem; text-transform:uppercase; letter-spacing:.4px; color:#64748b; font-weight:700; padding:10px 14px !important; }
+.tbl-card table td { font-size:.83rem; padding:10px 14px !important; border-color:#f1f5f9 !important; vertical-align:middle; }
+.tbl-card table tr:last-child td { border-bottom:none !important; }
+.sbadge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:.7rem;font-weight:700; }
+.sbadge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.6;}
+.s-active   { background:#d1fae5;color:#065f46; }
+.s-inactive { background:#f1f5f9;color:#64748b; }
+</style>
+}
 
-    <!-- Mobile Navbar -->
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
-        <div class="container-fluid">
-            <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka</a>
-            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left me-2"></i>Logout</a>
-        </div>
-    </nav>
-    <nav id="sidebarMenu" class="sidebar d-lg-none">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
-    <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform: none; padding-top: 56px;">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-building text-primary me-2"></i>Outsource Companies</h4>
+        <p class="text-muted small mb-0">@Model.Companies.Count company records</p>
+    </div>
+    <button class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addModal">
+        <i class="bi bi-plus-lg me-1"></i>Add Company
+    </button>
+</div>
 
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top: 56px;">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2"><i class="bi bi-building me-2"></i>Outsource Company Management</h1>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addModal">
-                <i class="bi bi-plus-circle me-2"></i>Add Company
-            </button>
-        </div>
+@if (!string.IsNullOrEmpty(Model.SuccessMessage)) {
+    <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-3">
+        <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.ErrorMessage)) {
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-3">
+        <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
-        <!-- Success/Error Messages -->
-        @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-        {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-        {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>@Model.ErrorMessage
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
-        <!-- Search -->
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <form method="get" class="d-flex">
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="searchQuery" placeholder="Search companies..." value="@Model.SearchQuery" />
-                        <button class="btn btn-outline-secondary" type="submit">
-                            <i class="bi bi-search"></i>
-                        </button>
-                        @if (!string.IsNullOrEmpty(Model.SearchQuery))
-                        {
-                            <a href="/Dashboard/Manager/OutsourceCompany" class="btn btn-outline-secondary">
-                                <i class="bi bi-x"></i>
-                            </a>
-                        }
-                    </div>
-                </form>
-            </div>
+<!-- Search -->
+<div class="d-flex gap-2 mb-3">
+    <form method="get" class="d-flex flex-grow-1" style="max-width:400px">
+        <div class="input-group">
+            <input type="text" class="form-control rounded-start-3" name="searchQuery"
+                   placeholder="Search companies…" value="@Model.SearchQuery" />
+            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+            @if (!string.IsNullOrEmpty(Model.SearchQuery)) {
+                <a href="/Dashboard/Manager/OutsourceCompany" class="btn btn-outline-secondary rounded-end-3">
+                    <i class="bi bi-x"></i>
+                </a>
+            }
         </div>
+    </form>
+</div>
 
         <!-- Add Company Modal -->
         <div class="modal fade" id="addModal" tabindex="-1">
@@ -156,78 +122,57 @@
 
 
         <!-- Companies Table -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white pb-0">
-                <h5 class="card-title mt-2"><i class="bi bi-list-ul me-2"></i>Companies Directory</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Company Name</th>
-                                <th>Contact Person</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th>Contract Start</th>
-                                <th>Contract End</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (Model.Companies.Any())
-                            {
-                                foreach (var company in Model.Companies)
-                                {
-                                    <tr>
-                                        <td>@company.Id</td>
-                                        <td><strong>@company.CompanyName</strong></td>
-                                        <td>@company.ContactPerson</td>
-                                        <td>@company.Phone</td>
-                                        <td>@company.Email</td>
-                                        <td>@(company.ContractStartDate?.ToString("yyyy-MM-dd") ?? "-")</td>
-                                        <td>@(company.ContractEndDate?.ToString("yyyy-MM-dd") ?? "-")</td>
-                                        <td>
-                                            @if (company.Status == "Active")
-                                            {
-                                                <span class="badge bg-success">Active</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-secondary">Inactive</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewModal-@company.Id" title="View">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editModal-@company.Id" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@company.Id" title="Delete">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                            else
-                            {
+        <div class="tbl-card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Company Name</th>
+                            <th>Contact</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Contract Start</th>
+                            <th>Contract End</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Companies.Any())
+                        {
+                            int n = 0;
+                            foreach (var company in Model.Companies)
+                            { n++;
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
-                                        <i class="bi bi-building display-4"></i><br>
-                                        No companies found
+                                    <td class="text-muted">@n</td>
+                                    <td><strong>@company.CompanyName</strong></td>
+                                    <td class="text-muted">@(string.IsNullOrEmpty(company.ContactPerson)?"—":company.ContactPerson)</td>
+                                    <td class="text-muted">@(string.IsNullOrEmpty(company.Phone)?"—":company.Phone)</td>
+                                    <td class="text-muted">@(string.IsNullOrEmpty(company.Email)?"—":company.Email)</td>
+                                    <td class="text-muted">@(company.ContractStartDate?.ToString("MMM dd, yyyy") ?? "—")</td>
+                                    <td class="text-muted">@(company.ContractEndDate?.ToString("MMM dd, yyyy") ?? "—")</td>
+                                    <td>
+                                        <span class="sbadge @(company.Status=="Active"?"s-active":"s-inactive")">@company.Status</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary rounded-pill me-1" data-bs-toggle="modal" data-bs-target="#viewModal-@company.Id" title="View"><i class="bi bi-eye"></i></button>
+                                        <button class="btn btn-sm btn-outline-warning rounded-pill me-1" data-bs-toggle="modal" data-bs-target="#editModal-@company.Id" title="Edit"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger rounded-pill" data-bs-toggle="modal" data-bs-target="#deleteModal-@company.Id" title="Delete"><i class="bi bi-trash"></i></button>
                                     </td>
                                 </tr>
                             }
-                        </tbody>
-                    </table>
-                </div>
+                        }
+                        else
+                        {
+                            <tr><td colspan="9" class="text-center py-5 text-muted">
+                                <i class="bi bi-building fs-2 opacity-25 d-block mb-2"></i>No companies found
+                            </td></tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
-    </main>
 
     <!-- Add Company Modal Removed -->
 
@@ -358,16 +303,3 @@
         </div>
     }
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebarMenu').classList.toggle('show');
-            document.getElementById('sidebarBackdrop').classList.toggle('show');
-        }
-        document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(link) {
-            link.addEventListener('click', function() { if (window.innerWidth < 992) toggleSidebar(); });
-        });
-    </script>
-</body>
-</html>

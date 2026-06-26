@@ -257,7 +257,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
                     chartParts.Add("SELECT receipt_date AS d, kilogram AS kg, COALESCE(NULLIF(total_amount,0), kilogram*price) AS amt FROM private_company_receipts WHERE receipt_date BETWEEN @CS AND @CE");
 
                 var chartSql = $@"
-                    SELECT FORMAT(d,'MM-dd') AS label,
+                    SELECT DATE_FORMAT(d,'%m-%d') AS label,
                            ROUND(SUM(kg),2)       AS kg,
                            ROUND(SUM(amt),2)      AS amt
                     FROM ({string.Join(" UNION ALL ", chartParts)}) t

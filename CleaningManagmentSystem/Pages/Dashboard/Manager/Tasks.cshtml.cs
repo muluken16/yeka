@@ -23,11 +23,22 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
 
         public void OnGet()
         {
+            var role = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (HttpContext.Session.GetInt32("UserId") == null ||
+                role is not ("manager" or "superadmin" or "hr"))
+            {
+                Response.Redirect("/Login");
+                return;
+            }
             LoadTasks();
         }
 
         public IActionResult OnPostCreate()
         {
+            var role = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (HttpContext.Session.GetInt32("UserId") == null ||
+                role is not ("manager" or "superadmin" or "hr"))
+                return RedirectToPage("/Login");
             using var connection = new MySqlConnection(_connectionString);
             string q = "INSERT INTO delivery_tasks (task_number, description, priority, task_date, status, created_at) VALUES (@TaskNumber, @Description, @Priority, @TaskDate, 'Pending', NOW())";
             try {

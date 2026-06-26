@@ -21,7 +21,7 @@ public class IndexModel : PageModel
     {
         Posts = GetFallbackPosts();
         Services = GetFallbackServices();
-        Gallery = GetFallbackGallery();
+        Gallery = new List<dynamic>();
 
         try
         {
@@ -65,22 +65,6 @@ public class IndexModel : PageModel
             new { id = 3, name = "Waste Collection", description = "Organized waste collection across all weredas." },
             new { id = 4, name = "Transport Services", description = "Managed transport with driver assignment and tracking." }
         };
-        return fallback;
-    }
-
-    private List<dynamic> GetFallbackGallery()
-    {
-        var fallback = new List<dynamic>();
-        var galFallback = new[] {
-            ("https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80", "City Cleaning"),
-            ("https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=600&q=80", "Waste Management"),
-            ("https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80", "Office Cleaning"),
-            ("https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80", "Team at Work"),
-            ("https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80", "Equipment"),
-            ("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80", "Street Cleaning")
-        };
-        for (int i = 0; i < galFallback.Length; i++)
-            fallback.Add(new { id = i + 1, title = galFallback[i].Item2, image_url = galFallback[i].Item1, category = "", description = "" });
         return fallback;
     }
 }

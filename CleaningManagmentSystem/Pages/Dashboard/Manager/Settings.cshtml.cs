@@ -53,6 +53,14 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
 
         public async Task OnGetAsync()
         {
+            var role = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (HttpContext.Session.GetInt32("UserId") == null ||
+                role is not ("manager" or "superadmin" or "hr"))
+            {
+                Response.Redirect("/Login");
+                return;
+            }
+
             using var connection = new MySqlConnection(_connectionString);
             await EnsureSettingsTableExistsAsync(connection);
 

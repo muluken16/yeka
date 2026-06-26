@@ -1,55 +1,195 @@
 @{
-    var userName = Context.Session.GetString("UserName");
+    var userName = Context.Session.GetString("UserName") ?? "Manager";
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Manager - Yeka Cleaning</title>
+    <title>@ViewData["Title"] — Manager — Yeka Cleaning</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/dashboard.css" />
+    <style>
+        /* ── Reset double-padding issue ── */
+        body { padding-top: 0 !important; background: #f8fafc; }
+
+        /* ── Top navbar ── */
+        .mgr-nav {
+            height: 56px;
+            background: linear-gradient(135deg, #2E86AB, #A23B72) !important;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1030;
+            display: flex; align-items: center;
+            padding: 0 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.15);
+        }
+        .mgr-nav .brand { font-weight: 700; font-size: 1.1rem; color: #fff; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+        .mgr-nav .nav-user { margin-left: auto; display: flex; align-items: center; gap: 12px; color: #fff; font-size: .85rem; font-weight: 500; }
+        .mgr-nav .btn-logout {
+            background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3);
+            color: #fff; padding: 5px 14px; border-radius: 20px;
+            text-decoration: none; font-size: .82rem; display: flex; align-items: center; gap: 5px;
+            transition: background .2s;
+        }
+        .mgr-nav .btn-logout:hover { background: rgba(255,255,255,.35); color: #fff; }
+        .mgr-nav .toggler { background: none; border: none; color: #fff; font-size: 1.3rem; padding: 0 8px; cursor: pointer; display: none; }
+        @@media (max-width: 991px) { .mgr-nav .toggler { display: block; } .mgr-nav .welcome-text { display: none; } }
+
+        /* ── Sidebar ── */
+        .mgr-sidebar {
+            position: fixed; top: 56px; bottom: 0; left: 0;
+            width: 230px;
+            background: linear-gradient(180deg, #2E86AB, #A23B72);
+            overflow-y: auto; z-index: 900;
+            transition: transform .25s, width .25s;
+        }
+        @@media (max-width: 991px) {
+            .mgr-sidebar { transform: translateX(-230px); }
+            .mgr-sidebar.open { transform: translateX(0); }
+        }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 850; }
+        .sidebar-overlay.open { display: block; }
+
+        /* ── Main content ── */
+        .mgr-main {
+            margin-left: 230px;
+            padding: 24px 28px 48px;
+            min-height: calc(100vh - 56px);
+            margin-top: 56px;
+            transition: margin-left .25s;
+        }
+        @@media (max-width: 991px) { .mgr-main { margin-left: 0; } }
+
+        /* ── Sidebar nav link colours ── */
+        .mgr-sidebar .nav-link {
+            color: rgba(255,255,255,.82);
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            border-radius: 0;
+            transition: background .15s, color .15s;
+            text-decoration: none;
+            font-size: .88rem;
+        }
+        .mgr-sidebar .nav-link:hover,
+        .mgr-sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(255,255,255,.16);
+        }
+        .mgr-sidebar .nav-link i { font-size: 1.05rem; width: 20px; text-align: center; }
+
+        /* ── Sidebar collapse (desktop) ── */
+        body.sb-collapsed .mgr-sidebar { width: 58px; }
+        body.sb-collapsed .mgr-main    { margin-left: 58px; }
+        body.sb-collapsed .nav-label, body.sb-collapsed .sb-label, body.sb-collapsed .sb-brand-text { display: none !important; }
+        body.sb-collapsed .mgr-sidebar .nav-link { justify-content: center; padding: 12px 0; }
+        body.sb-collapsed .mgr-sidebar .sb-logo { justify-content: center !important; }
+    </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-            <div class="nav-user">
-                <span>Welcome, @userName</span>
-                <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
-            </div>
+<div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+
+<!-- Navbar -->
+<nav class="mgr-nav">
+    <button class="toggler" onclick="openSidebar()"><i class="bi bi-list"></i></button>
+    <a class="brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
+    <div class="nav-user">
+        @{ var _mgrPhoto = Context.Session.GetString("UserPhoto") ?? ""; }
+        @{ var _mgrRole  = Context.Session.GetString("UserRole")  ?? "Manager"; }
+        @{ var _mgrInit  = (userName.Length > 0 ? userName[0].ToString().ToUpper() : "M"); }
+        <div class="dropdown">
+            <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="p-wrap">
+                    @if (!string.IsNullOrEmpty(_mgrPhoto))
+                    {
+                        <img src="@_mgrPhoto" class="p-avatar" alt="@userName"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                        <span class="p-initial" style="display:none">@_mgrInit</span>
+                    }
+                    else { <span class="p-initial">@_mgrInit</span> }
+                    <span class="p-dot"></span>
+                </span>
+                <span class="p-name welcome-text">@userName</span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+                <li>
+                    <div class="pd-header">
+                        <div class="pd-big-wrap">
+                            @if (!string.IsNullOrEmpty(_mgrPhoto))
+                            {
+                                <img src="@_mgrPhoto" class="pd-big-avatar" alt="@userName"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                <span class="pd-big-initial" style="display:none">@_mgrInit</span>
+                            }
+                            else { <span class="pd-big-initial">@_mgrInit</span> }
+                            <span class="pd-online-dot"></span>
+                        </div>
+                        <div class="pd-info">
+                            <div class="pd-name">@userName</div>
+                            <div class="pd-role"><span class="pd-role-badge">@_mgrRole</span></div>
+                            <div class="pd-status">Online</div>
+                        </div>
+                    </div>
+                </li>
+                <li><div class="pd-section-label">Account</div></li>
+                <li><a class="dropdown-item" href="/Dashboard/Profile">
+                    <span class="pd-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-person-circle"></i></span>
+                    <span class="pd-item-label">My Profile<br/><span class="pd-item-sub">View &amp; edit your info</span></span>
+                    <i class="bi bi-chevron-right pd-arrow"></i>
+                </a></li>
+                <li><a class="dropdown-item" href="/Dashboard/Manager">
+                    <span class="pd-icon" style="background:#f0fdf4;color:#16a34a"><i class="bi bi-speedometer2"></i></span>
+                    <span class="pd-item-label">Dashboard</span>
+                    <i class="bi bi-chevron-right pd-arrow"></i>
+                </a></li>
+                <li><hr class="dropdown-divider"/></li>
+                <li><a class="dropdown-item pd-danger" href="/Login?logout=1">
+                    <span class="pd-icon"><i class="bi bi-box-arrow-right"></i></span>
+                    <span class="pd-item-label">Sign Out</span>
+                </a></li>
+                <li><div style="padding:6px 16px 10px;font-size:.65rem;color:#94a3b8;text-align:center">Yeka Cleaning v1.0</div></li>
+            </ul>
         </div>
-    </nav>
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
-        <div class="container-fluid">
-            <button class="navbar-toggler" onclick="toggleSidebar()"><span class="navbar-toggler-icon"></span></button>
-            <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka</a>
-            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
-        </div>
-    </nav>
-    <nav id="sidebarMenu" class="sidebar d-lg-none">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
-    <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
+    </div>
+</nav>
 
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
-        @RenderBody()
-    </main>
+<!-- Sidebar -->
+<aside class="mgr-sidebar" id="mgrSidebar">
+    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
+</aside>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebarMenu').classList.toggle('show');
-            document.getElementById('sidebarBackdrop').classList.toggle('show');
-        }
-    </script>
-    @await RenderSectionAsync("Scripts", required: false)
+<!-- Main -->
+<main class="mgr-main" id="mgrMain">
+    @RenderBody()
+</main>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function openSidebar()  { document.getElementById('mgrSidebar').classList.add('open');    document.getElementById('sOverlay').classList.add('open'); }
+function closeSidebar() { document.getElementById('mgrSidebar').classList.remove('open'); document.getElementById('sOverlay').classList.remove('open'); }
+
+// Desktop collapse
+(function() {
+    var c = localStorage.getItem('mgrSbCollapsed') === '1';
+    if (c) document.body.classList.add('sb-collapsed');
+
+    // Reuse existing sidebar toggle button from _Sidebar partial
+    window.toggleSidebarCollapse = function() {
+        var col = document.body.classList.toggle('sb-collapsed');
+        localStorage.setItem('mgrSbCollapsed', col ? '1' : '0');
+    };
+
+    // New sidebar uses sbToggleIcon
+    window.toggleDesktopSidebar = window.toggleSidebarCollapse;
+
+    // Legacy toggleSidebar for any inline calls
+    window.toggleSidebar = openSidebar;
+})();
+</script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

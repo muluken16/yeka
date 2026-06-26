@@ -1,77 +1,419 @@
 @page
+@model CleaningManagmentSystem.Pages.GalleryModel
 @{
     Layout = null;
     ViewData["Title"] = "Gallery";
 }
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title data-i18n-title="gallery_page_title">@ViewData["Title"] - Yeka Cleaning Services</title>
+    <title>Gallery — Yeka Cleaning Services</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --blue: #2E86AB; --blue2: #A23B72; --dark: #0d1117; --r: 14px; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc;
+               color: #1a1a2e; padding-top: 60px; }
+
+        /* ── Navbar ─────────────────────────────────────────────────────── */
+        .site-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1050;
+            background: linear-gradient(135deg, #2E86AB, #A23B72);
+            box-shadow: 0 2px 24px rgba(39,42,245,.35); padding: 0;
+        }
+        .site-nav .inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; height: 60px;
+        }
+        .nav-brand {
+            color: #fff; font-weight: 800; font-size: 1.1rem;
+            text-decoration: none; display: flex; align-items: center; gap: 8px;
+        }
+        .nav-links { display: flex; align-items: center; gap: 4px; }
+        .nav-links a {
+            color: rgba(255,255,255,.82); text-decoration: none;
+            padding: 6px 13px; border-radius: 8px;
+            font-size: .875rem; font-weight: 500; transition: all .18s;
+        }
+        .nav-links a:hover, .nav-links a.active { color: #fff; background: rgba(255,255,255,.18); }
+        .nav-login {
+            background: rgba(255,255,255,.18) !important;
+            border: 1.5px solid rgba(255,255,255,.35) !important;
+            color: #fff !important; font-weight: 600 !important;
+        }
+        .nav-login:hover { background: rgba(255,255,255,.28) !important; }
+        .nav-toggle {
+            display: none; background: none;
+            border: 1.5px solid rgba(255,255,255,.4); color: #fff;
+            border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 1.1rem;
+        }
+        @@media (max-width: 768px) {
+            .nav-toggle { display: block; }
+            .nav-links {
+                display: none; flex-direction: column;
+                position: absolute; top: 60px; left: 0; right: 0;
+                background: linear-gradient(135deg,#2E86AB,#A23B72);
+                padding: 12px 16px; gap: 4px;
+            }
+            .nav-links.open { display: flex; }
+        }
+
+        /* ── Hero band ──────────────────────────────────────────────────── */
+        .gal-hero {
+            background: linear-gradient(135deg, #2E86AB 0%, #A23B72 100%);
+            padding: 56px 24px 48px; text-align: center;
+        }
+        .gal-hero h1 {
+            color: #fff; font-weight: 800;
+            font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 10px;
+        }
+        .gal-hero p { color: rgba(255,255,255,.75); font-size: 1rem; max-width: 500px; margin: 0 auto; }
+        .gal-hero .badge-count {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+            border-radius: 20px; padding: 5px 16px; color: #fff;
+            font-size: .82rem; font-weight: 600; margin-top: 16px;
+        }
+
+        /* ── Filter tabs ────────────────────────────────────────────────── */
+        .filter-bar {
+            background: #fff; border-bottom: 1px solid #e8ecf0;
+            padding: 16px 0; position: sticky; top: 60px; z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,.04);
+        }
+        .filter-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px;
+                         display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .filter-btn {
+            border: 1.5px solid #e8ecf0; background: #fff; color: #64748b;
+            border-radius: 20px; padding: 6px 18px; font-size: .82rem;
+            font-weight: 500; cursor: pointer; text-decoration: none;
+            transition: all .18s; display: inline-block;
+        }
+        .filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+        .filter-btn.active {
+            background: linear-gradient(135deg,#2E86AB,#A23B72);
+            border-color: transparent; color: #fff; font-weight: 600;
+        }
+
+        /* ── Gallery grid ───────────────────────────────────────────────── */
+        .gal-wrap { max-width: 1200px; margin: 0 auto; padding: 40px 24px 64px; }
+        .gal-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        @@media (max-width: 900px) { .gal-grid { grid-template-columns: repeat(2, 1fr); } }
+        @@media (max-width: 560px) { .gal-grid { grid-template-columns: 1fr; } }
+
+        .gal-card {
+            border-radius: var(--r); overflow: hidden; position: relative;
+            background: #e8ecf0; aspect-ratio: 4/3; cursor: pointer;
+            box-shadow: 0 2px 12px rgba(0,0,0,.06); transition: all .25s;
+        }
+        .gal-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,.14); }
+        .gal-card img {
+            width: 100%; height: 100%; object-fit: cover;
+            display: block; transition: transform .35s;
+        }
+        .gal-card:hover img { transform: scale(1.06); }
+        .gal-ov {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 55%);
+            display: flex; align-items: flex-end; padding: 16px;
+            opacity: 0; transition: opacity .25s;
+        }
+        .gal-card:hover .gal-ov { opacity: 1; }
+        .gal-ov-inner { width: 100%; }
+        .gal-title { color: #fff; font-weight: 700; font-size: .9rem; margin-bottom: 3px; }
+        .gal-cat   { color: rgba(255,255,255,.7); font-size: .74rem; }
+        .gal-zoom  {
+            position: absolute; top: 10px; right: 10px;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(255,255,255,.2); backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,.3);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: .9rem;
+            opacity: 0; transition: opacity .2s;
+        }
+        .gal-card:hover .gal-zoom { opacity: 1; }
+        .gal-ph {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; color: #adb5bd; background: #f0f4f8;
+        }
+        .gal-date {
+            color: rgba(255,255,255,.6); font-size: .7rem;
+            margin-top: 3px; display: flex; align-items: center; gap: 4px;
+        }
+
+        /* ── Empty state ────────────────────────────────────────────────── */
+        .empty-state {
+            text-align: center; padding: 80px 24px; color: #94a3b8;
+        }
+        .empty-state i { font-size: 4rem; display: block; margin-bottom: 16px; opacity: .2; }
+        .empty-state h5 { font-size: 1.1rem; font-weight: 600; color: #64748b; margin-bottom: 6px; }
+        .empty-state p  { font-size: .88rem; }
+
+        /* ── Lightbox ───────────────────────────────────────────────────── */
+        .lb-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,.9);
+            z-index: 9000; display: none; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .lb-backdrop.open { display: flex; }
+        .lb-box { position: relative; max-width: 900px; width: 100%; }
+        .lb-img {
+            width: 100%; max-height: 80vh; object-fit: contain;
+            border-radius: 10px; display: block;
+        }
+        .lb-info {
+            background: rgba(255,255,255,.07); border-radius: 0 0 10px 10px;
+            padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .lb-title { color: #fff; font-weight: 600; font-size: .95rem; }
+        .lb-cat   { color: rgba(255,255,255,.55); font-size: .78rem; margin-top: 2px; }
+        .lb-close {
+            position: absolute; top: -14px; right: -14px;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.3);
+            color: #fff; font-size: 1rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .2s;
+        }
+        .lb-close:hover { background: rgba(255,255,255,.3); }
+        .lb-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 42px; height: 42px; border-radius: 50%;
+            background: rgba(255,255,255,.13); border: 1.5px solid rgba(255,255,255,.25);
+            color: #fff; font-size: 1.2rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .2s;
+        }
+        .lb-nav:hover { background: rgba(255,255,255,.28); }
+        .lb-prev { left: -56px; }
+        .lb-next { right: -56px; }
+        @@media (max-width: 700px) {
+            .lb-prev { left: 4px; } .lb-next { right: 4px; }
+        }
+
+        /* ── Footer ─────────────────────────────────────────────────────── */
+        .footer { background: var(--dark); color: rgba(255,255,255,.6); padding: 48px 0 24px; }
+        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .footer h6 { color: #fff; font-weight: 700; margin-bottom: 12px; font-size: .9rem; }
+        .footer a  { color: rgba(255,255,255,.5); text-decoration: none; font-size: .85rem; }
+        .footer a:hover { color: #fff; }
+        .footer-hr { border-color: rgba(255,255,255,.1) !important; }
+    </style>
 </head>
 <body>
-<header>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" asp-area="" asp-page="/Index" data-i18n="nav_brand"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="navbar-collapse collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-lg-center">
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Index" data-i18n="nav_home"><i class="bi bi-house-door"></i> Home</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Gallery" data-i18n="nav_gallery"><i class="bi bi-images"></i> Gallery</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Services" data-i18n="nav_services"><i class="bi bi-briefcase"></i> Services</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/About" data-i18n="nav_about"><i class="bi bi-people"></i> About Us</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Contact" data-i18n="nav_contact"><i class="bi bi-envelope"></i> Contact Us</a></li>
-                    <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Blog" data-i18n="nav_blog"><i class="bi bi-journal-text"></i> Blog</a></li>
-                    <li class="nav-item ms-lg-3"><a class="login-btn" asp-area="" asp-page="/Login" data-i18n="nav_login">Login</a></li>
-                    <li class="nav-item ms-lg-3">
-                        <select id="languageSelect" class="form-select form-select-sm border-light text-dark"></select>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-</header>
 
-<div class="container py-5" style="margin-top: 80px;">
-    <h1 class="text-center mb-5" data-i18n="gallery_page_header">Our Work Gallery</h1>
-    <div class="row g-4">
-        @for (int i = 1; i <= 6; i++)
-        {
-            <div class="col-md-4 col-sm-6">
-                <div class="card h-100 border-0 shadow-sm">
-                    <img src="https://picsum.photos/400/300?random=@i" class="card-img-top" alt="Cleaning Work @(i)">
-                    <div class="card-body">
-                        <h5 class="card-title" data-i18n="gallery_project_title">Project</h5>
-                        <p class="card-text" data-i18n="gallery_project_description">Professional cleaning service completed.</p>
+<!-- ── NAVBAR ─────────────────────────────────────────────────────────── -->
+<nav class="site-nav">
+    <div class="inner">
+        <a class="nav-brand" asp-page="/Index">
+            <i class="bi bi-droplet-fill" style="color:#93c5fd"></i>
+            Yeka Cleaning
+        </a>
+        <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="nav-links" id="navLinks">
+            <a asp-page="/Index">Home</a>
+            <a asp-page="/Gallery" class="active">Gallery</a>
+            <a asp-page="/Services">Services</a>
+            <a asp-page="/About">About</a>
+            <a asp-page="/Contact">Contact</a>
+            <a asp-page="/Login" class="nav-login ms-2">
+                <i class="bi bi-person-fill me-1"></i>Login
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- ── HERO BAND ─────────────────────────────────────────────────────── -->
+<div class="gal-hero">
+    <h1><i class="bi bi-images me-2" style="opacity:.85"></i>Our Work Gallery</h1>
+    <p>A glimpse of our work across Yeka sub-city.</p>
+    @if (Model.TotalCount > 0)
+    {
+        <div class="badge-count">
+            <i class="bi bi-camera"></i>
+            @Model.TotalCount photo@(Model.TotalCount == 1 ? "" : "s") published
+        </div>
+    }
+</div>
+
+<!-- ── FILTER BAR ─────────────────────────────────────────────────────── -->
+@if (Model.Categories.Any())
+{
+    <div class="filter-bar">
+        <div class="filter-inner">
+            <a href="/Gallery" class="filter-btn @(string.IsNullOrEmpty(Model.FilterCategory) ? "active" : "")">
+                <i class="bi bi-grid-3x3-gap me-1"></i>All
+            </a>
+            @foreach (var cat in Model.Categories)
+            {
+                <a href="/Gallery?FilterCategory=@Uri.EscapeDataString(cat)"
+                   class="filter-btn @(Model.FilterCategory == cat ? "active" : "")">
+                    @cat
+                </a>
+            }
+        </div>
+    </div>
+}
+
+<!-- ── GALLERY GRID ───────────────────────────────────────────────────── -->
+<div class="gal-wrap">
+    @if (!Model.Photos.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-images"></i>
+            <h5>No photos published yet</h5>
+            <p>
+                @if (!string.IsNullOrEmpty(Model.FilterCategory))
+                {
+                    <span>No photos in the "@Model.FilterCategory" category. </span>
+                    <a href="/Gallery" style="color:var(--blue)">View all photos</a>
+                }
+                else
+                {
+                    <span>Staff can upload and publish photos via the dashboard.</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="gal-grid" id="galGrid">
+            @for (int i = 0; i < Model.Photos.Count; i++)
+            {
+                var p = Model.Photos[i];
+                <div class="gal-card"
+                     onclick="openLb(@i)"
+                     data-img="@p.ImageUrl"
+                     data-title="@Html.Raw(p.Title.Replace("\"","&quot;"))"
+                     data-cat="@Html.Raw(p.Category.Replace("\"","&quot;"))"
+                     data-desc="@Html.Raw(p.Description.Replace("\"","&quot;"))">
+                    @if (!string.IsNullOrEmpty(p.ImageUrl))
+                    {
+                        <img src="@p.ImageUrl" alt="@p.Title" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="gal-ph"><i class="bi bi-image"></i></div>
+                    }
+                    <div class="gal-zoom"><i class="bi bi-zoom-in"></i></div>
+                    <div class="gal-ov">
+                        <div class="gal-ov-inner">
+                            <div class="gal-title">@p.Title</div>
+                            @if (!string.IsNullOrEmpty(p.Category))
+                            {
+                                <div class="gal-cat">@p.Category</div>
+                            }
+                            <div class="gal-date">
+                                <i class="bi bi-calendar3"></i>
+                                @p.CreatedAt.ToString("dd MMM yyyy")
+                            </div>
+                        </div>
                     </div>
                 </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- ── LIGHTBOX ───────────────────────────────────────────────────────── -->
+<div class="lb-backdrop" id="lb" onclick="closeLbOutside(event)">
+    <div class="lb-box">
+        <button class="lb-close" onclick="closeLb()"><i class="bi bi-x-lg"></i></button>
+        <button class="lb-nav lb-prev" onclick="lbNav(-1)"><i class="bi bi-chevron-left"></i></button>
+        <button class="lb-nav lb-next" onclick="lbNav(1)"><i class="bi bi-chevron-right"></i></button>
+        <img src="" alt="" id="lbImg" class="lb-img" />
+        <div class="lb-info">
+            <div>
+                <div class="lb-title" id="lbTitle"></div>
+                <div class="lb-cat"  id="lbCat"></div>
             </div>
-        }
+            <div id="lbCounter" style="color:rgba(255,255,255,.45);font-size:.78rem"></div>
+        </div>
     </div>
 </div>
 
-<footer>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 mb-4"><h5><i class="bi bi-droplet-fill"></i> <span data-i18n="footer_brand">Yeka Cleaning</span></h5><p data-i18n="gallery_footer_desc">Your trusted partner.</p></div>
-            <div class="col-md-4 mb-4"><h5 data-i18n="footer_quicklinks">Quick Links</h5><ul class="list-unstyled"><li><a asp-page="/Services" data-i18n="footer_link_services">Services</a></li><li><a asp-page="/About" data-i18n="footer_link_about">About Us</a></li><li><a asp-page="/Contact" data-i18n="footer_link_contact">Contact</a></li></ul></div>
-            <div class="col-md-4 mb-4"><h5 data-i18n="footer_contact_title">Contact</h5><p><span data-i18n="footer_phone">(555) 123-4567</span></p></div>
+<!-- ── FOOTER ─────────────────────────────────────────────────────────── -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:32px">
+            <div>
+                <h6><i class="bi bi-droplet-fill" style="color:#93c5fd;margin-right:8px"></i>Yeka Cleaning</h6>
+                <p style="font-size:.85rem;line-height:1.6">Professional cleaning management for Yeka sub-city, Addis Ababa.</p>
+            </div>
+            <div>
+                <h6>Navigation</h6>
+                <ul style="list-style:none;line-height:2.1">
+                    <li><a asp-page="/Index">Home</a></li>
+                    <li><a asp-page="/Services">Services</a></li>
+                    <li><a asp-page="/About">About Us</a></li>
+                    <li><a asp-page="/Contact">Contact</a></li>
+                </ul>
+            </div>
+            <div>
+                <h6>Contact</h6>
+                <p style="font-size:.85rem;margin-bottom:6px"><i class="bi bi-telephone" style="color:#93c5fd;margin-right:8px"></i>+251 (0) 11 234 5678</p>
+                <p style="font-size:.85rem;margin-bottom:6px"><i class="bi bi-envelope" style="color:#93c5fd;margin-right:8px"></i>info@yeka-cleaning.et</p>
+                <p style="font-size:.85rem"><i class="bi bi-geo-alt" style="color:#93c5fd;margin-right:8px"></i>Yeka Sub-city, Addis Ababa</p>
+            </div>
         </div>
-        <div class="text-center border-top pt-3"><p class="mb-0" data-i18n="footer_copyright">&copy; 2026 Yeka Cleaning.</p></div>
+        <hr class="footer-hr mt-4 mb-3" />
+        <p style="text-align:center;font-size:.82rem">&copy; @DateTime.Now.Year Yeka Cleaning Management System. All rights reserved.</p>
     </div>
 </footer>
 
-<button class="chatbot-btn" onclick="alert('Chat support coming soon!')"><i class="bi bi-chat-dots-fill"></i></button>
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="~/js/translation.js"></script>
+<script>
+// ── Lightbox ──────────────────────────────────────────────────────────────
+var lbCards = Array.from(document.querySelectorAll('#galGrid .gal-card'));
+var lbIdx   = 0;
+
+function openLb(i) {
+    lbIdx = i;
+    renderLb();
+    document.getElementById('lb').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeLb() {
+    document.getElementById('lb').classList.remove('open');
+    document.body.style.overflow = '';
+}
+function closeLbOutside(e) {
+    if (e.target === document.getElementById('lb')) closeLb();
+}
+function lbNav(dir) {
+    if (!lbCards.length) return;
+    lbIdx = (lbIdx + dir + lbCards.length) % lbCards.length;
+    renderLb();
+}
+function renderLb() {
+    var c = lbCards[lbIdx];
+    document.getElementById('lbImg').src        = c.dataset.img   || '';
+    document.getElementById('lbImg').alt        = c.dataset.title || '';
+    document.getElementById('lbTitle').textContent = c.dataset.title || '';
+    document.getElementById('lbCat').textContent   = c.dataset.cat   || '';
+    document.getElementById('lbCounter').textContent = (lbIdx + 1) + ' / ' + lbCards.length;
+}
+
+// keyboard nav
+document.addEventListener('keydown', function(e) {
+    var lb = document.getElementById('lb');
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'ArrowLeft')  lbNav(-1);
+    if (e.key === 'ArrowRight') lbNav(1);
+    if (e.key === 'Escape')     closeLb();
+});
+</script>
 </body>
 </html>

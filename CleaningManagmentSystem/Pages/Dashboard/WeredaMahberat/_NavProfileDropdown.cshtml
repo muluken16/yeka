@@ -1,0 +1,80 @@
+@{
+    var _pUser  = Context.Session.GetString("UserName")  ?? "";
+    var _pRole  = Context.Session.GetString("UserRole")  ?? "";
+    var _pPhoto = Context.Session.GetString("UserPhoto") ?? "";
+    var _pInit  = _pUser.Length > 0 ? _pUser[0].ToString().ToUpper() : "W";
+    string _dashUrl = "/Dashboard/WeredaMahberat";
+}
+<div class="dropdown">
+    <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="p-wrap">
+            @if (!string.IsNullOrEmpty(_pPhoto))
+            {
+                <img src="@_pPhoto" class="p-avatar" alt="@_pUser"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                <span class="p-initial" style="display:none">@_pInit</span>
+            }
+            else
+            {
+                <span class="p-initial">@_pInit</span>
+            }
+            <span class="p-dot"></span>
+        </span>
+        <span class="p-name">@_pUser</span>
+        <i class="bi bi-chevron-down"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+        <!-- Header -->
+        <li>
+            <div class="pd-header">
+                <div class="pd-big-wrap">
+                    @if (!string.IsNullOrEmpty(_pPhoto))
+                    {
+                        <img src="@_pPhoto" class="pd-big-avatar" alt="@_pUser"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                        <span class="pd-big-initial" style="display:none">@_pInit</span>
+                    }
+                    else
+                    {
+                        <span class="pd-big-initial">@_pInit</span>
+                    }
+                    <span class="pd-online-dot"></span>
+                </div>
+                <div class="pd-info">
+                    <div class="pd-name">@_pUser</div>
+                    <div class="pd-role">
+                        <span class="pd-role-badge">@_pRole</span>
+                    </div>
+                    <div class="pd-status">Online</div>
+                </div>
+            </div>
+        </li>
+        <!-- Account -->
+        <li><div class="pd-section-label">Account</div></li>
+        <li>
+            <a class="dropdown-item" href="/Dashboard/Profile">
+                <span class="pd-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-person-circle"></i></span>
+                <span class="pd-item-label">My Profile<br/><span class="pd-item-sub">View &amp; edit your info</span></span>
+                <i class="bi bi-chevron-right pd-arrow"></i>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item" href="@_dashUrl">
+                <span class="pd-icon" style="background:#f0fdf4;color:#16a34a"><i class="bi bi-speedometer2"></i></span>
+                <span class="pd-item-label">Dashboard<br/><span class="pd-item-sub">Back to home</span></span>
+                <i class="bi bi-chevron-right pd-arrow"></i>
+            </a>
+        </li>
+        <li><hr class="dropdown-divider"/></li>
+        <!-- Logout -->
+        <li>
+            <a class="dropdown-item pd-danger" href="/Login?logout=1">
+                <span class="pd-icon"><i class="bi bi-box-arrow-right"></i></span>
+                <span class="pd-item-label">Sign Out</span>
+            </a>
+        </li>
+        <li><div style="padding:6px 16px 10px;font-size:.65rem;color:#94a3b8;text-align:center">
+            Yeka Cleaning Management v1.0
+        </div></li>
+    </ul>
+</div>

@@ -1,233 +1,757 @@
 @page
+@model CleaningManagmentSystem.Pages.Dashboard.SuperAdminModel
+@using CleaningManagmentSystem.Pages.Dashboard
 @{
     var userName = HttpContext.Session.GetString("UserName");
-    var userRole = HttpContext.Session.GetString("UserRole")?.ToLower() ?? "superadmin";
-    
-    if (userName == null)
-    {
-        Response.Redirect("/Login");
-        return;
-    }
+    if (userName == null) { Response.Redirect("/Login"); return; }
+
+    string RoleBadge(string r) => (r ?? "").ToLower() switch {
+        "superadmin"        => "danger",
+        "hr"                => "info",
+        "manager"           => "primary",
+        "driver"            => "success",
+        "outsource"         => "warning",
+        "privatecompanyrep" => "info",
+        "staff"             => "secondary",
+        "wereda_mahberat"   => "dark",
+        "dispatchofficer"   => "primary",
+        _                   => "secondary"
+    };
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Super Admin Dashboard - Yeka Cleaning</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="~/css/dashboard.css" />
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>Super Admin Dashboard – Yeka Cleaning</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet" href="~/css/dashboard.css"/>
+    <style>
+        .stat-card       { border-left: 4px solid; transition: transform .15s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card .icon { font-size: 2.4rem; opacity: .18; }
+        .mini-table td, .mini-table th { font-size: .82rem; }
+        .section-title   { font-size: .78rem; font-weight:700; letter-spacing:.08em;
+                           text-transform:uppercase; color:#6c757d; }
+    </style>
 </head>
 <body>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/Dashboard/SuperAdmin"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-            <div class="nav-user">
-                <span>Welcome, @userName</span>
-                <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
-            </div>
-        </div>
-    </nav>
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-none d-lg-flex">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/Dashboard/SuperAdmin"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
+        <div class="nav-user d-flex align-items-center gap-2">
 
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
-        <div class="container-fluid">
-            <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
-                <span class="navbar-toggler-icon"></span>
+            <!-- Dark / Light mode toggle -->
+            <button id="btnDarkMode" onclick="toggleDarkMode()"
+                    class="btn-logout border-0 bg-transparent text-white px-2"
+                    title="Toggle dark mode" style="cursor:pointer">
+                <i class="bi bi-moon-stars-fill" id="darkModeIcon"></i>
             </button>
-            <a class="navbar-brand" href="/Dashboard/SuperAdmin"><i class="bi bi-droplet-fill"></i> Yeka</a>
-            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i></a>
-        </div>
-    </nav>
 
-    <nav id="sidebarMenu" class="sidebar d-lg-none">
-        @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
-    </nav>
-
-    <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform: none; padding-top: 56px;">
-        @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
-    </nav>
-
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2"><i class="bi bi-shield-check me-2"></i>Super Admin Dashboard</h1>
-            <span class="badge bg-danger">Super Admin</span>
-        </div>
-
-        <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-people display-4 text-primary"></i>
-                        <h4 class="mt-2">156</h4>
-                        <p class="text-muted mb-0">Total Users</p>
-                    </div>
-                </div>
+            <!-- Notifications bell -->
+            <button class="btn-logout border-0 bg-transparent text-white px-2 position-relative"
+                    title="Notifications" style="cursor:pointer"
+                    id="btnNotif">
+                <i class="bi bi-bell-fill"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                      style="font-size:.55rem;padding:.2em .4em">3</span>
+            </button>
+            <!-- Notifications dropdown -->
+            <div id="notifDropdown" class="dropdown-menu dropdown-menu-end shadow"
+                 style="position:absolute;top:56px;right:80px;min-width:280px;z-index:9999">
+                <h6 class="dropdown-header">Notifications</h6>
+                <a class="dropdown-item small py-2" href="/Dashboard/SuperAdmin/Users">
+                    <i class="bi bi-person-plus text-primary me-2"></i>New user account created
+                </a>
+                <a class="dropdown-item small py-2" href="/Dashboard/SuperAdmin/PrivateCleaningCompany">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>Private company rep missing
+                </a>
+                <a class="dropdown-item small py-2" href="/Dashboard/SuperAdmin/Capital">
+                    <i class="bi bi-bank text-success me-2"></i>Capital updated
+                </a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item small text-center text-muted" href="/Dashboard/SuperAdmin">View all</a>
             </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-building display-4 text-success"></i>
-                        <h4 class="mt-2">24</h4>
-                        <p class="text-muted mb-0">Companies</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-currency-dollar display-4 text-warning"></i>
-                        <h4 class="mt-2">1.2M</h4>
-                        <p class="text-muted mb-0">Total Revenue</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-clipboard-data display-4 text-info"></i>
-                        <h4 class="mt-2">48</h4>
-                        <p class="text-muted mb-0">Active Weredas</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Monthly Performance</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="border-end">
-                                    <h3 class="text-success">85%</h3>
-                                    <small class="text-muted">Task Completion</small>
+            <!-- Profile dropdown -->
+            <div class="dropdown">
+                <button class="profile-btn dropdown-toggle" id="profileDropBtn"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="p-wrap">
+                        @if (!string.IsNullOrEmpty(Model.UserPhoto))
+                        {
+                            <img src="@Model.UserPhoto" class="p-avatar" alt="@userName"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                            <span class="p-initial" style="display:none">@(userName?.Length>0?userName[0].ToString().ToUpper():"A")</span>
+                        }
+                        else { <span class="p-initial">@(userName?.Length>0?userName[0].ToString().ToUpper():"A")</span> }
+                        <span class="p-dot"></span>
+                    </span>
+                    <span class="p-name">@userName</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+
+                    <!-- ── Header ─────────────────────────────────────── -->
+                    <li>
+                        <div class="pd-header">
+                            <div class="pd-big-wrap">
+                                @if (!string.IsNullOrEmpty(Model.UserPhoto))
+                                {
+                                    <img src="@Model.UserPhoto" class="pd-big-avatar" alt="@userName"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                    <span class="pd-big-initial" style="display:none">@(userName?.Length>0?userName[0].ToString().ToUpper():"A")</span>
+                                }
+                                else { <span class="pd-big-initial">@(userName?.Length>0?userName[0].ToString().ToUpper():"A")</span> }
+                                <span class="pd-online-dot"></span>
+                            </div>
+                            <div class="pd-info">
+                                <div class="pd-name">@userName</div>
+                                <div class="pd-role">
+                                    <span class="pd-role-badge">
+                                        <i class="bi bi-shield-fill me-1" style="font-size:.6rem"></i>Super Admin
+                                    </span>
+                                </div>
+                                <div class="pd-status">
+                                    <span class="pd-status-dot"></span>Active Session
                                 </div>
                             </div>
-                            <div class="col-4">
-                                <div class="border-end">
-                                    <h3 class="text-primary">92%</h3>
-                                    <small class="text-muted">User Satisfaction</small>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <h3 class="text-warning">15%</h3>
-                                <small class="text-muted">Growth Rate</small>
-                            </div>
                         </div>
-                    </div>
-                </div>
+                    </li>
 
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-people me-2"></i>Recent Users</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Role</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Alemayehu Kassa</td>
-                                        <td>alem@company.com</td>
-                                        <td><span class="badge bg-primary">Manager</span></td>
-                                        <td><span class="badge bg-success">Active</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Tigist Girma</td>
-                                        <td>tigist@company.com</td>
-                                        <td><span class="badge bg-info">Staff</span></td>
-                                        <td><span class="badge bg-success">Active</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Bekele Alemu</td>
-                                        <td>bekele@company.com</td>
-                                        <td><span class="badge bg-secondary">Driver</span></td>
-                                        <td><span class="badge bg-success">Active</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Sisay Mengistu</td>
-                                        <td>sisay@company.com</td>
-                                        <td><span class="badge bg-warning text-dark">Wereda Officer</span></td>
-                                        <td><span class="badge bg-success">Active</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <!-- ── Stats strip ───────────────────────────────── -->
+                    <li>
+                        <div class="pd-stats">
+                            <a href="/Dashboard/SuperAdmin/Users" class="pd-stat text-decoration-none">
+                                <div class="pd-stat-val" style="color:#1d4ed8">@Model.TotalUsers</div>
+                                <div class="pd-stat-lbl">Users</div>
+                            </a>
+                            <a href="/Dashboard/SuperAdmin/OutsourceCompany" class="pd-stat text-decoration-none">
+                                <div class="pd-stat-val" style="color:#16a34a">@Model.OutsourceCount</div>
+                                <div class="pd-stat-lbl">Outsource</div>
+                            </a>
+                            <a href="/Dashboard/SuperAdmin/PrivateCleaningCompany" class="pd-stat text-decoration-none">
+                                <div class="pd-stat-val" style="color:#7c3aed">@Model.PrivateCount</div>
+                                <div class="pd-stat-lbl">Private</div>
+                            </a>
+                            <a href="/Dashboard/SuperAdmin/RegisterReceipt" class="pd-stat text-decoration-none">
+                                <div class="pd-stat-val" style="color:#d97706">@Model.ReceiptCount</div>
+                                <div class="pd-stat-lbl">Receipts</div>
+                            </a>
                         </div>
-                    </div>
-                </div>
+                    </li>
+
+                    <!-- ── Quick pills ───────────────────────────────── -->
+                    <li>
+                        <div class="pd-quick-row">
+                            <a href="/Dashboard/Profile" class="pd-quick-pill"
+                               style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe">
+                                <i class="bi bi-person-circle"></i> Profile
+                            </a>
+                            <a href="/Dashboard/SuperAdmin/Settings" class="pd-quick-pill"
+                               style="background:#faf5ff;color:#7c3aed;border-color:#ddd6fe">
+                                <i class="bi bi-gear"></i> Settings
+                            </a>
+                            <a href="/Dashboard/SuperAdmin/RoleUsage" class="pd-quick-pill"
+                               style="background:#fef9ee;color:#d97706;border-color:#fde68a">
+                                <i class="bi bi-shield-lock"></i> Roles
+                            </a>
+                        </div>
+                    </li>
+
+                    <li><hr class="dropdown-divider"/></li>
+
+                    <!-- ── Account section ───────────────────────────── -->
+                    <li><div class="pd-section-label">Navigation</div></li>
+                    <li>
+                        <a class="dropdown-item" href="/Dashboard/SuperAdmin">
+                            <span class="pd-icon" style="background:#f0fdf4;color:#16a34a"><i class="bi bi-speedometer2"></i></span>
+                            <span class="pd-item-text">
+                                <span class="pd-item-label">Dashboard</span>
+                                <span class="pd-item-sub">System overview</span>
+                            </span>
+                            <i class="bi bi-chevron-right pd-arrow"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/Dashboard/SuperAdmin/Users">
+                            <span class="pd-icon" style="background:#eff6ff;color:#1d4ed8"><i class="bi bi-people"></i></span>
+                            <span class="pd-item-text">
+                                <span class="pd-item-label">Manage Users</span>
+                                <span class="pd-item-sub">@Model.TotalUsers total · @Model.ActiveUsers active</span>
+                            </span>
+                            <i class="bi bi-chevron-right pd-arrow"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/Dashboard/SuperAdmin/Settings">
+                            <span class="pd-icon" style="background:#faf5ff;color:#7c3aed"><i class="bi bi-gear-wide-connected"></i></span>
+                            <span class="pd-item-text">
+                                <span class="pd-item-label">Settings &amp; Config</span>
+                                <span class="pd-item-sub">System configuration</span>
+                            </span>
+                            <i class="bi bi-chevron-right pd-arrow"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/Dashboard/Profile">
+                            <span class="pd-icon" style="background:#fff7ed;color:#ea580c"><i class="bi bi-person-vcard"></i></span>
+                            <span class="pd-item-text">
+                                <span class="pd-item-label">My Profile</span>
+                                <span class="pd-item-sub">View &amp; update your info</span>
+                            </span>
+                            <i class="bi bi-chevron-right pd-arrow"></i>
+                        </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"/></li>
+
+                    <!-- ── Logout ─────────────────────────────────────── -->
+                    <li>
+                        <a class="dropdown-item pd-danger" href="/Login?logout=1">
+                            <span class="pd-icon"><i class="bi bi-box-arrow-right"></i></span>
+                            <span class="pd-item-text">
+                                <span class="pd-item-label">Sign Out</span>
+                                <span class="pd-item-sub">End your session</span>
+                            </span>
+                        </a>
+                    </li>
+
+                    <!-- ── Footer ─────────────────────────────────────── -->
+                    <li>
+                        <div class="pd-footer">
+                            <span class="pd-version">Yeka Cleaning v1.0</span>
+                            <a href="/Dashboard/SuperAdmin/Settings">System Info →</a>
+                        </div>
+                    </li>
+
+                </ul>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary"><i class="bi bi-person-plus me-2"></i>Add New User</button>
-                            <button class="btn btn-success"><i class="bi bi-building-add me-2"></i>Add Company</button>
-                            <button class="btn btn-info"><i class="bi bi-file-earmark-plus me-2"></i>Create Report</button>
-                            <button class="btn btn-warning"><i class="bi bi-gear me-2"></i>System Settings</button>
+            <!-- Logout -->
+            <a class="btn-logout" href="/Login?logout=1" title="Logout">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </div>
+</nav>
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
+    <div class="container-fluid">
+        <button class="navbar-toggler" onclick="toggleSidebar()"><span class="navbar-toggler-icon"></span></button>
+        <a class="navbar-brand" href="/Dashboard/SuperAdmin"><i class="bi bi-droplet-fill"></i> Yeka</a>
+        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
+    </div>
+</nav>
+<nav id="sidebarMenu" class="sidebar d-lg-none">
+    @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
+</nav>
+<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
+    @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
+</nav>
+
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-4 border-bottom flex-wrap gap-2">
+        <h1 class="h2 mb-0"><i class="bi bi-shield-check me-2"></i>Super Admin Dashboard</h1>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="text-muted small">@DateTime.Now.ToString("dddd, dd MMM yyyy")</span>
+            <span class="badge bg-danger px-3 py-2">Super Admin</span>
+        </div>
+    </div>
+
+    <!-- ════ ROW 1 – TOP SUMMARY STATS ══════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+
+        <!-- Users -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="/Dashboard/SuperAdmin/Users" class="text-decoration-none">
+                <div class="card border-0 shadow-sm stat-card h-100 p-3" style="border-color:#0d6efd!important">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="section-title mb-1">Users</div>
+                            <div class="fs-2 fw-bold text-primary">@Model.TotalUsers</div>
+                            <small class="text-success"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> @Model.ActiveUsers active</small>
                         </div>
+                        <i class="bi bi-people icon text-primary"></i>
                     </div>
                 </div>
+            </a>
+        </div>
 
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0"><i class="bi bi-bell me-2"></i>System Alerts</h5>
+        <!-- Outsource -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="/Dashboard/SuperAdmin/OutsourceCompany" class="text-decoration-none">
+                <div class="card border-0 shadow-sm stat-card h-100 p-3" style="border-color:#198754!important">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="section-title mb-1">Outsource Co.</div>
+                            <div class="fs-2 fw-bold text-success">@Model.OutsourceCount</div>
+                            <small class="text-success"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> @Model.OutsourceActive active</small>
+                        </div>
+                        <i class="bi bi-building icon text-success"></i>
                     </div>
-                    <div class="card-body p-0">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                                    <span>3 companies need renewal</span>
-                                </div>
-                            </li>
-                            <li class="list-group-item">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-info-circle text-info me-2"></i>
-                                    <span>System update available</span>
-                                </div>
-                            </li>
-                            <li class="list-group-item">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-check-circle text-success me-2"></i>
-                                    <span>Backup completed</span>
-                                </div>
-                            </li>
-                        </ul>
+                </div>
+            </a>
+        </div>
+
+        <!-- Private -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="/Dashboard/SuperAdmin/PrivateCleaningCompany" class="text-decoration-none">
+                <div class="card border-0 shadow-sm stat-card h-100 p-3" style="border-color:#0dcaf0!important">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="section-title mb-1">Private Co.</div>
+                            <div class="fs-2 fw-bold text-info">@Model.PrivateCount</div>
+                            <small class="text-success"><i class="bi bi-circle-fill" style="font-size:.45rem"></i> @Model.PrivateActive active</small>
+                        </div>
+                        <i class="bi bi-briefcase icon text-info"></i>
                     </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Receipts -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="/Dashboard/SuperAdmin/RegisterReceipt" class="text-decoration-none">
+                <div class="card border-0 shadow-sm stat-card h-100 p-3" style="border-color:#ffc107!important">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="section-title mb-1">Receipts</div>
+                            <div class="fs-2 fw-bold text-warning">@Model.ReceiptCount</div>
+                            <small class="text-muted">ETB @Model.ReceiptTotal.ToString("N0")</small>
+                        </div>
+                        <i class="bi bi-receipt icon text-warning"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Payroll -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="/Dashboard/SuperAdmin/ReceiptPayroll" class="text-decoration-none">
+                <div class="card border-0 shadow-sm stat-card h-100 p-3" style="border-color:#6f42c1!important">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="section-title mb-1">Payroll</div>
+                            <div class="fs-2 fw-bold" style="color:#6f42c1">@Model.PayrollCount</div>
+                            <small class="text-muted">ETB @Model.PayrollTotal.ToString("N0") paid</small>
+                        </div>
+                        <i class="bi bi-cash-stack icon" style="color:#6f42c1"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Capital -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="/Dashboard/SuperAdmin/Capital" class="text-decoration-none">
+                <div class="card border-0 shadow-sm stat-card h-100 p-3" style="border-color:@(Model.Capital>=0?"#198754":"#dc3545")!important">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="section-title mb-1">Capital</div>
+                            <div class="fs-2 fw-bold @(Model.Capital>=0?"text-success":"text-danger")">
+                                ETB @Math.Abs(Model.Capital).ToString("N0")
+                            </div>
+                            <small class="text-muted">In: @Model.TotalIncome.ToString("N0") / Out: @Model.TotalExpense.ToString("N0")</small>
+                        </div>
+                        <i class="bi bi-bank icon @(Model.Capital>=0?"text-success":"text-danger")"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div><!-- /ROW 1 -->
+
+    <!-- ════ ROW 2 – OUTSOURCE + PRIVATE COMPANIES ══════════════════════════ -->
+    <div class="row g-4 mb-4">
+
+        <!-- Outsource Companies -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="fw-semibold"><i class="bi bi-building me-2 text-success"></i>Outsource Companies</span>
+                    <a href="/Dashboard/SuperAdmin/OutsourceCompany" class="btn btn-sm btn-outline-success">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (!Model.RecentOutsource.Any())
+                    {
+                        <div class="text-center text-muted py-4 small">No outsource companies yet.</div>
+                    }
+                    else
+                    {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 mini-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Contact</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in Model.RecentOutsource)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@c.CompanyName</td>
+                                        <td class="text-muted">@(string.IsNullOrEmpty(c.ContactPerson) ? "—" : c.ContactPerson)</td>
+                                        <td class="text-muted">@(string.IsNullOrEmpty(c.Phone) ? "—" : c.Phone)</td>
+                                        <td>
+                                            <span class="badge bg-@(c.Status=="Active"?"success":"secondary")">
+                                                @c.Status
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
                 </div>
             </div>
         </div>
-    </main>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebarMenu').classList.toggle('show');
-            document.getElementById('sidebarBackdrop').classList.toggle('show');
-        }
-        document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(link) {
-            link.addEventListener('click', function() {
-                if (window.innerWidth < 992) toggleSidebar();
-            });
-        });
-    </script>
+        <!-- Private Cleaning Companies -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="fw-semibold"><i class="bi bi-briefcase me-2 text-info"></i>Private Cleaning Companies</span>
+                    <a href="/Dashboard/SuperAdmin/PrivateCleaningCompany" class="btn btn-sm btn-outline-info">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (!Model.RecentPrivate.Any())
+                    {
+                        <div class="text-center text-muted py-4 small">No private companies yet.</div>
+                    }
+                    else
+                    {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 mini-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Rep (Mobile)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in Model.RecentPrivate)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@c.CompanyName</td>
+                                        <td>
+                                            @if (c.RepName == "— No Rep —")
+                                            {
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-exclamation-triangle me-1"></i>No Rep
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-phone me-1"></i>@c.RepName
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-@(c.Status=="Active"?"success":"secondary")">@c.Status</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /ROW 2 -->
+
+    <!-- ════ ROW 3 – RECEIPTS + PAYROLL ═════════════════════════════════════ -->
+    <div class="row g-4 mb-4">
+
+        <!-- Recent Receipts -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="fw-semibold"><i class="bi bi-receipt me-2 text-warning"></i>Recent Receipts</span>
+                    <a href="/Dashboard/SuperAdmin/RegisterReceipt" class="btn btn-sm btn-outline-warning">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (!Model.RecentReceipts.Any())
+                    {
+                        <div class="text-center text-muted py-4 small">No receipts yet.</div>
+                    }
+                    else
+                    {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 mini-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Receipt #</th>
+                                    <th>Client</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in Model.RecentReceipts)
+                                {
+                                    <tr>
+                                        <td><code class="small">@r.ReceiptNumber</code></td>
+                                        <td class="fw-semibold">@r.ClientName</td>
+                                        <td class="text-success fw-semibold">ETB @r.Amount.ToString("N0")</td>
+                                        <td><span class="badge bg-secondary">@r.PaymentMethod</span></td>
+                                        <td class="text-muted small">
+                                            @(r.ReceiptDate.HasValue ? r.ReceiptDate.Value.ToString("dd MMM yy") : "—")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Footer total -->
+                    <div class="px-3 py-2 border-top bg-light d-flex justify-content-between">
+                        <small class="text-muted">Total @Model.ReceiptCount receipt(s)</small>
+                        <small class="fw-semibold text-success">ETB @Model.ReceiptTotal.ToString("N2")</small>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payroll -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="fw-semibold"><i class="bi bi-cash-stack me-2" style="color:#6f42c1"></i>Recent Payroll</span>
+                    <a href="/Dashboard/SuperAdmin/ReceiptPayroll" class="btn btn-sm btn-outline-secondary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (!Model.RecentPayroll.Any())
+                    {
+                        <div class="text-center text-muted py-4 small">No payroll records yet.</div>
+                    }
+                    else
+                    {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 mini-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Net Salary</th>
+                                    <th>Period</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.RecentPayroll)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@p.EmployeeName</td>
+                                        <td class="fw-semibold" style="color:#6f42c1">ETB @p.NetSalary.ToString("N0")</td>
+                                        <td class="text-muted small">@p.Month @p.Year</td>
+                                        <td>
+                                            <span class="badge bg-@(p.Status=="Paid"?"success":p.Status=="Cancelled"?"danger":"warning text-dark")">
+                                                @p.Status
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Footer total -->
+                    <div class="px-3 py-2 border-top bg-light d-flex justify-content-between">
+                        <small class="text-muted">@Model.PayrollCount active record(s)</small>
+                        <small class="fw-semibold" style="color:#6f42c1">ETB @Model.PayrollTotal.ToString("N2") paid</small>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /ROW 3 -->
+
+    <!-- ════ ROW 4 – RECENT USERS + CAPITAL SUMMARY ═════════════════════════ -->
+    <div class="row g-4 mb-4">
+
+        <!-- Recent Users -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="fw-semibold"><i class="bi bi-people me-2 text-primary"></i>Recent Users</span>
+                    <a href="/Dashboard/SuperAdmin/Users" class="btn btn-sm btn-outline-primary">
+                        Manage Users <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (!Model.RecentUsers.Any())
+                    {
+                        <div class="text-center text-muted py-4 small">No users found.</div>
+                    }
+                    else
+                    {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 mini-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in Model.RecentUsers)
+                                {
+                                    <tr>
+                                        <td class="text-muted small">@u.Id</td>
+                                        <td class="fw-semibold">@u.Name</td>
+                                        <td><code class="small">@u.Email</code></td>
+                                        <td>
+                                            <span class="badge bg-@RoleBadge(u.Role)">
+                                                @(string.IsNullOrEmpty(u.Role) ? "No Role" : u.Role)
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-@(u.IsActive?"success":"danger")">
+                                                @(u.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Capital Summary + Quick Actions -->
+        <div class="col-lg-4">
+
+            <!-- Capital -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white py-2 border-bottom">
+                    <span class="fw-semibold"><i class="bi bi-bank me-2"></i>Capital Overview</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted">Total Income</span>
+                        <span class="fw-bold text-success">ETB @Model.TotalIncome.ToString("N2")</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-muted">Total Expense</span>
+                        <span class="fw-bold text-danger">ETB @Model.TotalExpense.ToString("N2")</span>
+                    </div>
+                    <hr class="my-2"/>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small fw-semibold">Net Capital</span>
+                        <span class="fs-5 fw-bold @(Model.Capital>=0?"text-success":"text-danger")">
+                            @(Model.Capital < 0 ? "-" : "")ETB @Math.Abs(Model.Capital).ToString("N2")
+                        </span>
+                    </div>
+                    <!-- Progress bar -->
+                    @{
+                        var incomeTotal = Model.TotalIncome + Model.TotalExpense;
+                        var incomePct   = incomeTotal > 0 ? (int)(Model.TotalIncome / incomeTotal * 100) : 0;
+                    }
+                    <div class="progress mt-3" style="height:8px" title="Income vs Expense">
+                        <div class="progress-bar bg-success" style="width:@incomePct%"></div>
+                        <div class="progress-bar bg-danger" style="width:@(100-incomePct)%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <small class="text-success">Income @incomePct%</small>
+                        <small class="text-danger">Expense @(100-incomePct)%</small>
+                    </div>
+                    <a href="/Dashboard/SuperAdmin/Capital" class="btn btn-sm btn-outline-secondary w-100 mt-3">
+                        <i class="bi bi-arrow-right me-1"></i>View Capital
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-2 border-bottom">
+                    <span class="fw-semibold"><i class="bi bi-lightning me-2 text-warning"></i>Quick Actions</span>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    <a class="btn btn-primary btn-sm" href="/Dashboard/SuperAdmin/Users">
+                        <i class="bi bi-person-plus me-2"></i>Add New User
+                    </a>
+                    <a class="btn btn-success btn-sm" href="/Dashboard/SuperAdmin/OutsourceCompany">
+                        <i class="bi bi-building-add me-2"></i>Add Outsource Company
+                    </a>
+                    <a class="btn btn-info btn-sm text-white" href="/Dashboard/SuperAdmin/PrivateCleaningCompany">
+                        <i class="bi bi-briefcase me-2"></i>Add Private Company
+                    </a>
+                    <a class="btn btn-warning btn-sm" href="/Dashboard/SuperAdmin/RegisterReceipt">
+                        <i class="bi bi-receipt me-2"></i>Register Receipt
+                    </a>
+                    <a class="btn btn-secondary btn-sm" href="/Dashboard/SuperAdmin/ReceiptPayroll">
+                        <i class="bi bi-cash-stack me-2"></i>Manage Payroll
+                    </a>
+                    <a class="btn btn-outline-danger btn-sm" href="/Dashboard/SuperAdmin/PdfReports">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>PDF Reports
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div><!-- /ROW 4 -->
+
+</main>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebarMenu').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(l) {
+    l.addEventListener('click', function() { if (window.innerWidth < 992) toggleSidebar(); });
+});
+
+// ── Dark mode ────────────────────────────────────────────────────────────────
+function applyDarkMode(on) {
+    document.body.setAttribute('data-bs-theme', on ? 'dark' : 'light');
+    document.getElementById('darkModeIcon').className = on ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+}
+function toggleDarkMode() {
+    var on = document.body.getAttribute('data-bs-theme') !== 'dark';
+    applyDarkMode(on);
+    localStorage.setItem('darkMode', on ? '1' : '0');
+}
+// Restore on load
+(function(){ applyDarkMode(localStorage.getItem('darkMode') === '1'); })();
+
+// ── Close notification dropdown on outside click ──────────────────────────────
+document.getElementById('btnNotif')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var dd = document.getElementById('notifDropdown');
+    dd.classList.toggle('show');
+});
+document.addEventListener('click', function() {
+    document.getElementById('notifDropdown')?.classList.remove('show');
+});
+</script>
 </body>
 </html>

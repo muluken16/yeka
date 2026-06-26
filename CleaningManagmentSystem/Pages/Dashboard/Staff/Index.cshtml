@@ -6,390 +6,512 @@
     var staffName = HttpContext.Session.GetString("UserName") ?? "Staff";
 
     string PriorityColor(string p) => (p ?? "").ToLower() switch {
-        "high"   => "danger",
-        "urgent" => "danger",
-        "medium" => "warning",
-        _        => "secondary"
+        "high" or "urgent" => "danger", "medium" => "warning", _ => "secondary"
     };
     string TrainingStatus(string s) => (s ?? "").ToLower() switch {
-        "completed"  => "bg-success",
-        "ongoing"    => "bg-primary",
-        "scheduled"  => "bg-info text-dark",
-        "cancelled"  => "bg-danger",
-        _            => "bg-secondary"
+        "completed" => "bg-success", "ongoing" => "bg-primary",
+        "scheduled" => "bg-info text-dark", "cancelled" => "bg-danger", _ => "bg-secondary"
     };
+
+    // JSON helpers for charts
+    string JsStrArr(IEnumerable<string> v) =>
+        "[" + string.Join(",", v.Select(x => "\"" + x.Replace("\"","\\\"") + "\"")) + "]";
+    string JsNumArr<T>(IEnumerable<T> v) => "[" + string.Join(",", v) + "]";
 }
 
+@section Styles {
 <style>
-    .kpi-card { border-radius:16px; border:none; transition:transform .18s,box-shadow .18s; }
-    .kpi-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.1)!important; }
-    .post-card { border-radius:14px; border:1px solid #eaecf0;
-                 transition:box-shadow .18s,transform .18s; height:100%; }
-    .post-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.08); transform:translateY(-2px); }
-    .post-card.pinned { border-left:4px solid #0d6efd; }
-    .training-item { border-radius:12px; border:1px solid #eaecf0; padding:14px 16px;
+    :root { --c1:#2563eb;--c2:#16a34a;--c3:#f59e0b;--c4:#7c3aed;--c5:#ef4444;--c6:#0891b2; }
+    .kpi { border-radius:16px;border:none;transition:transform .18s,box-shadow .18s;overflow:hidden; }
+    .kpi:hover { transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.12)!important; }
+    .kpi-icon { width:52px;height:52px;border-radius:14px;display:flex;align-items:center;
+                justify-content:center;font-size:1.4rem;flex-shrink:0; }
+    .sec-lbl { font-size:.71rem;font-weight:700;text-transform:uppercase;
+               letter-spacing:.08em;color:#8a9bb0;margin-bottom:.9rem; }
+    .chart-card { border-radius:16px;border:1px solid #eaecf0;background:#fff;
+                  padding:20px;height:100%; }
+    .chart-wrap { position:relative;height:220px; }
+    .post-card { border-radius:14px;border:1px solid #eaecf0;transition:all .18s;height:100%; }
+    .post-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.08);transform:translateY(-2px); }
+    .post-card.pinned { border-left:4px solid var(--c1); }
+    .training-item { border-radius:12px;border:1px solid #eaecf0;padding:14px 16px;
                      transition:box-shadow .15s; }
     .training-item:hover { box-shadow:0 4px 16px rgba(0,0,0,.07); }
-    .service-chip { border-radius:12px; border:1px solid #e2e8f0; padding:14px;
-                    background:#fff; transition:all .18s; text-align:center; }
-    .service-chip:hover { border-color:#0d6efd; background:#f0f5ff; }
-    .section-label { font-size:.72rem; font-weight:700; text-transform:uppercase;
-                     letter-spacing:.08em; color:#8a9bb0; margin-bottom:1rem; }
-    .chart-box { height:190px; position:relative; }
-    .quick-action { border-radius:14px; border:1px solid #e8ecef; padding:18px;
-                    text-decoration:none; color:inherit; display:block;
-                    transition:all .18s; text-align:center; }
-    .quick-action:hover { border-color:#0d6efd; background:#f0f5ff; color:#0d6efd; }
-    .quick-action i { font-size:1.8rem; margin-bottom:8px; display:block; }
-    @@media print { .no-print { display:none!important; } }
+    .qa { border-radius:14px;border:1px solid #e8ecef;padding:16px 10px;
+          text-decoration:none;color:inherit;display:block;
+          transition:all .18s;text-align:center; }
+    .qa:hover { border-color:var(--c1);background:#f0f5ff;color:var(--c1); }
+    .qa i { font-size:1.7rem;margin-bottom:8px;display:block; }
+    @@media print { .no-print{display:none!important} }
 </style>
+}
 
 <div class="main-content p-3 p-md-4">
 <div class="container-fluid">
 
-    <!-- ── Header ─────────────────────────────────────────────────────── -->
-    <div class="d-flex justify-content-between align-items-center pt-2 pb-3 mb-4 border-bottom flex-wrap gap-2">
-        <div>
-            <h1 class="h4 fw-bold mb-0">
-                <i class="bi bi-speedometer2 me-2 text-primary"></i>Staff Dashboard
-            </h1>
-            <small class="text-muted">
-                Welcome back, <strong>@staffName</strong> ·
-                @DateTime.Now.ToString("dddd, dd MMMM yyyy")
-            </small>
-        </div>
-        <div class="d-flex gap-2 flex-wrap no-print">
-            <a href="/Dashboard/Staff/RegisterReceipt" class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-circle me-1"></i>Register Receipt
-            </a>
-            <a href="/Dashboard/Staff/Approvals" class="btn btn-warning btn-sm">
-                <i class="bi bi-check2-square me-1"></i>Approvals
-            </a>
+<!-- ── HEADER ──────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center pt-2 pb-3 mb-4 border-bottom flex-wrap gap-2">
+    <div>
+        <h1 class="h4 fw-bold mb-0">
+            <i class="bi bi-speedometer2 me-2 text-primary"></i>Staff Dashboard
+        </h1>
+        <small class="text-muted">
+            Welcome back, <strong>@staffName</strong> ·
+            @DateTime.Now.ToString("dddd, dd MMMM yyyy")
+        </small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap no-print">
+        <a href="/Dashboard/Staff/RegisterReceipt" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>Register Receipt
+        </a>
+        <a href="/Dashboard/Staff/Approvals" class="btn btn-warning btn-sm">
+            <i class="bi bi-check2-square me-1"></i>Approvals
+            @if (Model.PendingApprovals > 0)
+            {
+                <span class="badge bg-danger ms-1">@Model.PendingApprovals</span>
+            }
+        </a>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="alert @(Model.IsSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show py-2">
+        @Model.Message
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- ════ KPI CARDS ══════════════════════════════════════════════════════ -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card kpi shadow-sm p-3 h-100" style="border-top:3px solid var(--c1)">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#eff6ff;color:var(--c1)"><i class="bi bi-receipt-cutoff"></i></div>
+                <div>
+                    <div class="fs-2 fw-bold lh-1" style="color:var(--c1)">@Model.TotalReceipts</div>
+                    <div class="small text-muted">Total Receipts</div>
+                </div>
+            </div>
         </div>
     </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card kpi shadow-sm p-3 h-100" style="border-top:3px solid var(--c2)">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#f0fdf4;color:var(--c2)"><i class="bi bi-calendar-check"></i></div>
+                <div>
+                    <div class="fs-2 fw-bold lh-1" style="color:var(--c2)">@Model.TodayReceipts</div>
+                    <div class="small text-muted">Today</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card kpi shadow-sm p-3 h-100" style="border-top:3px solid var(--c3)">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#fffbeb;color:var(--c3)"><i class="bi bi-calendar-week"></i></div>
+                <div>
+                    <div class="fs-2 fw-bold lh-1" style="color:var(--c3)">@Model.WeekReceipts</div>
+                    <div class="small text-muted">This Week</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card kpi shadow-sm p-3 h-100" style="border-top:3px solid var(--c4)">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#f5f3ff;color:var(--c4)"><i class="bi bi-box-seam"></i></div>
+                <div>
+                    <div class="fs-2 fw-bold lh-1" style="color:var(--c4)">@Model.TotalKg.ToString("N0")</div>
+                    <div class="small text-muted">Total KG</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card kpi shadow-sm p-3 h-100" style="border-top:3px solid var(--c2)">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#f0fdf4;color:var(--c2)"><i class="bi bi-cash-stack"></i></div>
+                <div>
+                    <div class="fs-2 fw-bold lh-1" style="color:var(--c2)">@((Model.TotalRevenue/1000m).ToString("N0"))K</div>
+                    <div class="small text-muted">Revenue ETB</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card kpi shadow-sm p-3 h-100" style="border-top:3px solid var(--c5)">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon" style="background:#fef2f2;color:var(--c5)"><i class="bi bi-hourglass-split"></i></div>
+                <div>
+                    <div class="fs-2 fw-bold lh-1" style="color:var(--c5)">@Model.PendingApprovals</div>
+                    <div class="small text-muted">Pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    @if (!string.IsNullOrEmpty(Model.Message))
+<!-- ════ CHARTS ROW 1 — Line + Doughnut ════════════════════════════════ -->
+<div class="row g-3 mb-4">
+    <!-- Daily receipts & KG line chart -->
+    <div class="col-12 col-lg-8">
+        <div class="chart-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <div class="sec-lbl mb-0"><i class="bi bi-graph-up me-1"></i>Last 7 Days — Receipts & KG</div>
+                </div>
+                <span class="badge bg-light text-dark border small">Daily Trend</span>
+            </div>
+            <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
+        </div>
+    </div>
+    <!-- Status doughnut -->
+    <div class="col-12 col-lg-4">
+        <div class="chart-card">
+            <div class="sec-lbl"><i class="bi bi-pie-chart me-1"></i>Receipt Status</div>
+            <div class="chart-wrap"><canvas id="chartStatus"></canvas></div>
+            <div id="statusLegend" class="mt-3 d-flex flex-wrap gap-2 justify-content-center"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ════ CHARTS ROW 2 — Wereda bar + Vehicle bar ═══════════════════════ -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-lg-6">
+        <div class="chart-card">
+            <div class="sec-lbl"><i class="bi bi-bar-chart me-1"></i>Receipts by Wereda</div>
+            <div class="chart-wrap"><canvas id="chartWereda"></canvas></div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-6">
+        <div class="chart-card">
+            <div class="sec-lbl"><i class="bi bi-truck me-1"></i>Receipts by Vehicle</div>
+            <div class="chart-wrap"><canvas id="chartVehicle"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- ════ QUICK ACTIONS ═══════════════════════════════════════════════════ -->
+<div class="sec-lbl no-print">Quick Actions</div>
+<div class="row g-2 mb-4 no-print">
+    @{
+        var actions = new[] {
+            ("/Dashboard/Staff/RegisterReceipt",       "bi-receipt",               "text-primary",   "Register Receipt"),
+            ("/Dashboard/Staff/OutsourceReceipt",      "bi-building-add",          "text-success",   "Outsource Receipt"),
+            ("/Dashboard/Staff/PrivateCompanyReceipt", "bi-briefcase",             "text-warning",   "Private Receipt"),
+            ("/Dashboard/Staff/Approvals",             "bi-check2-square",         "text-danger",    "Approvals"),
+            ("/Dashboard/Staff/StaffReport",           "bi-file-earmark-bar-graph","text-info",      "Staff Report"),
+            ("/Dashboard/Staff/Gallery",               "bi-images",                "text-secondary", "Gallery"),
+        };
+    }
+    @foreach (var a in actions)
     {
-        <div class="alert @(Model.IsSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show py-2">
-            @Model.Message
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="col-4 col-md-2">
+            <a href="@a.Item1" class="qa">
+                <i class="bi @a.Item2 @a.Item3"></i>
+                <div style="font-size:.77rem;font-weight:600">@a.Item4</div>
+            </a>
         </div>
     }
+</div>
 
-    <!-- ════ KPI CARDS ════════════════════════════════════════════════════ -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="card kpi-card shadow-sm p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:46px;height:46px;border-radius:12px;background:#e7f0ff;
-                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#0d6efd">
-                        <i class="bi bi-geo-alt"></i>
-                    </div>
-                    <div>
-                        <div class="fs-2 fw-bold lh-1 text-primary">@Model.Weredas.Count</div>
-                        <div class="small text-muted">Weredas</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card kpi-card shadow-sm p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:46px;height:46px;border-radius:12px;background:#e6f9f1;
-                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#198754">
-                        <i class="bi bi-building"></i>
-                    </div>
-                    <div>
-                        <div class="fs-2 fw-bold lh-1 text-success">@Model.Mahberats.Count</div>
-                        <div class="small text-muted">Mahberats</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card kpi-card shadow-sm p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:46px;height:46px;border-radius:12px;background:#fff8e1;
-                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fd7e14">
-                        <i class="bi bi-truck"></i>
-                    </div>
-                    <div>
-                        <div class="fs-2 fw-bold lh-1" style="color:#fd7e14">@Model.Vehicles.Count</div>
-                        <div class="small text-muted">Vehicles</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card kpi-card shadow-sm p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:46px;height:46px;border-radius:12px;background:#f0e9ff;
-                                display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#6f42c1">
-                        <i class="bi bi-person-badge"></i>
-                    </div>
-                    <div>
-                        <div class="fs-2 fw-bold lh-1" style="color:#6f42c1">@Model.Drivers.Count</div>
-                        <div class="small text-muted">Drivers</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ════ QUICK ACTIONS ════════════════════════════════════════════════ -->
-    <div class="section-label no-print">Quick Actions</div>
-    <div class="row g-2 mb-4 no-print">
-        @{
-            var actions = new[] {
-                ("/Dashboard/Staff/RegisterReceipt",      "bi-receipt",              "text-primary",  "Register Receipt"),
-                ("/Dashboard/Staff/OutsourceReceipt",     "bi-building-add",         "text-success",  "Outsource Receipt"),
-                ("/Dashboard/Staff/PrivateCompanyReceipt","bi-briefcase",            "text-warning",  "Private Receipt"),
-                ("/Dashboard/Staff/Approvals",            "bi-check2-square",        "text-danger",   "Approvals"),
-                ("/Dashboard/Staff/StaffReport",          "bi-file-earmark-bar-graph","text-info",    "Staff Report"),
-                ("/Dashboard/Staff/AgencyReport",         "bi-file-earmark-text",    "text-secondary","Agency Report"),
-            };
-        }
-        @foreach (var a in actions)
-        {
-            <div class="col-4 col-md-2">
-                <a href="@a.Item1" class="quick-action">
-                    <i class="bi @a.Item2 @a.Item3"></i>
-                    <div style="font-size:.78rem;font-weight:600">@a.Item4</div>
-                </a>
-            </div>
-        }
-    </div>
-
-    <!-- ════ POSTS + TRAININGS ════════════════════════════════════════════ -->
-    <div class="row g-4 mb-4">
-
-        <!-- Posts column -->
-        <div class="col-12 col-lg-7">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="section-label mb-0">
-                    <i class="bi bi-postcard me-1"></i>Latest Posts & Announcements
-                </div>
-                <a href="/Dashboard/Staff/Post" class="btn btn-outline-primary btn-sm py-0 no-print">
-                    View All <i class="bi bi-arrow-right ms-1"></i>
-                </a>
-            </div>
-
-            @if (!Model.HomePosts.Any())
-            {
-                <div class="text-center py-4 text-muted border rounded-3">
-                    <i class="bi bi-postcard display-5 d-block mb-2 opacity-25"></i>
-                    No posts published yet.
-                </div>
-            }
-            <div class="row g-3">
-            @foreach (dynamic post in Model.HomePosts)
-            {
-                bool pinned = (bool)(post.is_pinned ?? false);
-                string cat  = Convert.ToString(post.category) ?? "";
-                string pri  = Convert.ToString(post.priority) ?? "Normal";
-                string catColor = cat.ToLower() switch {
-                    "announcement" => "bg-primary",
-                    "training"     => "bg-success",
-                    "operations"   => "bg-warning text-dark",
-                    "hr"           => "bg-info text-dark",
-                    _              => "bg-secondary"
-                };
-                string content = Convert.ToString(post.content) ?? "";
-                string preview = content.Length > 120 ? content[..120] + "…" : content;
-                DateTime? dt = post.created_at as DateTime?;
-
-                <div class="col-12 col-sm-6">
-                    <div class="card post-card @(pinned ? "pinned" : "") p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <span class="badge @catColor small">@(string.IsNullOrEmpty(cat) ? "General" : cat)</span>
-                            <div class="d-flex gap-1">
-                                @if (pinned) { <span class="badge bg-primary small"><i class="bi bi-pin-fill"></i></span> }
-                                @if (pri != "Normal") { <span class="badge bg-@PriorityColor(pri) small">@pri</span> }
-                            </div>
-                        </div>
-                        <h6 class="fw-bold mb-1" style="font-size:.9rem">@post.title</h6>
-                        <p class="text-muted small mb-2" style="font-size:.78rem;line-height:1.5">@preview</p>
-                        <div class="text-muted" style="font-size:.72rem">
-                            <i class="bi bi-clock me-1"></i>
-                            @(dt.HasValue ? dt.Value.ToString("dd MMM yyyy") : "—")
-                        </div>
-                    </div>
-                </div>
-            }
-            </div>
-        </div>
-
-        <!-- Trainings column -->
-        <div class="col-12 col-lg-5">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="section-label mb-0">
-                    <i class="bi bi-mortarboard me-1"></i>Upcoming Trainings
-                </div>
-                <a href="/Dashboard/Staff/Training" class="btn btn-outline-success btn-sm py-0 no-print">
-                    View All <i class="bi bi-arrow-right ms-1"></i>
-                </a>
-            </div>
-
-            @if (!Model.HomeTrainings.Any())
-            {
-                <div class="text-center py-4 text-muted border rounded-3">
-                    <i class="bi bi-mortarboard display-5 d-block mb-2 opacity-25"></i>
-                    No upcoming trainings.
-                </div>
-            }
-            <div class="d-flex flex-column gap-2">
-            @foreach (dynamic t in Model.HomeTrainings)
-            {
-                string tStatus = Convert.ToString(t.status) ?? "";
-                DateTime? tStart = t.start_date as DateTime?;
-                DateTime? tEnd   = t.end_date   as DateTime?;
-                string tCat   = Convert.ToString(t.category) ?? "";
-                string daysLeft = "";
-                if (tStart.HasValue)
-                {
-                    int days = (tStart.Value.Date - DateTime.Today).Days;
-                    daysLeft = days == 0 ? "Today" : days == 1 ? "Tomorrow" : days > 0 ? $"In {days} days" : "Ongoing";
-                }
-
-                <div class="training-item">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <h6 class="fw-bold mb-0" style="font-size:.88rem">@t.title</h6>
-                        <span class="badge @TrainingStatus(tStatus) small">@tStatus</span>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 small text-muted" style="font-size:.76rem">
-                        @if (!string.IsNullOrEmpty(Convert.ToString(t.trainer)))
-                        {
-                            <span><i class="bi bi-person me-1"></i>@t.trainer</span>
-                        }
-                        @if (!string.IsNullOrEmpty(Convert.ToString(t.location)))
-                        {
-                            <span><i class="bi bi-geo-alt me-1"></i>@t.location</span>
-                        }
-                        @if (tStart.HasValue)
-                        {
-                            <span><i class="bi bi-calendar3 me-1"></i>@tStart.Value.ToString("dd MMM")</span>
-                        }
-                        @if (!string.IsNullOrEmpty(daysLeft))
-                        {
-                            <span class="badge bg-light text-dark border">@daysLeft</span>
-                        }
-                    </div>
-                </div>
-            }
-            </div>
-        </div>
-    </div>
-
-    <!-- ════ SERVICES ════════════════════════════════════════════════════ -->
-    <div class="mb-4">
+<!-- ════ POSTS + TRAININGS ═══════════════════════════════════════════════ -->
+<div class="row g-4 mb-4">
+    <div class="col-12 col-lg-7">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="section-label mb-0">
-                <i class="bi bi-briefcase me-1"></i>Available Services
-            </div>
-            <a href="/Dashboard/Staff/Service" class="btn btn-outline-secondary btn-sm py-0 no-print">
+            <div class="sec-lbl mb-0"><i class="bi bi-postcard me-1"></i>Latest Announcements</div>
+            <a href="/Dashboard/Staff/Post" class="btn btn-outline-primary btn-sm py-0 no-print">
                 View All <i class="bi bi-arrow-right ms-1"></i>
             </a>
         </div>
-
-        @if (!Model.HomeServices.Any())
+        @if (!Model.HomePosts.Any())
         {
             <div class="text-center py-4 text-muted border rounded-3">
-                <i class="bi bi-briefcase display-5 d-block mb-2 opacity-25"></i>
-                No services registered yet.
+                <i class="bi bi-postcard display-5 d-block mb-2 opacity-25"></i>No posts yet.
             </div>
         }
         <div class="row g-3">
-        @foreach (dynamic svc in Model.HomeServices)
+        @foreach (dynamic post in Model.HomePosts)
         {
-            string svcDesc = Convert.ToString(svc.description) ?? "";
-            string svcPrev = svcDesc.Length > 80 ? svcDesc[..80] + "…" : svcDesc;
-            decimal svcPrice = (decimal)(svc.price ?? 0m);
-
-            <div class="col-6 col-md-4 col-lg-2">
-                <div class="service-chip h-100">
-                    <div style="width:40px;height:40px;border-radius:10px;background:#e7f0ff;
-                                display:flex;align-items:center;justify-content:center;
-                                margin:0 auto 10px;font-size:1.2rem;color:#0d6efd">
-                        <i class="bi bi-tools"></i>
-                    </div>
-                    <div class="fw-semibold small mb-1">@svc.name</div>
-                    @if (!string.IsNullOrEmpty(svcPrev))
-                    {
-                        <div class="text-muted" style="font-size:.72rem;line-height:1.4">@svcPrev</div>
-                    }
-                    @if (svcPrice > 0)
-                    {
-                        <div class="fw-bold text-success mt-2" style="font-size:.82rem">
-                            @svcPrice.ToString("N2") ETB
+            bool pinned = (bool)(post.is_pinned ?? false);
+            string cat  = Convert.ToString(post.category) ?? "";
+            string pri  = Convert.ToString(post.priority) ?? "Normal";
+            string catCls = cat.ToLower() switch {
+                "announcement"=>"bg-primary","training"=>"bg-success",
+                "operations"  =>"bg-warning text-dark","hr"=>"bg-info text-dark",
+                _=>"bg-secondary"
+            };
+            string body = Convert.ToString(post.content) ?? "";
+            string prev = body.Length > 110 ? body[..110] + "…" : body;
+            DateTime? dt = post.created_at as DateTime?;
+            <div class="col-12 col-sm-6">
+                <div class="card post-card @(pinned ? "pinned" : "") p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge @catCls small">@(string.IsNullOrEmpty(cat) ? "General" : cat)</span>
+                        <div class="d-flex gap-1">
+                            @if (pinned){ <span class="badge bg-primary small"><i class="bi bi-pin-fill"></i></span> }
+                            @if (pri != "Normal"){ <span class="badge bg-@PriorityColor(pri) small">@pri</span> }
                         </div>
-                    }
+                    </div>
+                    <h6 class="fw-bold mb-1" style="font-size:.88rem">@post.title</h6>
+                    <p class="text-muted small mb-2" style="font-size:.77rem;line-height:1.5">@prev</p>
+                    <div class="text-muted" style="font-size:.71rem">
+                        <i class="bi bi-clock me-1"></i>@(dt.HasValue ? dt.Value.ToString("dd MMM yyyy") : "—")
+                    </div>
                 </div>
             </div>
         }
         </div>
     </div>
-
-    <!-- ════ RECENT RECEIPTS ═════════════════════════════════════════════ -->
-    <div class="mb-4">
+    <div class="col-12 col-lg-5">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="section-label mb-0">
-                <i class="bi bi-clock-history me-1"></i>Recent Receipts
-            </div>
-            <a href="/Dashboard/Staff/RegisterReceipt" class="btn btn-outline-primary btn-sm py-0 no-print">
-                All Receipts <i class="bi bi-arrow-right ms-1"></i>
+            <div class="sec-lbl mb-0"><i class="bi bi-mortarboard me-1"></i>Upcoming Trainings</div>
+            <a href="/Dashboard/Staff/Training" class="btn btn-outline-success btn-sm py-0 no-print">
+                View All <i class="bi bi-arrow-right ms-1"></i>
             </a>
         </div>
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Wereda</th>
-                            <th>Mahberat</th>
-                            <th>Plate</th>
-                            <th>Driver</th>
-                            <th class="text-end">KG</th>
-                            <th class="text-end">ETB</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @if (!Model.RecentReceipts.Any())
-                    {
-                        <tr><td colspan="8" class="text-center py-4 text-muted">No receipts yet.</td></tr>
-                    }
-                    @foreach (dynamic r in Model.RecentReceipts)
-                    {
-                        string st = Convert.ToString(r.status) ?? "";
-                        string sc = st switch {
-                            "Approved" or "Billed" => "bg-success",
-                            "Paid"                 => "bg-primary",
-                            "Pending"              => "bg-warning text-dark",
-                            "Registered"           => "bg-info text-dark",
-                            "Rejected"             => "bg-danger",
-                            _                      => "bg-secondary"
-                        };
-                        decimal kg  = (decimal)(r.kilogram    ?? 0m);
-                        decimal tot = (decimal)(r.total_price ?? 0m);
-                        DateTime? rd = r.receipt_date as DateTime?;
-
-                        <tr>
-                            <td>@(string.IsNullOrEmpty(Convert.ToString(r.wereda_name)) ? "—" : (object)r.wereda_name)</td>
-                            <td class="fw-semibold">@(string.IsNullOrEmpty(Convert.ToString(r.mahberat_name)) ? "—" : (object)r.mahberat_name)</td>
-                            <td><code style="font-size:.75rem">@(Convert.ToString(r.plate_number) ?? "—")</code></td>
-                            <td>@(string.IsNullOrEmpty(Convert.ToString(r.driver_name)) ? "—" : (object)r.driver_name)</td>
-                            <td class="text-end fw-semibold">@kg.ToString("N1")</td>
-                            <td class="text-end text-success fw-bold">@tot.ToString("N0")</td>
-                            <td><span class="badge @sc">@st</span></td>
-                            <td class="text-muted">@(rd.HasValue ? rd.Value.ToString("dd MMM") : "—")</td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
+        @if (!Model.HomeTrainings.Any())
+        {
+            <div class="text-center py-4 text-muted border rounded-3">
+                <i class="bi bi-mortarboard display-5 d-block mb-2 opacity-25"></i>No upcoming trainings.
             </div>
+        }
+        <div class="d-flex flex-column gap-2">
+        @foreach (dynamic t in Model.HomeTrainings)
+        {
+            string ts = Convert.ToString(t.status) ?? "";
+            DateTime? tStart = t.start_date as DateTime?;
+            string days = "";
+            if (tStart.HasValue){
+                int d=(tStart.Value.Date-DateTime.Today).Days;
+                days = d==0?"Today":d==1?"Tomorrow":d>0?$"In {d} days":"Ongoing";
+            }
+            <div class="training-item">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <h6 class="fw-bold mb-0" style="font-size:.87rem">@t.title</h6>
+                    <span class="badge @TrainingStatus(ts) small">@ts</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 text-muted" style="font-size:.75rem">
+                    @if (!string.IsNullOrEmpty(Convert.ToString(t.trainer))){ <span><i class="bi bi-person me-1"></i>@t.trainer</span> }
+                    @if (!string.IsNullOrEmpty(Convert.ToString(t.location))){ <span><i class="bi bi-geo-alt me-1"></i>@t.location</span> }
+                    @if (tStart.HasValue){ <span><i class="bi bi-calendar3 me-1"></i>@tStart.Value.ToString("dd MMM")</span> }
+                    @if (!string.IsNullOrEmpty(days)){ <span class="badge bg-light text-dark border">@days</span> }
+                </div>
+            </div>
+        }
         </div>
     </div>
+</div>
 
+<!-- ════ RECENT RECEIPTS ══════════════════════════════════════════════════ -->
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="sec-lbl mb-0"><i class="bi bi-clock-history me-1"></i>Recent Receipts</div>
+        <a href="/Dashboard/Staff/RegisterReceipt" class="btn btn-outline-primary btn-sm py-0 no-print">
+            All Receipts <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
+                <thead style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff">
+                    <tr>
+                        <th class="fw-semibold">Wereda</th>
+                        <th class="fw-semibold">Mahberat</th>
+                        <th class="fw-semibold">Plate</th>
+                        <th class="fw-semibold">Driver</th>
+                        <th class="fw-semibold text-end">KG</th>
+                        <th class="fw-semibold text-end">ETB</th>
+                        <th class="fw-semibold">Type</th>
+                        <th class="fw-semibold">Status</th>
+                        <th class="fw-semibold">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!Model.RecentReceipts.Any())
+                {
+                    <tr><td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox display-5 d-block mb-2 opacity-25"></i>No receipts yet.
+                    </td></tr>
+                }
+                @foreach (dynamic r in Model.RecentReceipts)
+                {
+                    string st  = Convert.ToString(r.status) ?? "";
+                    string rt  = Convert.ToString(r.receipt_type) ?? "";
+                    string sc  = st switch {
+                        "Approved" or "Billed" => "bg-success",
+                        "Paid"                 => "bg-primary",
+                        "Pending"              => "bg-warning text-dark",
+                        "Registered"           => "bg-info text-dark",
+                        "Rejected"             => "bg-danger",
+                        _                      => "bg-secondary"
+                    };
+                    string rc  = rt == "Outsource" ? "bg-purple text-white" : "bg-light text-dark border";
+                    decimal kg  = (decimal)(r.kilogram    ?? 0m);
+                    decimal tot = (decimal)(r.total_price ?? 0m);
+                    DateTime? rd = r.receipt_date as DateTime?;
+                    <tr>
+                        <td>@(string.IsNullOrEmpty(Convert.ToString(r.wereda_name))   ? "—" : (object)r.wereda_name)</td>
+                        <td class="fw-semibold">@(string.IsNullOrEmpty(Convert.ToString(r.mahberat_name)) ? "—" : (object)r.mahberat_name)</td>
+                        <td><code style="font-size:.74rem">@(Convert.ToString(r.plate_number) ?? "—")</code></td>
+                        <td>@(string.IsNullOrEmpty(Convert.ToString(r.driver_name))   ? "—" : (object)r.driver_name)</td>
+                        <td class="text-end fw-semibold">@kg.ToString("N1")</td>
+                        <td class="text-end text-success fw-bold">@tot.ToString("N0")</td>
+                        <td><span class="badge @rc small">@rt</span></td>
+                        <td><span class="badge @sc small">@st</span></td>
+                        <td class="text-muted">@(rd.HasValue ? rd.Value.ToString("dd MMM") : "—")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-</div>
+
+</div><!-- /container-fluid -->
+</div><!-- /main-content -->
+
+@section Scripts {
+<script>
+// ── shared palette ────────────────────────────────────────────────────────
+const PAL = ['#2563eb','#16a34a','#f59e0b','#7c3aed','#ef4444','#0891b2',
+             '#db2777','#ea580c','#65a30d','#0284c7'];
+Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
+Chart.defaults.plugins.legend.display = false;
+
+// ── 1. TREND — daily bar+line combo ──────────────────────────────────────
+(function(){
+    const labels = @Html.Raw(JsStrArr(Model.DailyLabels));
+    const counts = @Html.Raw(JsNumArr(Model.DailyCount));
+    const kgs    = @Html.Raw(JsNumArr(Model.DailyKg));
+    new Chart(document.getElementById('chartTrend'), {
+        data: {
+            labels,
+            datasets: [
+                {
+                    type:'bar', label:'Receipts', data:counts,
+                    backgroundColor:'rgba(37,99,235,.25)',
+                    borderColor:'rgba(37,99,235,.7)',
+                    borderWidth:1.5, borderRadius:6, yAxisID:'y'
+                },
+                {
+                    type:'line', label:'KG', data:kgs,
+                    borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,.12)',
+                    borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#16a34a',
+                    fill:true, tension:.4, yAxisID:'y1'
+                }
+            ]
+        },
+        options: {
+            responsive:true, maintainAspectRatio:false,
+            interaction:{ mode:'index', intersect:false },
+            plugins:{ legend:{ display:true, position:'top',
+                labels:{ boxWidth:12, font:{size:11} } },
+                tooltip:{ callbacks:{
+                    label: ctx => ctx.dataset.label===
+                        'KG'?` ${ctx.parsed.y.toFixed(1)} kg`:` ${ctx.parsed.y} receipts`
+                }}
+            },
+            scales:{
+                y:{ beginAtZero:true, ticks:{precision:0,font:{size:10}},
+                    grid:{color:'#f0f0f0'} },
+                y1:{ beginAtZero:true, position:'right',
+                     ticks:{font:{size:10}},
+                     grid:{display:false} },
+                x:{ ticks:{font:{size:10}}, grid:{display:false} }
+            }
+        }
+    });
+})();
+</script>
+
+<script>
+// ── 2. STATUS doughnut ────────────────────────────────────────────────────
+(function(){
+    const labels = @Html.Raw(JsStrArr(Model.StatusLabels));
+    const values = @Html.Raw(JsNumArr(Model.StatusValues));
+    const colors = labels.map((_,i)=>PAL[i%PAL.length]);
+    new Chart(document.getElementById('chartStatus'), {
+        type:'doughnut',
+        data:{ labels, datasets:[{ data:values, backgroundColor:colors,
+               borderWidth:2, hoverOffset:8 }] },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            cutout:'62%',
+            plugins:{
+                legend:{display:false},
+                tooltip:{ callbacks:{
+                    label: ctx=>`  ${ctx.label}: ${ctx.parsed} receipts`
+                }}
+            }
+        }
+    });
+    // custom legend
+    const leg = document.getElementById('statusLegend');
+    labels.forEach((l,i)=>{
+        const t = values[i] ?? 0;
+        const el = document.createElement('div');
+        el.style.cssText='display:flex;align-items:center;gap:5px;font-size:.75rem';
+        el.innerHTML=`<span style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0"></span>${l} <strong>${t}</strong>`;
+        leg.appendChild(el);
+    });
+})();
+
+// ── 3. WEREDA bar ─────────────────────────────────────────────────────────
+(function(){
+    const labels = @Html.Raw(JsStrArr(Model.ChartLabels));
+    const values = @Html.Raw(JsNumArr(Model.ChartValues));
+    new Chart(document.getElementById('chartWereda'), {
+        type:'bar',
+        data:{
+            labels,
+            datasets:[{
+                label:'Receipts', data:values,
+                backgroundColor: labels.map((_,i)=>PAL[i%PAL.length]+'bb'),
+                borderColor:     labels.map((_,i)=>PAL[i%PAL.length]),
+                borderWidth:1.5, borderRadius:6
+            }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false, indexAxis:'y',
+            plugins:{ legend:{display:false},
+                tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} receipts`}} },
+            scales:{
+                x:{ beginAtZero:true, ticks:{precision:0,font:{size:10}},
+                    grid:{color:'#f5f5f5'} },
+                y:{ ticks:{font:{size:10}}, grid:{display:false} }
+            }
+        }
+    });
+})();
+
+// ── 4. VEHICLE bar ────────────────────────────────────────────────────────
+(function(){
+    const labels = @Html.Raw(JsStrArr(Model.VehicleLabels));
+    const values = @Html.Raw(JsNumArr(Model.VehicleValues));
+    new Chart(document.getElementById('chartVehicle'), {
+        type:'bar',
+        data:{
+            labels,
+            datasets:[{
+                label:'Receipts', data:values,
+                backgroundColor:'rgba(124,58,237,.22)',
+                borderColor:'rgba(124,58,237,.8)',
+                borderWidth:1.5, borderRadius:6
+            }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false},
+                tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} receipts`}} },
+            scales:{
+                y:{ beginAtZero:true, ticks:{precision:0,font:{size:10}},
+                    grid:{color:'#f5f5f5'} },
+                x:{ ticks:{font:{size:10},maxRotation:35}, grid:{display:false} }
+            }
+        }
+    });
+})();
+</script>
+}

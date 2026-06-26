@@ -1,88 +1,36 @@
 @page
 @model CleaningManagmentSystem.Pages.Dashboard.Manager.SettingsModel
 @{
-    Layout = null;
+    Layout = "_ManagerLayout";
+    ViewData["Title"] = "Settings";
     var success = TempData["SuccessMessage"] as string;
     var error = TempData["ErrorMessage"] as string;
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Manager Settings - Yeka Cleaning</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="~/css/dashboard.css" />
-    <style>
-        .settings-card {
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-            overflow: hidden;
-            height: 100%;
-        }
-        .settings-card .card-header-section {
-            padding: 1rem 1.4rem 0.6rem;
-            font-weight: 700;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            border-bottom: 1px solid rgba(0,0,0,0.06);
-        }
-        .section-pricing  .card-header-section { background: linear-gradient(90deg,#e3f2fd,#bbdefb); color:#1565c0; }
-        .section-user     .card-header-section { background: linear-gradient(90deg,#e8f5e9,#c8e6c9); color:#2e7d32; }
-        .section-password .card-header-section { background: linear-gradient(90deg,#fff3e0,#ffe0b2); color:#e65100; }
-        .section-system   .card-header-section { background: linear-gradient(90deg,#f3e5f5,#e1bee7); color:#6a1b9a; }
-        .stat-box {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+@section Styles {
+<style>
+    .settings-card {
+        border: none; border-radius: 16px;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+        overflow: hidden; height: 100%;
+    }
+    .settings-card .card-header-section {
+        padding: 1rem 1.4rem 0.6rem; font-weight: 700;
+        font-size: 0.95rem; display: flex; align-items: center;
+        gap: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .section-pricing  .card-header-section { background: linear-gradient(90deg,#e3f2fd,#bbdefb); color:#1565c0; }
+    .section-user     .card-header-section { background: linear-gradient(90deg,#e8f5e9,#c8e6c9); color:#2e7d32; }
+    .section-password .card-header-section { background: linear-gradient(90deg,#fff3e0,#ffe0b2); color:#e65100; }
+    .section-system   .card-header-section { background: linear-gradient(90deg,#f3e5f5,#e1bee7); color:#6a1b9a; }
+    .stat-box { background: #f8f9fa; border-radius: 12px; padding: 1rem; text-align: center; }
+</style>
+}
 
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-            <div class="nav-user">
-                <span>Welcome, @HttpContext.Session.GetString("UserName")</span>
-                <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <div>
+                <h4 class="fw-bold mb-1"><i class="bi bi-gear-fill text-primary me-2"></i>Manager Settings</h4>
+                <p class="text-muted small mb-0">Configure pricing, users and system defaults</p>
             </div>
-        </div>
-    </nav>
-
-    <nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
-        <div class="container-fluid">
-            <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka</a>
-            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i></a>
-        </div>
-    </nav>
-
-    <nav id="sidebarMenu" class="sidebar d-lg-none">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
-    <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform: none; padding-top: 56px;">
-        @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-    </nav>
-
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top: 56px;">
-
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
-            <h1 class="h3 mb-0"><i class="bi bi-gear-fill me-2"></i>Manager Settings</h1>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="/Dashboard/Manager">Dashboard</a></li>
-                    <li class="breadcrumb-item active">Settings</li>
-                </ol>
-            </nav>
         </div>
 
         @if (!string.IsNullOrEmpty(success))
@@ -269,39 +217,23 @@
             </div>
         </div>
 
-    </main>
-
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebarMenu').classList.toggle('show');
-            document.getElementById('sidebarBackdrop').classList.toggle('show');
+@section Scripts {
+<script>
+    function toggleVis(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+        } else {
+            input.type = 'password';
+            btn.innerHTML = '<i class="bi bi-eye"></i>';
         }
-
-        function toggleVis(inputId, btn) {
-            const input = document.getElementById(inputId);
-            if (input.type === 'password') {
-                input.type = 'text';
-                btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
-            } else {
-                input.type = 'password';
-                btn.innerHTML = '<i class="bi bi-eye"></i>';
-            }
-        }
-
-        function checkMatch() {
-            const p1 = document.getElementById('resetPass').value;
-            const p2 = document.getElementById('confirmPass').value;
-            const msg = document.getElementById('matchMsg');
-            msg.classList.toggle('d-none', p2.length === 0 || p1 === p2);
-        }
-
-        document.querySelectorAll('#sidebarMenu .nav-link').forEach(function (link) {
-            link.addEventListener('click', function () {
-                if (window.innerWidth < 992) toggleSidebar();
-            });
-        });
-    </script>
-</body>
-</html>
+    }
+    function checkMatch() {
+        const p1 = document.getElementById('resetPass').value;
+        const p2 = document.getElementById('confirmPass').value;
+        const msg = document.getElementById('matchMsg');
+        msg.classList.toggle('d-none', p2.length === 0 || p1 === p2);
+    }
+</script>
+}

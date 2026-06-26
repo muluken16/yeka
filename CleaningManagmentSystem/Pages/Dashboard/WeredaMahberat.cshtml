@@ -106,8 +106,53 @@
             <i class="bi bi-droplet-fill"></i> Yeka Cleaning
         </a>
         <div class="nav-user">
-            <span>Welcome, <strong>@userName</strong></span>
-            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            @{ var _wmPhoto = HttpContext.Session.GetString("UserPhoto") ?? ""; }
+            @{ var _wmRole  = HttpContext.Session.GetString("UserRole")  ?? "Wereda Mahberat"; }
+            <div class="dropdown">
+                <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    @if (!string.IsNullOrEmpty(_wmPhoto))
+                    {
+                        <img src="@_wmPhoto" class="p-avatar" alt="@userName"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                        <span class="p-initial" style="display:none">@(userName?.Length>0?userName[0].ToString().ToUpper():"W")</span>
+                    }
+                    else
+                    {
+                        <span class="p-initial">@(userName?.Length>0?userName[0].ToString().ToUpper():"W")</span>
+                    }
+                    <span>@userName</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+                    <li>
+                        <div class="pd-header">
+                            @if (!string.IsNullOrEmpty(_wmPhoto))
+                            {
+                                <img src="@_wmPhoto" class="pd-big-avatar" alt="@userName"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                <span class="pd-big-initial" style="display:none">@(userName?.Length>0?userName[0].ToString().ToUpper():"W")</span>
+                            }
+                            else
+                            {
+                                <span class="pd-big-initial">@(userName?.Length>0?userName[0].ToString().ToUpper():"W")</span>
+                            }
+                            <div>
+                                <div class="pd-name">@userName</div>
+                                <div class="pd-role">@_wmRole</div>
+                            </div>
+                        </div>
+                    </li>
+                    <li><a class="dropdown-item" href="/Dashboard/Profile">
+                        <i class="bi bi-person-circle text-primary"></i>My Profile
+                    </a></li>
+                    <li><a class="dropdown-item" href="/Dashboard/WeredaMahberat">
+                        <i class="bi bi-speedometer2 text-success"></i>Dashboard
+                    </a></li>
+                    <li><hr class="dropdown-divider"/></li>
+                    <li><a class="dropdown-item text-danger" href="/Login?logout=1">
+                        <i class="bi bi-box-arrow-right text-danger"></i>Logout
+                    </a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </nav>

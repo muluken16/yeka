@@ -73,6 +73,17 @@ namespace CleaningManagmentSystem.Pages
             HttpContext.Session.SetString("UserName", user.Name);
             HttpContext.Session.SetString("UserRole", user.Role);
 
+            // Also store photo_url from linked employee record (if any)
+            try
+            {
+                using var conn2 = new MySqlConnection(_connectionString);
+                var photoUrl = conn2.QueryFirstOrDefault<string>(
+                    "SELECT COALESCE(photo_url,'') FROM employees WHERE user_id=@uid",
+                    new { uid = user.Id });
+                HttpContext.Session.SetString("UserPhoto", photoUrl ?? "");
+            }
+            catch { HttpContext.Session.SetString("UserPhoto", ""); }
+
             return RedirectToRolePage(user.Role);
         }
 

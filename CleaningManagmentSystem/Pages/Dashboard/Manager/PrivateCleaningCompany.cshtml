@@ -1,71 +1,27 @@
 @page
 @model CleaningManagmentSystem.Pages.Dashboard.Manager.PrivateCleaningCompanyModel
 @{
-    Layout = null;
-    var userName = HttpContext.Session.GetString("UserName");
-    if (userName == null) { Response.Redirect("/Login"); return; }
+    Layout = "_ManagerLayout";
+    ViewData["Title"] = "Private Cleaning Companies";
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Private Cleaning Companies — Manager — Yeka</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="~/css/dashboard.css" />
-</head>
-<body>
-<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+@section Styles {
+<style>
+.tbl-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; margin-bottom:24px; }
+.tbl-card table th { background:#f8fafc; font-size:.7rem; text-transform:uppercase; letter-spacing:.4px; color:#64748b; font-weight:700; padding:10px 14px !important; }
+.tbl-card table td { font-size:.83rem; padding:10px 14px !important; border-color:#f1f5f9 !important; vertical-align:middle; }
+.tbl-card table tr:last-child td { border-bottom:none !important; }
+</style>
+}
 
-<!-- Desktop Navbar -->
-<nav class="navbar navbar-dark dashboard-navbar fixed-top">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/Dashboard/Manager">
-            <i class="bi bi-droplet-fill"></i> Yeka Cleaning
-        </a>
-        <div class="nav-user">
-            <span>Welcome, @userName</span>
-            <a class="btn-logout" href="/Login?logout=1">
-                <i class="bi bi-box-arrow-right"></i> Logout
-            </a>
-        </div>
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-briefcase text-primary me-2"></i>Private Cleaning Companies</h4>
+        <p class="text-muted small mb-0">Manage companies and link mobile app representatives</p>
     </div>
-</nav>
-
-<!-- Mobile Navbar -->
-<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
-    <div class="container-fluid">
-        <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <a class="navbar-brand" href="/Dashboard/Manager"><i class="bi bi-droplet-fill"></i> Yeka</a>
-        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
-    </div>
-</nav>
-
-<nav id="sidebarMenu" class="sidebar d-lg-none">
-    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-</nav>
-<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
-    @await Html.PartialAsync("~/Pages/Dashboard/Manager/_Sidebar.cshtml")
-</nav>
-
-<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
-
-    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom flex-wrap gap-2">
-        <div>
-            <h1 class="h3 mb-0 fw-bold">
-                <i class="bi bi-briefcase me-2 text-primary"></i>Private Cleaning Companies
-            </h1>
-            <small class="text-muted">
-                Manage companies and link registered users as mobile app representatives
-            </small>
-        </div>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
-            <i class="bi bi-plus-circle me-1"></i>Add Company
-        </button>
-    </div>
+    <button class="btn btn-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAdd">
+        <i class="bi bi-plus-lg me-1"></i>Add Company
+    </button>
+</div>
 
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
     {
@@ -225,8 +181,6 @@
             </table>
         </div>
     </div>
-
-</main>
 
 <!-- ════ ADD COMPANY MODAL ════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalAdd" tabindex="-1">
@@ -503,14 +457,8 @@
     </div>
 </div>
 
-<script src="~/lib/jquery/dist/jquery.min.js"></script>
-<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@section Scripts {
 <script>
-function toggleSidebar() {
-    document.getElementById('sidebarMenu').classList.toggle('show');
-    document.getElementById('sidebarBackdrop').classList.toggle('show');
-}
-
 function fillEdit(id, name, license, contact, phone, email, address, services, status, repUserId) {
     document.getElementById('eId').value      = id;
     document.getElementById('eName').value    = name;
@@ -520,54 +468,33 @@ function fillEdit(id, name, license, contact, phone, email, address, services, s
     document.getElementById('eEmail').value   = email;
     document.getElementById('eAddress').value = address;
     document.getElementById('eServices').value = services;
-
     var statusSel = document.getElementById('eStatus');
-    for (var i = 0; i < statusSel.options.length; i++) {
+    for (var i = 0; i < statusSel.options.length; i++)
         statusSel.options[i].selected = (statusSel.options[i].value === status);
-    }
-
     var repSel = document.getElementById('eRepUserId');
-    for (var i = 0; i < repSel.options.length; i++) {
+    for (var i = 0; i < repSel.options.length; i++)
         repSel.options[i].selected = (repSel.options[i].value == repUserId);
-    }
 }
-
 function fillLinkUser(id, companyName, currentRepUserId) {
     document.getElementById('lId').value = id;
     document.getElementById('lAction').value = 'link_user';
-
     var label = document.getElementById('lblCompanyName');
     if (label) label.textContent = companyName;
     var label2 = document.getElementById('lblCompanyName2');
     if (label2) label2.textContent = companyName;
-
     var sel = document.getElementById('lUserId');
-    if (sel && currentRepUserId > 0) {
-        for (var i = 0; i < sel.options.length; i++) {
+    if (sel && currentRepUserId > 0)
+        for (var i = 0; i < sel.options.length; i++)
             sel.options[i].selected = (sel.options[i].value == currentRepUserId);
-        }
-    }
 }
-
-function setLinkAction(action) {
-    document.getElementById('lAction').value = action;
-}
-
+function setLinkAction(action) { document.getElementById('lAction').value = action; }
 function filterUsers(query) {
     var sel = document.getElementById('lUserId');
     var lower = query.toLowerCase();
     for (var i = 0; i < sel.options.length; i++) {
         var opt = sel.options[i];
-        if (i === 0) { opt.style.display = ''; continue; } // keep placeholder
-        opt.style.display = opt.text.toLowerCase().includes(lower) ? '' : 'none';
+        opt.style.display = (i === 0 || opt.text.toLowerCase().includes(lower)) ? '' : 'none';
     }
 }
-
-document.querySelectorAll('#sidebarMenu .nav-link').forEach(function(link) {
-    link.addEventListener('click', function() {
-        if (window.innerWidth < 992) toggleSidebar();
-    });
-});
 </script>
-</body>
-</html>
+}

@@ -90,6 +90,19 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
         public List<dynamic> HomeTrainings { get; set; } = new();
         public List<dynamic> HomeServices  { get; set; } = new();
 
+        // ── Summary KPIs ──────────────────────────────────────────────────
+        public int     TotalReceipts     { get; set; }
+        public int     TodayReceipts     { get; set; }
+        public decimal TotalKg           { get; set; }
+        public decimal TotalRevenue      { get; set; }
+        public int     PendingApprovals  { get; set; }
+        public int     WeekReceipts      { get; set; }
+
+        // ── Monthly trend (last 7 days) ───────────────────────────────────
+        public List<string>  DailyLabels  { get; set; } = new();
+        public List<int>     DailyCount   { get; set; } = new();
+        public List<decimal> DailyKg      { get; set; } = new();
+
         public string Message { get; set; } = "";
         public bool IsSuccess { get; set; }
 
@@ -662,6 +675,57 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Staff
                     SELECT id, name, description, price
                     FROM services
                     ORDER BY id DESC").ToList();
+
+                // ── Summary KPIs ───────────────────────────────────────────
+                const string allR = @"
+                    SELECT id, kilogram, kilogram*price AS total,
+                           receipt_date, status
+                    FROM staff_receipts
+                    UNION ALL
+                    SELECT id, kilogram, kilogram*price AS total,
+                           receipt_date, status
+                    FROM outsource_receipts";
+
+                TotalReceipts = connection.QueryFirstOrDefault<int>(
+                    $"SELECT COUNT(*) FROM ({allR}) t");
+
+                TodayReceipts = connection.QueryFirstOrDefault<int>(
+                    $"SELECT COUNT(*) FROM ({allR}) t WHERE DATE(receipt_date)=CURDATE()");
+
+                WeekReceipts = connection.QueryFirstOrDefault<int>(
+                    $"SELECT COUNT(*) FROM ({allR}) t WHERE receipt_date >= DATE_SUB(CURDATE(),INTERVAL 7 DAY)");
+
+                TotalKg = connection.QueryFirstOrDefault<decimal>(
+                    $"SELECT COALESCE(SUM(kilogram),0) FROM ({allR}) t");
+
+                TotalRevenue = connection.QueryFirstOrDefault<decimal>(
+                    $"SELECT COALESCE(SUM(total),0) FROM ({allR}) t");
+
+                PendingApprovals = connection.QueryFirstOrDefault<int>(
+                    $"SELECT COUNT(*) FROM ({allR}) t WHERE status='Registered'");
+
+                // ── Daily trend — last 7 days ──────────────────────────────
+                var daily = connection.Query(@"
+                    SELECT DATE(receipt_date) AS day,
+                           COUNT(*)           AS cnt,
+                           COALESCE(SUM(kilogram),0) AS kg
+                    FROM (
+                        SELECT receipt_date, kilogram FROM staff_receipts
+                        UNION ALL
+                        SELECT receipt_date, kilogram FROM outsource_receipts
+                    ) t
+                    WHERE receipt_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                    GROUP BY DATE(receipt_date)
+                    ORDER BY day ASC").ToList();
+
+                for (int d = 6; d >= 0; d--)
+                {
+                    var day = DateTime.Today.AddDays(-d);
+                    var row = daily.FirstOrDefault(x => ((DateTime)x.day).Date == day.Date);
+                    DailyLabels.Add(day.ToString("ddd dd"));
+                    DailyCount.Add(row != null ? (int)row.cnt : 0);
+                    DailyKg.Add(row != null ? (decimal)row.kg : 0m);
+                }
             }
             catch (Exception ex)
             {

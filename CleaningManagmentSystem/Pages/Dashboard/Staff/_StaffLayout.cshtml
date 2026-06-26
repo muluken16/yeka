@@ -10,8 +10,64 @@
         <a class="navbar-brand" href="/Dashboard/Staff/Index" data-i18n="nav_brand"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
         <div class="nav-user">
             <select id="languageSelect" class="form-select form-select-sm border-light text-dark" style="width: auto; display: inline-block; margin-right: 1rem;"></select>
-            <span data-i18n="dashboard_welcome">Welcome,</span> @(Context.Session.GetString("UserName") ?? "User")
-            <a class="btn-logout" href="/Login?logout=1" data-i18n="nav_logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
+            @{ var _staffPhoto = Context.Session.GetString("UserPhoto") ?? ""; }
+            @{ var _staffUser  = Context.Session.GetString("UserName")  ?? "User"; }
+            @{ var _staffRole  = Context.Session.GetString("UserRole")  ?? "Staff"; }
+            @{ var _staffInit  = (_staffUser.Length > 0 ? _staffUser[0].ToString().ToUpper() : "S"); }
+            <div class="dropdown">
+                <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="p-wrap">
+                        @if (!string.IsNullOrEmpty(_staffPhoto))
+                        {
+                            <img src="@_staffPhoto" class="p-avatar" alt="@_staffUser"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                            <span class="p-initial" style="display:none">@_staffInit</span>
+                        }
+                        else { <span class="p-initial">@_staffInit</span> }
+                        <span class="p-dot"></span>
+                    </span>
+                    <span class="p-name">@_staffUser</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+                    <li>
+                        <div class="pd-header">
+                            <div class="pd-big-wrap">
+                                @if (!string.IsNullOrEmpty(_staffPhoto))
+                                {
+                                    <img src="@_staffPhoto" class="pd-big-avatar" alt="@_staffUser"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                    <span class="pd-big-initial" style="display:none">@_staffInit</span>
+                                }
+                                else { <span class="pd-big-initial">@_staffInit</span> }
+                                <span class="pd-online-dot"></span>
+                            </div>
+                            <div class="pd-info">
+                                <div class="pd-name">@_staffUser</div>
+                                <div class="pd-role"><span class="pd-role-badge">@_staffRole</span></div>
+                                <div class="pd-status">Online</div>
+                            </div>
+                        </div>
+                    </li>
+                    <li><div class="pd-section-label">Account</div></li>
+                    <li><a class="dropdown-item" href="/Dashboard/Profile">
+                        <span class="pd-icon" style="background:#eff6ff;color:#2563eb"><i class="bi bi-person-circle"></i></span>
+                        <span class="pd-item-label">My Profile<br/><span class="pd-item-sub">View &amp; edit your info</span></span>
+                        <i class="bi bi-chevron-right pd-arrow"></i>
+                    </a></li>
+                    <li><a class="dropdown-item" href="/Dashboard/Staff/Index">
+                        <span class="pd-icon" style="background:#f0fdf4;color:#16a34a"><i class="bi bi-speedometer2"></i></span>
+                        <span class="pd-item-label">Dashboard</span>
+                        <i class="bi bi-chevron-right pd-arrow"></i>
+                    </a></li>
+                    <li><hr class="dropdown-divider"/></li>
+                    <li><a class="dropdown-item pd-danger" href="/Login?logout=1">
+                        <span class="pd-icon"><i class="bi bi-box-arrow-right"></i></span>
+                        <span class="pd-item-label">Sign Out</span>
+                    </a></li>
+                    <li><div style="padding:6px 16px 10px;font-size:.65rem;color:#94a3b8;text-align:center">Yeka Cleaning v1.0</div></li>
+                </ul>
+            </div>
         </div>
     </div>
 </nav>
@@ -27,7 +83,7 @@
 </nav>
 
 <!-- Main Content -->
-<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5 main-content">
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 main-content">
     @RenderBody()
 </main>
 

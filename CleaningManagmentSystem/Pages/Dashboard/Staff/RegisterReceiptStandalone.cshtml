@@ -1,1 +1,31 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.Staff.RegisterReceiptStandaloneModel
+@{
+    Layout = "/Pages/Dashboard/Staff/_StaffLayout.cshtml";
+    ViewData["Title"] = "Register Receipt";
+    var userName = HttpContext.Session.GetString("UserName");
+    if (userName == null) { Response.Redirect("/Login"); return; }
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-receipt text-primary me-2"></i>Register Receipt</h4>
+        <p class="text-muted small mb-0">Quick standalone receipt registration</p>
+    </div>
+    <a href="/Dashboard/Staff/RegisterReceipt" class="btn btn-primary btn-sm rounded-pill px-3">
+        <i class="bi bi-journal-plus me-1"></i>Full Registration
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 text-center py-5">
+    <div class="card-body">
+        <i class="bi bi-receipt fs-1 text-muted opacity-25 d-block mb-3"></i>
+        <h5 class="text-muted">Use the full registration form</h5>
+        <p class="text-muted small mb-4">For complete receipt registration with all options, use the main receipt pages from the sidebar.</p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a href="/Dashboard/Staff/RegisterReceipt"       class="btn btn-primary rounded-pill px-4"><i class="bi bi-people me-1"></i>Mahberat Receipt</a>
+            <a href="/Dashboard/Staff/OutsourceReceipt"      class="btn btn-outline-primary rounded-pill px-4"><i class="bi bi-building me-1"></i>Outsource Receipt</a>
+            <a href="/Dashboard/Staff/PrivateCompanyReceipt" class="btn btn-outline-secondary rounded-pill px-4"><i class="bi bi-briefcase me-1"></i>Private Company</a>
+        </div>
+    </div>
 </div>

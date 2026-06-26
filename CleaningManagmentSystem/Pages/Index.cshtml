@@ -36,15 +36,7 @@
         _              => "#6c757d"
     };
 
-    // ── Gallery fallback images ───────────────────────────────────────────
-    var galFallback = new[] {
-        ("https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80", "City Cleaning"),
-        ("https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=600&q=80", "Waste Management"),
-        ("https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&q=80", "Office Cleaning"),
-        ("https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80", "Team at Work"),
-        ("https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80", "Equipment"),
-        ("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80", "Street Cleaning"),
-    };
+
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -601,47 +593,55 @@
     <div class="section-inner">
         <div class="sec-h">Gallery</div>
         <p class="sec-s">A glimpse of our work across Yeka sub-city.</p>
-
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-            @if (Model.Gallery.Any())
-            {
-                @foreach (dynamic g in Model.Gallery)
-                {
-                    string gImg  = Convert.ToString(g.image_url) ?? "";
-                    string gTitle= Convert.ToString(g.title)     ?? "";
-                    string gCat  = Convert.ToString(g.category)  ?? "";
-
-                    <div class="gal">
-                        @if (!string.IsNullOrEmpty(gImg))
-                        {
-                            <img src="@gImg" alt="@gTitle" loading="lazy" />
-                        }
-                        else
-                        {
-                            <div class="gal-ph"><i class="bi bi-image"></i></div>
-                        }
-                        <div class="gal-ov">
-                            <div>
-                                <div style="color:#fff;font-weight:600;font-size:.85rem">@gTitle</div>
-                                @if (!string.IsNullOrEmpty(gCat)) { <div style="color:rgba(255,255,255,.7);font-size:.72rem">@gCat</div> }
-                            </div>
-                        </div>
-                    </div>
-                }
-            }
-            else
-            {
-                @for (int i = 0; i < galFallback.Length; i++)
-                {
-                    <div class="gal">
-                        <img src="@galFallback[i].Item1" alt="@galFallback[i].Item2" loading="lazy" />
-                        <div class="gal-ov">
-                            <div style="color:#fff;font-weight:600;font-size:.85rem">@galFallback[i].Item2</div>
-                        </div>
-                    </div>
-                }
-            }
+        <div style="text-align:center;margin-bottom:32px">
+            <a asp-page="/Gallery"
+               style="display:inline-flex;align-items:center;gap:6px;
+                      background:linear-gradient(135deg,#2E86AB,#A23B72);
+                      color:#fff;border-radius:10px;padding:9px 22px;
+                      font-size:.88rem;font-weight:600;text-decoration:none;
+                      transition:opacity .18s"
+               onmouseover="this.style.opacity='.85'"
+               onmouseout="this.style.opacity='1'">
+                <i class="bi bi-images"></i> View Full Gallery
+            </a>
         </div>
+
+        @if (Model.Gallery.Any())
+        {
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            @foreach (dynamic g in Model.Gallery)
+            {
+                string gImg  = Convert.ToString(g.image_url) ?? "";
+                string gTitle= Convert.ToString(g.title)     ?? "";
+                string gCat  = Convert.ToString(g.category)  ?? "";
+
+                <div class="gal">
+                    @if (!string.IsNullOrEmpty(gImg))
+                    {
+                        <img src="@gImg" alt="@gTitle" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="gal-ph"><i class="bi bi-image"></i></div>
+                    }
+                    <div class="gal-ov">
+                        <div>
+                            <div style="color:#fff;font-weight:600;font-size:.85rem">@gTitle</div>
+                            @if (!string.IsNullOrEmpty(gCat)) { <div style="color:rgba(255,255,255,.7);font-size:.72rem">@gCat</div> }
+                        </div>
+                    </div>
+                </div>
+            }
+            </div>
+        }
+        else
+        {
+            <div style="text-align:center;padding:60px 24px;color:#94a3b8">
+                <i class="bi bi-images" style="font-size:3.5rem;display:block;margin-bottom:16px;opacity:.25"></i>
+                <div style="font-size:1rem;font-weight:600;color:#64748b;margin-bottom:6px">No photos published yet</div>
+                <div style="font-size:.85rem">Staff can upload and publish photos via the dashboard.</div>
+            </div>
+        }
     </div>
 </section>
 

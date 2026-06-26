@@ -15,11 +15,6 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
         public string ErrorMessage   { get; set; } = "";
         public string SearchQuery    { get; set; } = "";
 
-        // Employees registered via HR — shown in "Link to Employee" dropdown when creating a user
-        public List<EmployeeQuickDto> AvailableEmployees { get; set; } = new();
-
-        public record EmployeeQuickDto(int Id, string Name, string LastName, string Email, string Phone);
-
         public static readonly HashSet<string> MobileRoles = new(StringComparer.OrdinalIgnoreCase)
             { "driver", "outsource", "PrivateCompanyRep", "manager" };
 
@@ -40,7 +35,6 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
             ErrorMessage   = err ?? "";
 
             LoadUsers();
-            LoadAvailableEmployees();
             return Page();
         }
 
@@ -60,28 +54,6 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
             catch
             {
                 ErrorMessage = "Error loading users.";
-            }
-        }
-
-        private void LoadAvailableEmployees()
-        {
-            try
-            {
-                using var db = new MySqlConnection(_cs);
-                AvailableEmployees = db.Query<EmployeeQuickDto>(
-                    @"SELECT id          AS Id,
-                             first_name  AS Name,
-                             last_name   AS LastName,
-                             COALESCE(email_address, '') AS Email,
-                             COALESCE(phone_number,  '') AS Phone
-                      FROM employees
-                      WHERE employment_status = 'Active'
-                      ORDER BY first_name ASC").ToList();
-            }
-            catch
-            {
-                // employees table may not exist yet on first run — silently skip
-                AvailableEmployees = new();
             }
         }
     }

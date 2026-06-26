@@ -101,7 +101,14 @@ namespace CleaningManagmentSystem.Pages.Dashboard
                 db.Execute("UPDATE users SET name=@N, phone=@P, updated_at=NOW() WHERE id=@Id",
                     new { N = NewName.Trim(), P = NewPhone.Trim(), Id = editId });
                 if (editId == sid.Value)
+                {
                     HttpContext.Session.SetString("UserName", NewName.Trim());
+                    // Refresh photo in session too
+                    var photo = db.QueryFirstOrDefault<string>(
+                        "SELECT COALESCE(photo_url,'') FROM employees WHERE user_id=@uid",
+                        new { uid = editId });
+                    HttpContext.Session.SetString("UserPhoto", photo ?? "");
+                }
                 TempData["Success"] = "Profile updated.";
             }
             catch (Exception ex) { TempData["Error"] = ex.Message; }
@@ -203,7 +210,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard
                            hire_date, work_location, phone_number, email_address,
                            photo_url, gender, date_of_birth, nationality, marital_status,
                            highest_education, field_of_study, institution, graduation_year,
-                           '' AS salary, '' AS bank_name, '' AS bank_account,
+                           0 AS salary, '' AS bank_name, '' AS bank_account,
                            '' AS tax_id, '' AS pension_id,
                            national_id, blood_type, disability_status, skills, notes
                     FROM employees WHERE user_id=@Uid";
@@ -258,7 +265,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard
         public string   FieldOfStudy     { get; set; } = "";
         public string   Institution      { get; set; } = "";
         public int?     GraduationYear   { get; set; }
-        public decimal  Salary           { get; set; }
+        public decimal? Salary           { get; set; }
         public string   BankName         { get; set; } = "";
         public string   BankAccount      { get; set; } = "";
         public string   TaxId            { get; set; } = "";

@@ -8,249 +8,225 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
 {
     public class RoleUsageModel : PageModel
     {
-        private readonly string _connectionString;
+        private readonly string _cs;
 
         public RoleUsageModel(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection") ?? "";
-        }
+            => _cs = configuration.GetConnectionString("DefaultConnection") ?? "";
 
-        [BindProperty]
-        public int? EditId { get; set; }
+        // ── Bound form fields (Edit modal) ──────────────────────────────────
+        [BindProperty] public int?   EditId                  { get; set; }
+        [BindProperty] public string RoleName                { get; set; } = "";
+        [BindProperty] public string DisplayName             { get; set; } = "";
+        [BindProperty] public string Description             { get; set; } = "";
+        [BindProperty] public string UsageContext            { get; set; } = "";
+        [BindProperty] public string PrimaryResponsibilities { get; set; } = "";
+        [BindProperty] public string DailyActivities         { get; set; } = "";
+        [BindProperty] public string ReportsAccess           { get; set; } = "";
+        [BindProperty] public string ModulesAccess           { get; set; } = "";
+        [BindProperty] public int    AccessLevel             { get; set; }
+        [BindProperty] public bool   CanCreateUsers          { get; set; }
+        [BindProperty] public bool   CanViewFinancials       { get; set; }
+        [BindProperty] public bool   CanManageDispatch       { get; set; }
+        [BindProperty] public bool   CanViewPayroll          { get; set; }
+        [BindProperty] public bool   CanManageStaff          { get; set; }
 
-        [BindProperty]
-        public string RoleName { get; set; } = "";
+        // ── Page data ────────────────────────────────────────────────────────
+        public IList<RoleDefinition>   RoleDefinitions  { get; set; } = new List<RoleDefinition>();
+        public IList<RoleUserStat>     RoleUserStats    { get; set; } = new List<RoleUserStat>();
+        public IList<UserRoleRow>      AllUsers         { get; set; } = new List<UserRoleRow>();
+        public IList<RecentUserRow>    RecentUsers      { get; set; } = new List<RecentUserRow>();
 
-        [BindProperty]
-        public string DisplayName { get; set; } = "";
-
-        [BindProperty]
-        public string Description { get; set; } = "";
-
-        [BindProperty]
-        public string UsageContext { get; set; } = "";
-
-        [BindProperty]
-        public string PrimaryResponsibilities { get; set; } = "";
-
-        [BindProperty]
-        public string DailyActivities { get; set; } = "";
-
-        [BindProperty]
-        public string ReportsAccess { get; set; } = "";
-
-        [BindProperty]
-        public string ModulesAccess { get; set; } = "";
-
-        [BindProperty]
-        public int AccessLevel { get; set; }
-
-        [BindProperty]
-        public bool CanCreateUsers { get; set; }
-
-        [BindProperty]
-        public bool CanViewFinancials { get; set; }
-
-        [BindProperty]
-        public bool CanManageDispatch { get; set; }
-
-        [BindProperty]
-        public bool CanViewPayroll { get; set; }
-
-        [BindProperty]
-        public bool CanManageStaff { get; set; }
-
-        public IEnumerable<RoleDefinition> RoleDefinitions { get; set; } = new List<RoleDefinition>();
         public string? SuccessMessage { get; set; }
-        public string? ErrorMessage { get; set; }
+        public string? ErrorMessage   { get; set; }
+        public string  FilterRole     { get; set; } = "";
 
-        public IActionResult OnGet()
+        // ── DTOs ─────────────────────────────────────────────────────────────
+        public class RoleUserStat
         {
-            var userName = HttpContext.Session.GetString("UserName");
-            if (string.IsNullOrEmpty(userName))
+            public string Role        { get; set; } = "";
+            public string DisplayName { get; set; } = "";
+            public int    Total       { get; set; }
+            public int    Active      { get; set; }
+            public int    Inactive    { get; set; }
+            public string BadgeColor  { get; set; } = "";
+            public RoleUserStat() {}
+            public RoleUserStat(string role, string displayName, int total, int active, int inactive, string badgeColor)
+            { Role=role; DisplayName=displayName; Total=total; Active=active; Inactive=inactive; BadgeColor=badgeColor; }
+        }
+
+        // Dapper maps snake_case columns → properties by name (case-insensitive)
+        public class UserRoleRow
+        {
+            public int      Id        { get; set; }
+            public string   Name      { get; set; } = "";
+            public string   Email     { get; set; } = "";
+            public string   Role      { get; set; } = "";
+            public string   Phone     { get; set; } = "";
+            public bool     IsActive  { get; set; }
+            public DateTime CreatedAt { get; set; }
+        }
+
+        public class RecentUserRow
+        {
+            public int      Id        { get; set; }
+            public string   Name      { get; set; } = "";
+            public string   Email     { get; set; } = "";
+            public string   Role      { get; set; } = "";
+            public bool     IsActive  { get; set; }
+            public DateTime CreatedAt { get; set; }
+        }
+
+        // ── GET ──────────────────────────────────────────────────────────────
+        public IActionResult OnGet([FromQuery] string? filterRole = null)
+        {
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")))
                 return RedirectToPage("/Login");
 
-            LoadRoles();
+            FilterRole = filterRole ?? "";
+            LoadAll();
             return Page();
         }
 
-        public IActionResult OnPostLoad()
-        {
-            LoadRoles();
-            return Page();
-        }
-
-        public IActionResult OnPostEdit(int id)
-        {
-            var userName = HttpContext.Session.GetString("UserName");
-            if (string.IsNullOrEmpty(userName))
-                return RedirectToPage("/Login");
-
-            try
-            {
-                using var connection = new MySqlConnection(_connectionString);
-                var role = connection.QueryFirstOrDefault<RoleDefinition>(
-                    "SELECT * FROM role_definitions WHERE id = @Id", new { Id = id });
-
-                if (role != null)
-                {
-                    EditId = id;
-                    RoleName = role.RoleName;
-                    DisplayName = role.DisplayName;
-                    Description = role.Description;
-                    UsageContext = role.UsageContext;
-                    PrimaryResponsibilities = role.PrimaryResponsibilities;
-                    DailyActivities = role.DailyActivities;
-                    ReportsAccess = role.ReportsAccess;
-                    ModulesAccess = role.ModulesAccess;
-                    AccessLevel = role.AccessLevel;
-                    CanCreateUsers = role.CanCreateUsers;
-                    CanViewFinancials = role.CanViewFinancials;
-                    CanManageDispatch = role.CanManageDispatch;
-                    CanViewPayroll = role.CanViewPayroll;
-                    CanManageStaff = role.CanManageStaff;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[RoleUsage] Error loading role: {ex.Message}");
-                ErrorMessage = "Error loading role details.";
-            }
-
-            LoadRoles();
-            return Page();
-        }
-
+        // ── POST: Save edited role definition ────────────────────────────────
         public IActionResult OnPostSave()
         {
-            var userName = HttpContext.Session.GetString("UserName");
-            if (string.IsNullOrEmpty(userName))
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserName")))
                 return RedirectToPage("/Login");
 
-            if (string.IsNullOrEmpty(RoleName) || string.IsNullOrEmpty(DisplayName))
+            if (string.IsNullOrWhiteSpace(DisplayName))
             {
-                ErrorMessage = "Role Name and Display Name are required.";
-                LoadRoles();
+                ErrorMessage = "Display Name is required.";
+                LoadAll();
                 return Page();
             }
 
             try
             {
-                using var connection = new MySqlConnection(_connectionString);
-
+                using var db = new MySqlConnection(_cs);
                 if (EditId.HasValue)
                 {
-                    connection.Execute(@"
+                    db.Execute(@"
                         UPDATE role_definitions SET
-                            display_name = @DisplayName,
-                            description = @Description,
-                            usage_context = @UsageContext,
+                            display_name             = @DisplayName,
+                            description              = @Description,
+                            usage_context            = @UsageContext,
                             primary_responsibilities = @PrimaryResponsibilities,
-                            daily_activities = @DailyActivities,
-                            reports_access = @ReportsAccess,
-                            modules_access = @ModulesAccess,
-                            access_level = @AccessLevel,
-                            can_create_users = @CanCreateUsers,
-                            can_view_financials = @CanViewFinancials,
-                            can_manage_dispatch = @CanManageDispatch,
-                            can_view_payroll = @CanViewPayroll,
-                            can_manage_staff = @CanManageStaff,
-                            updated_at = NOW()
+                            daily_activities         = @DailyActivities,
+                            reports_access           = @ReportsAccess,
+                            modules_access           = @ModulesAccess,
+                            access_level             = @AccessLevel,
+                            can_create_users         = @CanCreateUsers,
+                            can_view_financials      = @CanViewFinancials,
+                            can_manage_dispatch      = @CanManageDispatch,
+                            can_view_payroll         = @CanViewPayroll,
+                            can_manage_staff         = @CanManageStaff,
+                            updated_at               = NOW()
                         WHERE id = @EditId",
-                        new
-                        {
-                            EditId,
-                            DisplayName,
-                            Description,
-                            UsageContext,
-                            PrimaryResponsibilities,
-                            DailyActivities,
-                            ReportsAccess,
-                            ModulesAccess,
-                            AccessLevel,
-                            CanCreateUsers,
-                            CanViewFinancials,
-                            CanManageDispatch,
-                            CanViewPayroll,
-                            CanManageStaff
-                        });
+                        new { EditId, DisplayName, Description, UsageContext,
+                              PrimaryResponsibilities, DailyActivities,
+                              ReportsAccess, ModulesAccess, AccessLevel,
+                              CanCreateUsers, CanViewFinancials, CanManageDispatch,
+                              CanViewPayroll, CanManageStaff });
 
-                    SuccessMessage = $"Role '{RoleName}' updated successfully.";
-                    Console.WriteLine($"[RoleUsage] Updated role ID: {EditId}");
+                    SuccessMessage = $"Role '{DisplayName}' updated successfully.";
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[RoleUsage] Database error: {ex.Message}");
-                ErrorMessage = "Database error occurred.";
+                ErrorMessage = $"Error saving role: {ex.Message}";
             }
 
-            LoadRoles();
+            LoadAll();
             return Page();
         }
 
-        public IActionResult OnPostDelete(int id)
-        {
-            var userName = HttpContext.Session.GetString("UserName");
-            if (string.IsNullOrEmpty(userName))
-                return RedirectToPage("/Login");
-
-            try
-            {
-                using var connection = new MySqlConnection(_connectionString);
-                connection.Execute("DELETE FROM role_definitions WHERE id = @Id", new { Id = id });
-                SuccessMessage = "Role definition deleted.";
-                Console.WriteLine($"[RoleUsage] Deleted role ID: {id}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[RoleUsage] Delete error: {ex.Message}");
-                ErrorMessage = "Error deleting role.";
-            }
-
-            LoadRoles();
-            return Page();
-        }
-
-        private void LoadRoles()
+        // ── Helpers ──────────────────────────────────────────────────────────
+        private void LoadAll()
         {
             try
             {
-                using var connection = new MySqlConnection(_connectionString);
-                RoleDefinitions = connection.Query<RoleDefinition>(
-                    "SELECT * FROM role_definitions ORDER BY access_level DESC, display_name ASC").ToList();
+                using var db = new MySqlConnection(_cs);
 
-                Console.WriteLine($"[RoleUsage] Loaded {RoleDefinitions.Count()} role definitions");
+                // Role definitions table
+                RoleDefinitions = db.Query<RoleDefinition>(
+                    "SELECT * FROM role_definitions ORDER BY access_level DESC, display_name ASC")
+                    .ToList();
+
+                // Per-role user counts  (uses the live users table)
+                var rawStats = db.Query(
+                    @"SELECT LOWER(COALESCE(role,'')) AS role,
+                             COUNT(*)                 AS total,
+                             SUM(is_active)           AS active
+                      FROM users
+                      GROUP BY LOWER(COALESCE(role,''))
+                      ORDER BY total DESC")
+                    .ToList();
+
+                RoleUserStats = rawStats.Select(r =>
+                {
+                    string rol  = (string)(r.role  ?? "");
+                    int    tot  = (int)(long)(r.total  ?? 0L);
+                    int    act  = (int)(long)(r.active ?? 0L);
+                    string disp = RoleDefinitions.FirstOrDefault(
+                                    d => d.RoleName.Equals(rol, StringComparison.OrdinalIgnoreCase))
+                                  ?.DisplayName ?? FallbackDisplay(rol);
+                    return new RoleUserStat(rol, disp, tot, act, tot - act, RoleBadge(rol));
+                }).ToList();
+
+                // All users (filtered if a role is selected)
+                var userSql = string.IsNullOrEmpty(FilterRole)
+                    ? @"SELECT id, name, email, COALESCE(role,'') AS role,
+                               COALESCE(phone,'') AS phone, is_active, created_at
+                         FROM users ORDER BY role, name"
+                    : @"SELECT id, name, email, COALESCE(role,'') AS role,
+                               COALESCE(phone,'') AS phone, is_active, created_at
+                         FROM users
+                         WHERE LOWER(COALESCE(role,'')) = LOWER(@r)
+                         ORDER BY name";
+
+                AllUsers = db.Query<UserRoleRow>(userSql, new { r = FilterRole }).ToList();
+
+                // 10 most recently created users
+                RecentUsers = db.Query<RecentUserRow>(
+                    @"SELECT id, name, email, COALESCE(role,'') AS role,
+                             is_active, created_at
+                      FROM users ORDER BY created_at DESC LIMIT 10")
+                    .ToList();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[RoleUsage] Load error: {ex.Message}");
-                ErrorMessage = "Error loading role definitions.";
+                ErrorMessage = $"Error loading data: {ex.Message}";
             }
         }
-    }
 
-    public class RoleActivityLogEntry
-    {
-        public int Id { get; set; }
-        public int UserId { get; set; }
-        public string UserName { get; set; } = "";
-        public string UserRole { get; set; } = "";
-        public string ActivityType { get; set; } = "";
-        public string PageAccessed { get; set; } = "";
-        public string ActionPerformed { get; set; } = "";
-        public string Details { get; set; } = "";
-        public DateTime Timestamp { get; set; }
-    }
+        // ── Static helpers ────────────────────────────────────────────────────
+        public static string RoleBadge(string role) => role.ToLower() switch
+        {
+            "superadmin"        => "danger",
+            "hr"                => "purple",
+            "manager"           => "primary",
+            "driver"            => "success",
+            "outsource"         => "warning",
+            "privatecompanyrep" => "info",
+            "staff"             => "secondary",
+            "wereda_mahberat"   => "dark",
+            "dispatchofficer"   => "indigo",
+            _                   => "secondary"
+        };
 
-    public class RolePermissionEntry
-    {
-        public int Id { get; set; }
-        public string RoleName { get; set; } = "";
-        public string ModuleName { get; set; } = "";
-        public string PermissionType { get; set; } = "";
-        public bool IsAllowed { get; set; }
-        public string Description { get; set; } = "";
-        public DateTime CreatedAt { get; set; }
+        public static string FallbackDisplay(string role) => role.ToLower() switch
+        {
+            "superadmin"        => "Super Admin",
+            "hr"                => "Human Resources",
+            "manager"           => "Manager",
+            "driver"            => "Driver",
+            "outsource"         => "Outsource",
+            "privatecompanyrep" => "Private Company Rep",
+            "staff"             => "Staff",
+            "wereda_mahberat"   => "Wereda Mahberat",
+            "dispatchofficer"   => "Dispatch Officer",
+            ""                  => "⚠ No Role",
+            _                   => role
+        };
     }
 }

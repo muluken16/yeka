@@ -1,0 +1,604 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.SuperAdmin.SettingsModel
+@{
+    var sessionUser = HttpContext.Session.GetString("UserName");
+    if (sessionUser == null) { Response.Redirect("/Login"); return; }
+
+    string RoleBadge(string r) => (r ?? "").ToLower() switch {
+        "superadmin"        => "danger",
+        "hr"                => "info",
+        "manager"           => "primary",
+        "driver"            => "success",
+        "outsource"         => "warning",
+        "privatecompanyrep" => "info",
+        "staff"             => "secondary",
+        "wereda_mahberat"   => "dark",
+        "dispatchofficer"   => "primary",
+        _                   => "secondary"
+    };
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>Settings &amp; Configuration – Yeka Cleaning</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet" href="~/css/dashboard.css"/>
+    <style>
+        .stat-tile        { border-left:4px solid; border-radius:.5rem; }
+        .info-table td    { font-size:.88rem; padding:.45rem .6rem; }
+        .info-table th    { font-size:.75rem; }
+        .section-divider  { font-size:.68rem; font-weight:700; letter-spacing:.1em;
+                            text-transform:uppercase; color:#6c757d; margin-bottom:.4rem; }
+    </style>
+</head>
+<body>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-none d-lg-flex">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/Dashboard/SuperAdmin"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
+        <div class="nav-user">
+            <span>@sessionUser</span>
+            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+    </div>
+</nav>
+<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
+    <div class="container-fluid">
+        <button class="navbar-toggler" onclick="toggleSidebar()"><span class="navbar-toggler-icon"></span></button>
+        <a class="navbar-brand" href="/Dashboard/SuperAdmin"><i class="bi bi-droplet-fill"></i> Yeka</a>
+        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
+    </div>
+</nav>
+<nav id="sidebarMenu" class="sidebar d-lg-none">
+    @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
+</nav>
+<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
+    @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
+</nav>
+
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
+
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom flex-wrap gap-2">
+        <h1 class="h2 mb-0"><i class="bi bi-gear me-2"></i>Settings &amp; Configuration</h1>
+        <span class="badge bg-danger px-3 py-2">Super Admin</span>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2">
+            <i class="bi bi-check-circle-fill me-1"></i>@Model.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>@Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- ═══ TABS ═══════════════════════════════════════════════════════════ -->
+    <ul class="nav nav-tabs mb-4" id="settingsTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabOverview">
+                <i class="bi bi-grid me-1"></i>Overview
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSystem">
+                <i class="bi bi-server me-1"></i>System Info
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabUsers">
+                <i class="bi bi-people me-1"></i>Users &amp; Roles
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabData">
+                <i class="bi bi-database me-1"></i>Data Summary
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSecurity">
+                <i class="bi bi-shield-lock me-1"></i>Security
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabNav">
+                <i class="bi bi-map me-1"></i>All Pages
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+    <!-- ══ TAB 1: OVERVIEW ══════════════════════════════════════════════════ -->
+    <div class="tab-pane fade show active" id="tabOverview">
+        <!-- Stat tiles row -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:#0d6efd!important">
+                    <div class="section-divider">Users</div>
+                    <div class="fs-2 fw-bold text-primary">@Model.TotalUsers</div>
+                    <small class="text-muted">@Model.ActiveUsers active · @Model.InactiveUsers inactive</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:#198754!important">
+                    <div class="section-divider">Employees</div>
+                    <div class="fs-2 fw-bold text-success">@Model.TotalEmployees</div>
+                    <small class="text-muted">@Model.ActiveEmployees active</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:#0dcaf0!important">
+                    <div class="section-divider">Companies</div>
+                    <div class="fs-2 fw-bold text-info">@(Model.OutsourceCompanies + Model.PrivateCompanies)</div>
+                    <small class="text-muted">@Model.OutsourceCompanies outsource · @Model.PrivateCompanies private</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:#ffc107!important">
+                    <div class="section-divider">Receipts</div>
+                    <div class="fs-2 fw-bold text-warning">@Model.TotalReceipts</div>
+                    <small class="text-muted">ETB @Model.TotalReceiptAmount.ToString("N0")</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:#6f42c1!important">
+                    <div class="section-divider">Payroll</div>
+                    <div class="fs-2 fw-bold" style="color:#6f42c1">@Model.TotalPayroll</div>
+                    <small class="text-muted">ETB @Model.TotalPayrollPaid.ToString("N0") paid</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:@(Model.TotalCapital>=0?"#198754":"#dc3545")!important">
+                    <div class="section-divider">Capital</div>
+                    <div class="fs-2 fw-bold @(Model.TotalCapital>=0?"text-success":"text-danger")">
+                        ETB @Math.Abs(Model.TotalCapital).ToString("N0")
+                    </div>
+                    <small class="text-muted">In @Model.TotalIncome.ToString("N0") / Out @Model.TotalExpense.ToString("N0")</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:#20c997!important">
+                    <div class="section-divider">Operations</div>
+                    <div class="fs-2 fw-bold text-success">@Model.TotalTransports</div>
+                    <small class="text-muted">@Model.TotalTrainings trainings · @Model.TotalPosts posts</small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 shadow-sm stat-tile p-3" style="border-color:#dc3545!important">
+                    <div class="section-divider">Role Definitions</div>
+                    <div class="fs-2 fw-bold text-danger">@Model.TotalRolesDefined</div>
+                    <small class="text-muted">@Model.RoleStats.Count role types in use</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick config shortcuts -->
+        <div class="section-divider mb-2">Quick Configuration</div>
+        <div class="row g-3">
+            @{
+                var shortcuts = new[] {
+                    ("/Dashboard/SuperAdmin/Users",     "bi-people",       "primary",   "Manage Users",        "Add, edit, deactivate accounts"),
+                    ("/Dashboard/SuperAdmin/RoleUsage", "bi-shield-lock",  "danger",    "Roles & Permissions", "Configure role definitions & permissions"),
+                    ("/Dashboard/Profile",              "bi-person-circle","secondary", "My Profile",          "Update your account information"),
+                };
+            }
+            @foreach (var (url, icon, color, title, desc) in shortcuts)
+            {
+                <div class="col-md-6 col-xl-4">
+                    <a href="@url" class="text-decoration-none">
+                        <div class="card border-0 shadow-sm h-100 py-2 px-3 d-flex flex-row align-items-center gap-3">
+                            <div class="rounded-circle bg-@color bg-opacity-10 p-2 flex-shrink-0">
+                                <i class="bi @icon text-@color fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold small">@title</div>
+                                <div class="text-muted" style="font-size:.78rem">@desc</div>
+                            </div>
+                            <i class="bi bi-arrow-right text-muted ms-auto"></i>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div><!-- /tabOverview -->
+
+    <!-- ══ TAB 2: SYSTEM INFO ═══════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tabSystem">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <span class="fw-semibold"><i class="bi bi-server me-2 text-primary"></i>Application</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-borderless info-table mb-0">
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold" style="width:45%">App Name</td>
+                                <td>Yeka Cleaning Management System</td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">Version</td>
+                                <td><span class="badge bg-primary">@Model.AppVersion</span></td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">Environment</td>
+                                <td>
+                                    <span class="badge bg-@(Model.Environment=="Production"?"danger":"warning text-dark")">
+                                        @Model.Environment
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">Framework</td>
+                                <td><code class="small">ASP.NET Core / Razor Pages</code></td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">Server Time</td>
+                                <td class="small">@DateTime.Now.ToString("dd MMM yyyy HH:mm:ss")</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted fw-semibold">UTC Time</td>
+                                <td class="small">@DateTime.UtcNow.ToString("dd MMM yyyy HH:mm:ss")</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <span class="fw-semibold"><i class="bi bi-database me-2 text-success"></i>Database</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-borderless info-table mb-0">
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold" style="width:45%">Engine</td>
+                                <td><code class="small">MySQL / MariaDB</code></td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">Version</td>
+                                <td><code class="small">@Model.DbVersion</code></td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">Host</td>
+                                <td><code class="small">@(string.IsNullOrEmpty(Model.DbHost)?"(configured)":Model.DbHost)</code></td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">Database</td>
+                                <td><code class="small">@(string.IsNullOrEmpty(Model.DbName)?"(configured)":Model.DbName)</code></td>
+                            </tr>
+                            <tr class="border-bottom">
+                                <td class="text-muted fw-semibold">ORM</td>
+                                <td><code class="small">Dapper + MySqlConnector</code></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted fw-semibold">Tables Tracked</td>
+                                <td><span class="badge bg-secondary">@Model.TableSizes.Count</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table sizes -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <span class="fw-semibold"><i class="bi bi-table me-2 text-info"></i>Database Table Row Counts</span>
+                        <small class="text-muted ms-2">(approximate — from information_schema)</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 info-table">
+                                <thead class="table-dark">
+                                    <tr><th>Table</th><th>Approx. Rows</th><th style="width:50%">Fill</th></tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var maxRows = Model.TableSizes.Any() ? Model.TableSizes.Max(t => t.Rows) : 1;
+                                    }
+                                    @foreach (var t in Model.TableSizes)
+                                    {
+                                        var pct = maxRows > 0 ? (int)(t.Rows * 100 / maxRows) : 0;
+                                        <tr>
+                                            <td><code>@t.TableName</code></td>
+                                            <td class="fw-semibold">@t.Rows.ToString("N0")</td>
+                                            <td>
+                                                <div class="progress" style="height:6px">
+                                                    <div class="progress-bar bg-primary" style="width:@pct%"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    @if (!Model.TableSizes.Any())
+                                    {
+                                        <tr><td colspan="3" class="text-center text-muted py-3">No data available.</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /tabSystem -->
+
+    <!-- ══ TAB 3: USERS & ROLES ══════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tabUsers">
+        <div class="row g-4">
+
+            <!-- Role breakdown -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <span class="fw-semibold"><i class="bi bi-shield-lock me-2 text-danger"></i>Users by Role</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover align-middle mb-0 info-table">
+                            <thead class="table-dark">
+                                <tr><th>Role</th><th class="text-center">Total</th><th class="text-center">Active</th><th class="text-center">Inactive</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in Model.RoleStats)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-@RoleBadge(r.Role)">@r.Role</span>
+                                        </td>
+                                        <td class="text-center fw-bold">@r.Total</td>
+                                        <td class="text-center text-success">@r.Active</td>
+                                        <td class="text-center text-danger">@r.Inactive</td>
+                                    </tr>
+                                }
+                                <tr class="table-light fw-bold">
+                                    <td>Total</td>
+                                    <td class="text-center">@Model.TotalUsers</td>
+                                    <td class="text-center text-success">@Model.ActiveUsers</td>
+                                    <td class="text-center text-danger">@Model.InactiveUsers</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="/Dashboard/SuperAdmin/Users" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="bi bi-people me-1"></i>Manage All Users
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent users -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <span class="fw-semibold"><i class="bi bi-clock-history me-2 text-primary"></i>8 Most Recent Accounts</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 info-table">
+                                <thead class="table-dark">
+                                    <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Created</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var u in Model.RecentUsers)
+                                    {
+                                        <tr>
+                                            <td class="text-muted">@u.Id</td>
+                                            <td class="fw-semibold">@u.Name</td>
+                                            <td><code class="small">@u.Email</code></td>
+                                            <td><span class="badge bg-@RoleBadge(u.Role)">@(string.IsNullOrEmpty(u.Role)?"—":u.Role)</span></td>
+                                            <td><span class="badge bg-@(u.IsActive?"success":"danger")">@(u.IsActive?"Active":"Inactive")</span></td>
+                                            <td class="small text-muted">@u.CreatedAt.ToString("dd MMM yy")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="/Dashboard/SuperAdmin/RoleUsage" class="btn btn-sm btn-outline-danger w-100">
+                            <i class="bi bi-shield-lock me-1"></i>View Role Usage & Permissions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /tabUsers -->
+
+    <!-- ══ TAB 4: DATA SUMMARY ═══════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tabData">
+        <div class="row g-3">
+            @{
+                var dataSections = new[] {
+                    ("Users",                "bi-people",            "primary",   Model.TotalUsers,          (string?)null),
+                    ("Active Users",         "bi-person-check",      "success",   Model.ActiveUsers,         (string?)null),
+                    ("Inactive Users",       "bi-person-dash",       "danger",    Model.InactiveUsers,       (string?)null),
+                    ("Employees",            "bi-person-badge",      "info",      Model.TotalEmployees,      (string?)null),
+                    ("Active Employees",     "bi-person-check-fill", "success",   Model.ActiveEmployees,     (string?)null),
+                    ("Outsource Companies",  "bi-building",          "success",   Model.OutsourceCompanies,  (string?)null),
+                    ("Private Companies",    "bi-briefcase",         "info",      Model.PrivateCompanies,    (string?)null),
+                    ("Receipts",             "bi-receipt",           "warning",   Model.TotalReceipts,       $"ETB {Model.TotalReceiptAmount:N0}"),
+                    ("Payroll Records",      "bi-cash-stack",        "secondary", Model.TotalPayroll,        $"ETB {Model.TotalPayrollPaid:N0} paid"),
+                    ("Capital (Net)",        "bi-bank",              Model.TotalCapital>=0?"success":"danger", 0, $"ETB {Model.TotalCapital:N0}"),
+                    ("Transport Requests",   "bi-truck",             "secondary", Model.TotalTransports,     (string?)null),
+                    ("Trainings",            "bi-mortarboard",       "primary",   Model.TotalTrainings,      (string?)null),
+                    ("Posts",                "bi-postcard",          "secondary", Model.TotalPosts,          (string?)null),
+                    ("Role Definitions",     "bi-shield-check",      "danger",    Model.TotalRolesDefined,   (string?)null),
+                };
+            }
+            @foreach (var (label, icon, color, count, extra) in dataSections)
+            {
+                <div class="col-6 col-md-4 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3 d-flex flex-row align-items-center gap-3">
+                        <div class="rounded-circle bg-@color bg-opacity-10 p-2">
+                            <i class="bi @icon text-@color fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold fs-5 lh-1">@(extra != null && count == 0 ? extra : count.ToString())</div>
+                            @if (extra != null && count > 0)
+                            {
+                                <div class="text-muted" style="font-size:.75rem">@extra</div>
+                            }
+                            <div class="text-muted small">@label</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div><!-- /tabData -->
+
+    <!-- ══ TAB 5: SECURITY ═══════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tabSecurity">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <span class="fw-semibold"><i class="bi bi-person-lock me-2 text-danger"></i>Current Session</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless info-table mb-3">
+                            <tr><td class="text-muted fw-semibold" style="width:40%">Logged in as</td>
+                                <td><strong>@sessionUser</strong></td></tr>
+                            <tr><td class="text-muted fw-semibold">Role</td>
+                                <td>
+                                    @{ var sessRole = HttpContext.Session.GetString("UserRole") ?? "—"; }
+                                    <span class="badge bg-danger">@sessRole</span>
+                                </td>
+                            </tr>
+                            <tr><td class="text-muted fw-semibold">Session Status</td>
+                                <td><span class="badge bg-success"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Active</span></td></tr>
+                            <tr><td class="text-muted fw-semibold">Page Time</td>
+                                <td class="small">@DateTime.Now.ToString("dd MMM yyyy HH:mm:ss")</td></tr>
+                        </table>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <form method="post" asp-page-handler="ResetSession">
+                                <button type="submit" class="btn btn-sm btn-outline-warning">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Clear Session Cache
+                                </button>
+                            </form>
+                            <a href="/Login?logout=1" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-box-arrow-right me-1"></i>Logout Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <span class="fw-semibold"><i class="bi bi-shield-check me-2 text-success"></i>Access Control</span>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small">
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Session-based authentication</li>
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Role-based page access control</li>
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>All mutations require active session</li>
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Passwords stored in database</li>
+                            <li class="mb-2"><i class="bi bi-info-circle-fill text-warning me-2"></i>Consider adding password hashing</li>
+                        </ul>
+                        <a href="/Dashboard/SuperAdmin/RoleUsage" class="btn btn-sm btn-outline-danger mt-2 w-100">
+                            <i class="bi bi-shield-lock me-1"></i>Configure Roles &amp; Permissions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /tabSecurity -->
+
+    <!-- ══ TAB 6: ALL PAGES ══════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tabNav">
+        <div class="row g-3">
+            @{
+                var pageGroups = new[] {
+                    ("Main", new[] {
+                        ("/Dashboard/SuperAdmin",        "bi-speedometer2", "primary",   "Home Dashboard",     "Live summary of all modules"),
+                        ("/Dashboard/SuperAdmin/Users",  "bi-people",       "primary",   "Users",              "Create, edit and manage system users"),
+                        ("/Dashboard/SuperAdmin/RoleUsage","bi-shield-lock","danger",    "Role Usage",         "View permissions and role definitions"),
+                    }),
+                    ("Companies", new[] {
+                        ("/Dashboard/SuperAdmin/OutsourceCompany",      "bi-building",  "success",   "Outsource Company",     "Manage outsource companies"),
+                        ("/Dashboard/SuperAdmin/PrivateCleaningCompany","bi-briefcase", "info",      "Private Cleaning Co.",  "Manage private companies and reps"),
+                    }),
+                    ("Finance", new[] {
+                        ("/Dashboard/SuperAdmin/RegisterReceipt", "bi-receipt",   "warning",   "Register Receipt",  "Create and track receipts"),
+                        ("/Dashboard/SuperAdmin/ReceiptPayroll",  "bi-cash-stack","secondary", "Receipt & Payroll", "Employee payroll management"),
+                        ("/Dashboard/SuperAdmin/Capital",         "bi-bank",      "dark",      "Capital",           "Income and expense tracking"),
+                    }),
+                    ("Operations", new[] {
+                        ("/Dashboard/SuperAdmin/Checklist",      "bi-check-square","success",  "Checklist",          "Operational checklists"),
+                        ("/Dashboard/SuperAdmin/Training",       "bi-mortarboard", "primary",  "Training",           "Training management"),
+                        ("/Dashboard/SuperAdmin/TransportAdmin", "bi-truck",       "secondary","Transport Requests", "Vehicle and transport management"),
+                        ("/Dashboard/SuperAdmin/Post",           "bi-postcard",    "secondary","Posts",              "Training posts and notes"),
+                    }),
+                    ("Reports & Config", new[] {
+                        ("/Dashboard/SuperAdmin/PdfReports", "bi-file-earmark-pdf","danger",   "PDF Reports",         "Download all system PDF reports"),
+                        ("/Dashboard/SuperAdmin/Settings",   "bi-gear",            "secondary","Settings",            "This page — configuration overview"),
+                        ("/Dashboard/Profile",               "bi-person-circle",   "secondary","My Profile",          "Edit your account and link to employee"),
+                    }),
+                };
+            }
+            @foreach (var (groupName, pages) in pageGroups)
+            {
+                <div class="col-12">
+                    <div class="section-divider mb-2">@groupName</div>
+                    <div class="row g-2">
+                        @foreach (var (url, icon, color, title, desc) in pages)
+                        {
+                            var isCurrentPage = HttpContext.Request.Path.Value?.StartsWith(url, StringComparison.OrdinalIgnoreCase) == true;
+                            <div class="col-md-6 col-xl-4">
+                                <a href="@url" class="text-decoration-none">
+                                    <div class="card border-0 @(isCurrentPage?"border-start border-3 border-primary shadow":"shadow-sm") h-100 py-2 px-3 d-flex flex-row align-items-center gap-2">
+                                        <i class="bi @icon text-@color fs-5 flex-shrink-0"></i>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold small">
+                                                @title
+                                                @if (isCurrentPage) { <span class="badge bg-primary ms-1">current</span> }
+                                            </div>
+                                            <div class="text-muted" style="font-size:.75rem">@desc</div>
+                                        </div>
+                                        <i class="bi bi-arrow-right text-muted flex-shrink-0"></i>
+                                    </div>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div><!-- /tabNav -->
+
+    </div><!-- /tab-content -->
+</main>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebarMenu').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+// Persist active tab
+(function(){
+    var saved = sessionStorage.getItem('settingsTab');
+    if (saved) {
+        var btn = document.querySelector('[data-bs-target="#' + saved + '"]');
+        if (btn) new bootstrap.Tab(btn).show();
+    }
+    document.querySelectorAll('#settingsTabs button').forEach(function(b){
+        b.addEventListener('shown.bs.tab', function(e){
+            sessionStorage.setItem('settingsTab', e.target.getAttribute('data-bs-target').replace('#',''));
+        });
+    });
+})();
+</script>
+</body>
+</html>

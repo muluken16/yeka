@@ -46,11 +46,9 @@ namespace CleaningManagmentSystem.Pages.Dashboard.Manager
         public IActionResult OnGet()
         {
             var userName = HttpContext.Session.GetString("UserName");
-            var userRole = HttpContext.Session.GetString("UserRole");
-            if (string.IsNullOrEmpty(userName) || userRole?.ToLower() != "manager")
-            {
+            var userRole = (HttpContext.Session.GetString("UserRole") ?? "").ToLower();
+            if (string.IsNullOrEmpty(userName) || userRole is not ("manager" or "superadmin" or "hr"))
                 return RedirectToPage("/Login");
-            }
 
             LoadDrivers();
             LoadVehicles();

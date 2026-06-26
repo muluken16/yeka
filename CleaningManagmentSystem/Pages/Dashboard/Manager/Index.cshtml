@@ -1,0 +1,277 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.Manager.IndexModel
+@{
+    Layout = "_ManagerLayout";
+    ViewData["Title"] = "Dashboard";
+    var greeting = DateTime.Now.Hour < 12 ? "Good morning" : DateTime.Now.Hour < 17 ? "Good afternoon" : "Good evening";
+}
+@section Styles {
+<style>
+    .scard { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:20px 18px; height:100%; transition:box-shadow .15s, transform .15s; }
+    .scard:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); transform:translateY(-2px); }
+    .scard .val { font-size:2rem; font-weight:900; line-height:1; }
+    .scard .lbl { font-size:.72rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.4px; margin-top:4px; }
+    .scard .ico { width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+    .ccard { background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; margin-bottom:24px; }
+    .ccard-head { padding:14px 18px; font-weight:700; font-size:.88rem; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px; }
+    .ccard table th { background:#f8fafc; font-size:.7rem; text-transform:uppercase; letter-spacing:.4px; color:#64748b; font-weight:700; padding:8px 14px !important; }
+    .ccard table td { font-size:.82rem; padding:9px 14px !important; border-color:#f1f5f9 !important; vertical-align:middle; }
+    .ccard table tr:last-child td { border-bottom:none !important; }
+    .sbadge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:.68rem;font-weight:700; }
+    .sbadge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.6;}
+    .s-pending { background:#fef3c7;color:#92400e; }
+    .pg-head { margin-bottom:24px; }
+    .pg-head h4 { font-size:1.35rem; font-weight:800; margin:0; }
+    .alert-banner { background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:12px; padding:12px 18px; margin-bottom:22px; display:flex; align-items:center; gap:14px; }
+</style>
+}
+
+<!-- Page header -->
+<div class="pg-head d-flex align-items-start justify-content-between flex-wrap gap-2">
+    <div>
+        <div class="text-muted small">@greeting, @Model.UserName 👋</div>
+        <h4>Manager Dashboard</h4>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/Dashboard/Manager/Approvals" class="btn btn-primary btn-sm rounded-pill px-3">
+            <i class="bi bi-check2-square me-1"></i>Approvals
+            @if (Model.PendingApprovals > 0) {
+                <span class="badge bg-warning text-dark ms-1">@Model.PendingApprovals</span>
+            }
+        </a>
+        <a href="/Dashboard/Manager/Reports" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-file-earmark-bar-graph me-1"></i>Reports
+        </a>
+    </div>
+</div>
+
+@if (Model.PendingApprovals > 0) {
+<div class="alert-banner">
+    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
+    <div class="flex-grow-1">
+        <div class="fw-bold" style="font-size:.85rem">@Model.PendingApprovals receipt@(Model.PendingApprovals==1?"":"s") waiting for approval</div>
+        <div class="text-muted" style="font-size:.75rem">Review and approve to keep the workflow moving.</div>
+    </div>
+    <a href="/Dashboard/Manager/Approvals" class="btn btn-sm btn-warning rounded-pill fw-semibold text-dark flex-shrink-0">Review →</a>
+</div>
+}
+
+<!-- Stats grid -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="scard">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="ico" style="background:#fef3c7;color:#d97706"><i class="bi bi-hourglass-split"></i></div>
+            </div>
+            <div class="val" style="color:#d97706">@Model.PendingApprovals</div>
+            <div class="lbl">Pending</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="scard">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="ico" style="background:#dbeafe;color:#2563eb"><i class="bi bi-receipt"></i></div>
+            </div>
+            <div class="val" style="color:#2563eb">@Model.TotalReceipts</div>
+            <div class="lbl">Total Receipts</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="scard">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="ico" style="background:#d1fae5;color:#059669"><i class="bi bi-bag-check"></i></div>
+            </div>
+            <div class="val" style="color:#059669">@Model.TotalKgToday.ToString("N0")</div>
+            <div class="lbl">Kg Today</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="scard">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="ico" style="background:#ede9fe;color:#7c3aed"><i class="bi bi-calendar-month"></i></div>
+            </div>
+            <div class="val" style="color:#7c3aed">@Model.TotalKgMonth.ToString("N0")</div>
+            <div class="lbl">Kg This Month</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="scard">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="ico" style="background:#cffafe;color:#0891b2"><i class="bi bi-people-fill"></i></div>
+            </div>
+            <div class="val" style="color:#0891b2">@Model.TotalEmployees</div>
+            <div class="lbl">Employees</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="scard">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="ico" style="background:#fce7f3;color:#db2777"><i class="bi bi-truck"></i></div>
+            </div>
+            <div class="val" style="color:#db2777">@Model.TotalVehicles</div>
+            <div class="lbl">Vehicles</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- Daily Kg Chart -->
+    <div class="col-lg-7">
+        <div class="ccard">
+            <div class="ccard-head">
+                <i class="bi bi-bar-chart-fill text-primary"></i>
+                Daily Collection — Last 14 Days
+                <span class="badge bg-light text-muted border ms-auto" style="font-size:.7rem">kg</span>
+            </div>
+            <div style="padding:16px">
+                @if (Model.DailyChart.Any()) {
+                    <canvas id="kgChart" height="130"></canvas>
+                } else {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-bar-chart fs-2 opacity-25 d-block mb-2"></i>
+                        No collection data for the last 14 days
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Receipt type breakdown -->
+        <div class="row g-3">
+            <div class="col-4">
+                <div class="ccard text-center py-3 px-2">
+                    <div class="fw-bold fs-4" style="color:#2563eb">@Model.MahberatCount</div>
+                    <div class="text-muted" style="font-size:.72rem;font-weight:600;text-transform:uppercase">Mahberat</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="ccard text-center py-3 px-2">
+                    <div class="fw-bold fs-4" style="color:#059669">@Model.OutsourceCount</div>
+                    <div class="text-muted" style="font-size:.72rem;font-weight:600;text-transform:uppercase">Outsource</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="ccard text-center py-3 px-2">
+                    <div class="fw-bold fs-4" style="color:#7c3aed">@Model.PrivateCount</div>
+                    <div class="text-muted" style="font-size:.72rem;font-weight:600;text-transform:uppercase">Private</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="col-lg-5">
+
+        <!-- Recent pending -->
+        <div class="ccard mb-4">
+            <div class="ccard-head">
+                <i class="bi bi-clock-history text-warning"></i> Recent Pending
+                <a href="/Dashboard/Manager/Approvals" class="ms-auto text-primary" style="font-size:.75rem;text-decoration:none;font-weight:600">View all →</a>
+            </div>
+            @if (Model.RecentPending.Any()) {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Entity</th><th>Driver</th><th>Kg</th><th>Type</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in Model.RecentPending) {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold" style="font-size:.8rem">@(((string?)r.entity_name ?? "")?.Length > 16 ? ((string)r.entity_name)[..16]+"…" : (string?)r.entity_name ?? "—")</div>
+                                    <div class="text-muted" style="font-size:.7rem">@r.wereda_name</div>
+                                </td>
+                                <td class="text-muted" style="font-size:.78rem">@(r.driver_name ?? "—")</td>
+                                <td class="fw-semibold" style="font-size:.8rem">@((decimal)(r.kilogram ?? 0m))kg</td>
+                                <td><span class="sbadge s-pending">@r.type</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            } else {
+                <div class="text-center py-4 text-muted" style="font-size:.82rem">
+                    <i class="bi bi-check2-all fs-2 opacity-25 d-block mb-1 text-success"></i>
+                    All receipts processed
+                </div>
+            }
+        </div>
+
+        <!-- Quick links -->
+        <div class="ccard">
+            <div class="ccard-head"><i class="bi bi-lightning-charge-fill text-warning"></i> Quick Links</div>
+            <div class="p-2">
+                @{
+                    var links = new[] {
+                        ("/Dashboard/Manager/Weredas",             "bi-geo-alt",              "#dbeafe", "#2563eb", "Weredas",         Model.TotalWeredas.ToString()),
+                        ("/Dashboard/Manager/Mahberats",           "bi-people",               "#d1fae5", "#059669", "Mahberats",       Model.TotalMahberats.ToString()),
+                        ("/Dashboard/Manager/Vehicles",            "bi-truck",                "#fce7f3", "#db2777", "Vehicles",        Model.TotalVehicles.ToString()),
+                        ("/Dashboard/Manager/Staff",               "bi-people-fill",          "#cffafe", "#0891b2", "Employees",       Model.TotalEmployees.ToString()),
+                        ("/Dashboard/Manager/Reports",             "bi-file-earmark-bar-graph","#ede9fe","#7c3aed", "Reports",         ""),
+                        ("/Dashboard/Manager/Approvals",           "bi-check2-square",        "#fef3c7", "#d97706", "Approvals",       Model.PendingApprovals > 0 ? Model.PendingApprovals+"!" : ""),
+                    };
+                }
+                @foreach (var (url, icon, bg, color, label, badge) in links) {
+                    <a href="@url" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;text-decoration:none;color:#0f172a;transition:background .12s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        <div style="width:34px;height:34px;border-radius:9px;background:@bg;color:@color;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0">
+                            <i class="bi @icon"></i>
+                        </div>
+                        <span style="font-size:.84rem;font-weight:600;flex:1">@label</span>
+                        @if (!string.IsNullOrEmpty(badge)) {
+                            <span class="badge rounded-pill" style="background:@bg;color:@color;font-size:.7rem">@badge</span>
+                        }
+                        <i class="bi bi-chevron-right text-muted" style="font-size:.7rem"></i>
+                    </a>
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+@if (Model.DailyChart.Any()) {
+    var labels = string.Join(",", Model.DailyChart.Select(r => $"'{r.Label}'"));
+    var values = string.Join(",", Model.DailyChart.Select(r => r.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));
+    <text>
+    (function() {
+        var ctx = document.getElementById('kgChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [@Html.Raw(labels)],
+                datasets: [{
+                    label: 'Kg Collected',
+                    data: [@Html.Raw(values)],
+                    backgroundColor: 'rgba(37,99,235,.15)',
+                    borderColor: '#2563eb',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return ctx.parsed.y + ' kg'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { font: { size: 11 }, callback: function(v) { return v + ' kg'; } }
+                    }
+                }
+            }
+        });
+    })();
+    </text>
+}
+</script>
+}
