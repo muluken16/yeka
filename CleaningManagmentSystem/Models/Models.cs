@@ -17,6 +17,8 @@ namespace CleaningManagmentSystem.Models
         public int? CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        // 1 = user must change their password on next login
+        public int IsDefaultPassword { get; set; } = 0;
     }
 
     public class Service

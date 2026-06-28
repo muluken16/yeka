@@ -31,36 +31,18 @@
                 <span class="nav-label ms-2">Dashboard</span>
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link @(IsActive("/Dashboard/WeredaMahberat/PayrollReport") ? "active" : "")" href="/Dashboard/WeredaMahberat/PayrollReport" title="Payroll Report">
-                <i class="bi bi-cash-stack flex-shrink-0"></i>
-                <span class="nav-label ms-2">Payroll Report</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(IsActive("/Dashboard/WeredaMahberat/Capital") ? "active" : "")" href="/Dashboard/WeredaMahberat/Capital" title="Capital">
-                <i class="bi bi-bank flex-shrink-0"></i>
-                <span class="nav-label ms-2">Capital</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(IsActive("/Dashboard/WeredaMahberat/Gallery") ? "active" : "")" href="/Dashboard/WeredaMahberat/Gallery" title="Gallery">
-                <i class="bi bi-images flex-shrink-0"></i>
-                <span class="nav-label ms-2">Gallery</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link @(IsActive("/Dashboard/WeredaMahberat/Contact") ? "active" : "")" href="/Dashboard/WeredaMahberat/Contact" title="Contact">
-                <i class="bi bi-envelope flex-shrink-0"></i>
-                <span class="nav-label ms-2">Contact</span>
-            </a>
-        </li>
 
         <!-- Divider -->
         <li class="nav-item">
             <div style="border-top:1px solid rgba(255,255,255,.15);margin:6px 12px"></div>
         </li>
 
+        <li class="nav-item">
+            <a class="nav-link @(IsActive("/Dashboard/WeredaMahberat/ReceiptApprovals") ? "active" : "")" href="/Dashboard/WeredaMahberat/ReceiptApprovals" title="Receipt Approvals">
+                <i class="bi bi-check2-circle flex-shrink-0"></i>
+                <span class="nav-label ms-2">Receipt Approvals</span>
+            </a>
+        </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/WeredaMahberat/TransportRequests") ? "active" : "")" href="/Dashboard/WeredaMahberat/TransportRequests" title="Transport Requests">
                 <i class="bi bi-truck flex-shrink-0"></i>
@@ -78,19 +60,21 @@
             </a>
         </li>
 
-        <li class="nav-item mt-3">
+
+        <li class="nav-item mt-3 border-top pt-2">
             <a class="nav-link @(IsActive("/Dashboard/Profile")?"active":"")" href="/Dashboard/Profile" title="My Profile">
                 <i class="bi bi-person-circle flex-shrink-0"></i>
                 <span class="nav-label ms-2">My Profile</span>
             </a>
         </li>
-        <li class="nav-item mt-3">
+        <li class="nav-item">
             <a class="nav-link text-warning fw-semibold" href="/Login?logout=1" title="Logout">
                 <i class="bi bi-box-arrow-left flex-shrink-0"></i>
                 <span class="nav-label ms-2">Logout</span>
             </a>
         </li>
     </ul>
+
 </div>
 
 <script>

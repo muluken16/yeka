@@ -204,7 +204,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.HR
             string? NationalId, string? BloodType, string? DisabilityStatus,
             string? WorkLocation, string? Notes,
             IFormFile? PhotoFile,
-            List<IFormFile>? EduFiles, List<string>? EduFileLabels)
+            List<IFormFile>? EduFiles, List<string>? EduFileLabels, List<string>? EduFileTypes)
         {
             if (!IsAuthorized()) return RedirectToPage("/Login");
 
@@ -270,7 +270,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.HR
                     });
 
                 // Save education documents
-                await SaveDocumentsAsync(db, empId, EduFiles, EduFileLabels, "Education");
+                await SaveDocumentsAsync(db, empId, EduFiles, EduFileLabels, EduFileTypes);
 
                 TempData["Success"] = $"Employee {FirstName} {LastName} registered successfully (Code: {code}).";
             }
@@ -298,7 +298,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.HR
             string? NationalId, string? BloodType, string? DisabilityStatus,
             string? WorkLocation, string? Notes,
             string? ExistingPhotoUrl, IFormFile? PhotoFile,
-            List<IFormFile>? EduFiles, List<string>? EduFileLabels)
+            List<IFormFile>? EduFiles, List<string>? EduFileLabels, List<string>? EduFileTypes)
         {
             if (!IsAuthorized()) return RedirectToPage("/Login");
 
@@ -349,7 +349,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.HR
                     });
 
                 // Append new education documents (existing ones are kept)
-                await SaveDocumentsAsync(db, Id, EduFiles, EduFileLabels, "Education");
+                await SaveDocumentsAsync(db, Id, EduFiles, EduFileLabels, EduFileTypes);
 
                 TempData["Success"] = $"Employee {FirstName} {LastName} updated successfully.";
             }
@@ -408,9 +408,10 @@ namespace CleaningManagmentSystem.Pages.Dashboard.HR
         }
 
         private async Task SaveDocumentsAsync(MySqlConnection db, int empId,
-            List<IFormFile>? files, List<string>? labels, string docType)
+            List<IFormFile>? files, List<string>? labels, object? docTypes)
         {
             if (files == null || files.Count == 0) return;
+            var typeList = docTypes as List<string>;
             for (int i = 0; i < files.Count; i++)
             {
                 var f = files[i];
@@ -418,6 +419,9 @@ namespace CleaningManagmentSystem.Pages.Dashboard.HR
                 var label   = (labels != null && i < labels.Count && !string.IsNullOrWhiteSpace(labels[i]))
                               ? labels[i]
                               : Path.GetFileNameWithoutExtension(f.FileName);
+                var docType = (typeList != null && i < typeList.Count && !string.IsNullOrWhiteSpace(typeList[i]))
+                              ? typeList[i]
+                              : "Education";
                 var fileUrl = await SaveUploadAsync(f, "employee-docs");
                 db.Execute(@"INSERT INTO employee_documents
                     (employee_id, doc_label, doc_type, file_name, file_url, file_size_kb, uploaded_at)

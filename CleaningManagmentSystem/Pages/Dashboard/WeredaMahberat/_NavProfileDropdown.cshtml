@@ -6,7 +6,7 @@
     string _dashUrl = "/Dashboard/WeredaMahberat";
 }
 <div class="dropdown">
-    <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+    <button class="profile-btn" data-bs-toggle="dropdown" aria-expanded="false">
         <span class="p-wrap">
             @if (!string.IsNullOrEmpty(_pPhoto))
             {
@@ -20,8 +20,6 @@
             }
             <span class="p-dot"></span>
         </span>
-        <span class="p-name">@_pUser</span>
-        <i class="bi bi-chevron-down"></i>
     </button>
     <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
         <!-- Header -->

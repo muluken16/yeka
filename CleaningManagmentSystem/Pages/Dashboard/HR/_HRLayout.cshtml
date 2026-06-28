@@ -23,7 +23,7 @@
                 @{ var _hrRole  = Context.Session.GetString("UserRole")  ?? "HR"; }
                 @{ var _hrInit  = (userName?.Length > 0 ? userName[0].ToString().ToUpper() : "H"); }
                 <div class="dropdown">
-                    <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="profile-btn" data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="p-wrap">
                             @if (!string.IsNullOrEmpty(_hrPhoto))
                             {
@@ -34,8 +34,6 @@
                             else { <span class="p-initial">@_hrInit</span> }
                             <span class="p-dot"></span>
                         </span>
-                        <span class="p-name">@userName</span>
-                        <i class="bi bi-chevron-down"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
                         <li>

@@ -58,6 +58,14 @@ namespace CleaningManagmentSystem.Controllers
         /// </summary>
         private static string NormalizeRole(string raw) => RoleHelper.NormalizeRole(raw);
 
+        [HttpGet("dump-users")]
+        public async Task<IActionResult> DumpUsers()
+        {
+            using var connection = CreateConnection();
+            var users = await connection.QueryAsync("SELECT email, role, password, is_active FROM users");
+            return Ok(users);
+        }
+
         [HttpGet("weredas")]
         public async Task<IActionResult> GetWeredas()
         {
@@ -572,6 +580,32 @@ namespace CleaningManagmentSystem.Controllers
                 new { UserId = userId });
             return Ok(receipts);
         }
+
+        // ── Settings: Change Password ────────────────────────────
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+        {
+            using var connection = CreateConnection();
+            var count = await connection.ExecuteAsync(
+                "UPDATE users SET password = @NewPassword, is_default_password = 0 WHERE id = @Id AND password = @OldPassword",
+                new { NewPassword = req.NewPassword, Id = req.UserId, OldPassword = req.OldPassword });
+
+            if (count == 0) return BadRequest(new { success = false, message = "Incorrect old password." });
+            return Ok(new { success = true, message = "Password updated successfully." });
+        }
+
+        // ── Settings: Update Profile ────────────────────────────
+        [HttpPost("update-profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
+        {
+            using var connection = CreateConnection();
+            var count = await connection.ExecuteAsync(
+                "UPDATE users SET phone = @Phone WHERE id = @Id",
+                new { Phone = req.Phone, Id = req.UserId });
+
+            if (count == 0) return BadRequest(new { success = false, message = "User not found." });
+            return Ok(new { success = true, message = "Profile updated successfully." });
+        }
     }
 
     public class LoginRequest
@@ -627,5 +661,18 @@ namespace CleaningManagmentSystem.Controllers
         public string  Time       { get; set; } = "";
         public string? Notes      { get; set; }
         public string? ImageUrl   { get; set; }
+    }
+
+    public class ChangePasswordRequest
+    {
+        public int UserId { get; set; }
+        public string OldPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class UpdateProfileRequest
+    {
+        public int UserId { get; set; }
+        public string Phone { get; set; } = string.Empty;
     }
 }

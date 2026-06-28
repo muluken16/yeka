@@ -14,6 +14,8 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
         public string SuccessMessage { get; set; } = "";
         public string ErrorMessage   { get; set; } = "";
         public string SearchQuery    { get; set; } = "";
+        public string RoleFilter     { get; set; } = "";
+        public List<dynamic> UnlinkedCompanies { get; set; } = new();
 
         public static readonly HashSet<string> MobileRoles = new(StringComparer.OrdinalIgnoreCase)
             { "driver", "outsource", "PrivateCompanyRep", "manager" };
@@ -24,6 +26,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
         // GET only — all mutations go through /admin/users/* controller actions
         public IActionResult OnGet(
             [FromQuery] string? searchQuery = null,
+            [FromQuery] string? roleFilter  = null,
             [FromQuery] string? ok = null,
             [FromQuery] string? err = null)
         {
@@ -31,6 +34,7 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
                 return RedirectToPage("/Login");
 
             SearchQuery    = searchQuery ?? "";
+            RoleFilter     = roleFilter  ?? "";
             SuccessMessage = ok  ?? "";
             ErrorMessage   = err ?? "";
 
@@ -43,13 +47,26 @@ namespace CleaningManagmentSystem.Pages.Dashboard.SuperAdmin
             try
             {
                 using var db = new MySqlConnection(_cs);
-                UsersList = string.IsNullOrEmpty(SearchQuery)
-                    ? db.Query<UserModel>("SELECT * FROM users ORDER BY id DESC").ToList()
-                    : db.Query<UserModel>(
-                        @"SELECT * FROM users
-                          WHERE name LIKE @s OR email LIKE @s OR phone LIKE @s OR role LIKE @s
-                          ORDER BY id DESC",
-                        new { s = $"%{SearchQuery}%" }).ToList();
+
+                var conditions = new List<string>();
+                var parameters = new DynamicParameters();
+
+                if (!string.IsNullOrEmpty(SearchQuery))
+                {
+                    conditions.Add("(name LIKE @s OR email LIKE @s OR phone LIKE @s)");
+                    parameters.Add("s", $"%{SearchQuery}%");
+                }
+                if (!string.IsNullOrEmpty(RoleFilter))
+                {
+                    conditions.Add("role = @r");
+                    parameters.Add("r", RoleFilter);
+                }
+
+                var where = conditions.Any() ? "WHERE " + string.Join(" AND ", conditions) : "";
+                UsersList = db.Query<UserModel>(
+                    $"SELECT * FROM users {where} ORDER BY id DESC", parameters).ToList();
+
+                UnlinkedCompanies = db.Query("SELECT id, company_name, email, contact_person, phone FROM private_cleaning_companies WHERE rep_user_id IS NULL OR rep_user_id = 0 ORDER BY company_name").ToList();
             }
             catch
             {

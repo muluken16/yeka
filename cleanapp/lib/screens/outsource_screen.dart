@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/auth_service.dart';
@@ -181,6 +182,11 @@ class _OutsourceScreenState extends State<OutsourceScreen>
               )
             : null,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () => context.push('/settings'),
+            tooltip: 'Settings',
+          ),
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _loadAll),
         ],
       ),

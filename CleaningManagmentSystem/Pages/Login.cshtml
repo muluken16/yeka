@@ -53,8 +53,8 @@
         <form id="loginForm" method="post" asp-page="/Login">
             @Html.AntiForgeryToken()
             <div class="mb-3">
-                <label class="form-label" data-i18n="login_email_label">Email</label>
-                <input type="email" id="loginEmail" name="Email" class="form-control" placeholder="Enter your email" data-i18n-placeholder="login_email_placeholder" required>
+                <label class="form-label">Username</label>
+                <input type="text" id="loginEmail" name="Email" class="form-control" placeholder="Enter your username (e.g. name@yeka)" required>
             </div>
             <div class="mb-3">
                 <label class="form-label" data-i18n="login_password_label">Password</label>

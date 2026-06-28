@@ -34,7 +34,7 @@ namespace CleaningManagmentSystem.Controllers
             [FromForm] string? Phone,
             [FromForm] string? Address,
             [FromForm] int? EmployeeId,
-            [FromForm] bool IsActive = true)
+            [FromForm] bool IsActive = false)
         {
             var check = RequireAdmin(); if (check != null) return check;
 
@@ -103,17 +103,13 @@ namespace CleaningManagmentSystem.Controllers
             [FromForm] string Email,
             [FromForm] string Password,
             [FromForm] string? Phone,
-            [FromForm] string? Address,
-            [FromForm] string CompanyName,
-            [FromForm] string? LicenseNumber,
-            [FromForm] string? CompanyAddress,
-            [FromForm] string? ServicesOffered)
+            [FromForm] int CompanyId)
         {
             var check = RequireAdmin(); if (check != null) return check;
 
             if (string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Email) ||
-                string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(CompanyName))
-                return Redirect("/Dashboard/SuperAdmin/Users?err=Name+Email+Password+and+CompanyName+are+required");
+                string.IsNullOrWhiteSpace(Password) || CompanyId <= 0)
+                return Redirect("/Dashboard/SuperAdmin/Users?err=Name+Email+Password+and+Company+are+required");
 
             try
             {
@@ -122,24 +118,21 @@ namespace CleaningManagmentSystem.Controllers
 
                 db.Execute(
                     @"INSERT INTO users (name,email,password,role,phone,address,is_active,created_by,created_at,updated_at)
-                      VALUES (@n,@e,@pw,'PrivateCompanyRep',@ph,@ad,1,@cb,NOW(),NOW())",
+                      VALUES (@n,@e,@pw,'PrivateCompanyRep',@ph,'',1,@cb,NOW(),NOW())",
                     new { n = Name, e = Email, pw = Password,
-                          ph = Phone ?? "", ad = Address ?? "", cb = adminId });
+                          ph = Phone ?? "", cb = adminId });
 
                 var newId = (int)db.QueryFirst<long>("SELECT LAST_INSERT_ID()");
 
                 db.Execute(
-                    @"INSERT INTO private_cleaning_companies
-                        (company_name,license_number,contact_person,phone,email,
-                         address,services_offered,status,is_active,rep_user_id,created_at,updated_at)
-                      VALUES
-                        (@cn,@ln,@cp,@ph,@em,@ca,@so,'Active',1,@rid,NOW(),NOW())",
-                    new { cn = CompanyName, ln = LicenseNumber ?? "", cp = Name,
-                          ph = Phone ?? "", em = Email,
-                          ca = CompanyAddress ?? "", so = ServicesOffered ?? "",
-                          rid = newId });
+                    @"UPDATE private_cleaning_companies
+                      SET rep_user_id = @rid, updated_at = NOW()
+                      WHERE id = @cid",
+                    new { rid = newId, cid = CompanyId });
 
-                return Redirect($"/Dashboard/SuperAdmin/Users?ok={Uri.EscapeDataString($"Private rep '{Name}' ({CompanyName}) registered")}");
+                var companyName = db.QueryFirstOrDefault<string>("SELECT company_name FROM private_cleaning_companies WHERE id=@cid", new { cid = CompanyId }) ?? "Company";
+
+                return Redirect($"/Dashboard/SuperAdmin/Users?ok={Uri.EscapeDataString($"Private rep '{Name}' ({companyName}) registered")}");
             }
             catch (Exception ex)
             {
@@ -158,7 +151,7 @@ namespace CleaningManagmentSystem.Controllers
             [FromForm] string? Phone,
             [FromForm] string? Address,
             [FromForm] string? Password,
-            [FromForm] bool IsActive = true)
+            [FromForm] bool IsActive = false)
         {
             var check = RequireAdmin(); if (check != null) return check;
 
@@ -188,7 +181,8 @@ namespace CleaningManagmentSystem.Controllers
             }
             catch (Exception ex)
             {
-                return Redirect($"/Dashboard/SuperAdmin/Users?err={Uri.EscapeDataString(ex.Message)}");
+                var msg = ex.Message.Contains("Duplicate") ? $"Email '{Email}' already exists" : ex.Message;
+                return Redirect($"/Dashboard/SuperAdmin/Users?err={Uri.EscapeDataString(msg)}");
             }
         }
 
@@ -200,6 +194,25 @@ namespace CleaningManagmentSystem.Controllers
             using var db = new MySqlConnection(_cs);
             db.Execute("UPDATE users SET is_active = 1 - is_active,updated_at=NOW() WHERE id=@id", new { id = UserId });
             return Redirect("/Dashboard/SuperAdmin/Users?ok=Status+updated");
+        }
+
+        // ── POST /admin/users/delete ────────────────────────────────────────
+        [HttpPost("delete")]
+        public IActionResult Delete([FromForm] int UserId)
+        {
+            var check = RequireAdmin(); if (check != null) return check;
+            try
+            {
+                using var db = new MySqlConnection(_cs);
+                var name = db.QueryFirstOrDefault<string>(
+                    "SELECT name FROM users WHERE id=@id", new { id = UserId }) ?? "User";
+                db.Execute("DELETE FROM users WHERE id=@id", new { id = UserId });
+                return Redirect($"/Dashboard/SuperAdmin/Users?ok={Uri.EscapeDataString($"'{name}' has been deleted.")}");
+            }
+            catch (Exception ex)
+            {
+                return Redirect($"/Dashboard/SuperAdmin/Users?err={Uri.EscapeDataString(ex.Message)}");
+            }
         }
 
         // ── POST /admin/users/deactivate ────────────────────────────────────

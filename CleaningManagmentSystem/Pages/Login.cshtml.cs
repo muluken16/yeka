@@ -54,7 +54,7 @@ namespace CleaningManagmentSystem.Pages
                 using var connection = new MySqlConnection(_connectionString);
                 connection.Open();
                 user = connection.QueryFirstOrDefault<User>(
-                    "SELECT id, name, email, password, role FROM users WHERE email = @Email AND is_active = 1",
+                    "SELECT id, name, email, password, role, is_default_password FROM users WHERE email = @Email AND is_active = 1",
                     new { Email });
             }
             catch (Exception ex)
@@ -65,7 +65,7 @@ namespace CleaningManagmentSystem.Pages
 
             if (user == null || user.Password != Password)
             {
-                ErrorMessage = "Invalid email or password";
+                ErrorMessage = "Invalid username or password";
                 return Page();
             }
 
@@ -84,6 +84,20 @@ namespace CleaningManagmentSystem.Pages
             }
             catch { HttpContext.Session.SetString("UserPhoto", ""); }
 
+            // ── Force password change for any default/flagged password ──
+            var defaultPasswords = new[] { "Yeka@1234", "Yeka@123", "admin123", "hr123",
+                                            "manager123", "staff123", "driver123",
+                                            "dispatch123", "outsource123", "private123" };
+            bool isDefault = defaultPasswords.Contains(user.Password)
+                          || (user.IsDefaultPassword == 1);
+
+            if (isDefault)
+            {
+                HttpContext.Session.SetString("MustChangePassword", "1");
+                return RedirectToPage("/ChangePassword");
+            }
+
+            HttpContext.Session.SetString("MustChangePassword", "0");
             return RedirectToRolePage(user.Role);
         }
 

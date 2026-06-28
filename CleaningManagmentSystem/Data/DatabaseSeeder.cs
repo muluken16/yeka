@@ -325,16 +325,9 @@ CREATE TABLE IF NOT EXISTS transport_request_logs (
 
             var defaultAccounts = new[]
             {
-                // ( name,                email,                        password,       role )
-                ( "Super Admin",          "superadmin@yeka.et",         "admin123",     "superadmin"       ),
-                ( "HR Admin",             "hr@yeka.et",                 "hr123",        "hr"               ),
-                ( "Operations Manager",   "manager@yeka.et",            "manager123",   "manager"          ),
-                ( "Staff Member",         "staff@yeka.et",              "staff123",     "staff"            ),
-                ( "Driver Vehicle 01",    "driver1@yeka.et",            "driver123",    "driver"           ),
-                ( "Dispatch Officer",     "dispatch@yeka.et",           "dispatch123",  "dispatchofficer"  ),
-                ( "Wereda Mahberat",      "wereda@yeka.et",             "Wereda@123",   "wereda_mahberat"  ),
-                ( "Outsource Demo",       "outsource@yeka.et",          "outsource123", "outsource"        ),
-                ( "Private Co. Demo",     "private@yeka.et",            "private123",   "PrivateCompanyRep"),
+                // ( name,          email,                 password,   role )
+                ( "Super Admin",    "superadmin@yeka.et",  "admin123", "superadmin" ),
+                ( "HR Admin",       "hr@yeka.et",          "hr123",    "hr"         ),
             };
 
             foreach (var (name, email, password, role) in defaultAccounts)

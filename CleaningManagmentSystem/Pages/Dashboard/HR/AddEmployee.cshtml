@@ -1,0 +1,248 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.HR.AddEmployeeModel
+@{
+    Layout = "_HRLayout";
+    ViewData["Title"] = "Add Employee";
+}
+@section Styles {
+<style>
+.field-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6c757d;margin-bottom:.3rem}
+.input-modern{border-radius:.6rem;border:1.5px solid #e9ecef;padding:.65rem .9rem;font-size:.9rem;transition:all .2s;background:#f8f9fa}
+.input-modern:focus{border-color:#86b7fe;background:#fff;box-shadow:0 0 0 4px rgba(13,110,253,.1)}
+.section-divider{font-size:1rem;font-weight:800;color:#2b2b2b;border-bottom:2px dashed #f0f0f0;padding-bottom:.5rem;margin-top:2.5rem;margin-bottom:1.5rem}
+.form-card{border-radius:1rem;border:none;box-shadow:0 10px 30px rgba(0,0,0,0.05);background:#fff;padding:3rem;}
+</style>
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <a href="/Dashboard/HR/Employees" class="text-decoration-none text-muted mb-2 d-inline-block"><i class="bi bi-arrow-left me-1"></i>Back to Employees</a>
+        <h4 class="fw-bold mb-1"><i class="bi bi-person-plus-fill text-primary me-2"></i>Register New Employee</h4>
+        <p class="text-muted mb-0 small">Fill in the details below to onboard a new team member.</p>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="formAddEmp">
+<div class="form-card mb-5">
+
+    <div id="addValidationAlertContainer"></div>
+    
+    <div class="section-divider mt-0 text-primary"><i class="bi bi-person me-2"></i>1. Personal Information</div>
+    
+    <div class="row g-3 mb-3 align-items-center">
+        <div class="col-auto">
+            <div id="aPhotoPreviewWrap" class="rounded-circle border border-2 border-primary d-flex align-items-center justify-content-center overflow-hidden bg-light"
+                 style="width:90px;height:90px;font-size:2rem;color:#adb5bd;">
+                <i class="bi bi-person-circle"></i>
+            </div>
+        </div>
+        <div class="col">
+            <label class="field-label">Upload Photo (JPG / PNG, max 2 MB)</label>
+            <input type="file" name="PhotoFile" id="aPhotoFile" accept="image/*" class="form-control input-modern" style="max-width: 400px;">
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><label class="field-label">First Name *</label><input type="text" name="FirstName" class="form-control input-modern" required></div>
+        <div class="col-md-4"><label class="field-label">Last Name *</label><input type="text" name="LastName" class="form-control input-modern" required></div>
+        <div class="col-md-4"><label class="field-label">Middle Name</label><input type="text" name="MiddleName" class="form-control input-modern"></div>
+        <div class="col-md-3"><label class="field-label">Gender</label>
+            <select name="Gender" class="form-select input-modern"><option value="">—</option><option>Male</option><option>Female</option></select></div>
+        <div class="col-md-3"><label class="field-label">Date of Birth</label><input type="date" name="DateOfBirth" class="form-control input-modern" max="@DateTime.Today.AddYears(-18).ToString("yyyy-MM-dd")"></div>
+        <div class="col-md-3"><label class="field-label">Nationality</label><input type="text" name="Nationality" class="form-control input-modern" value="Ethiopian"></div>
+        <div class="col-md-3"><label class="field-label">Marital Status</label>
+            <select name="MaritalStatus" class="form-select input-modern"><option value="">—</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select></div>
+        <div class="col-md-3">
+            <label class="field-label">Religion</label>
+            <select name="Religion" class="form-select input-modern">
+                <option value="">—</option><option>Orthodox</option><option>Muslim</option><option>Protestant</option><option>Catholic</option><option>Other</option>
+            </select>
+        </div>
+        <div class="col-md-3"><label class="field-label">Blood Type</label>
+            <select name="BloodType" class="form-select input-modern"><option value="">—</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+        <div class="col-md-3"><label class="field-label">National ID</label><input type="text" name="NationalId" class="form-control input-modern" placeholder="Kebele / National ID"></div>
+        <div class="col-md-3"><label class="field-label">Disability Status</label>
+            <select name="DisabilityStatus" class="form-select input-modern"><option value="None">None</option><option>Visual</option><option>Hearing</option><option>Physical</option><option>Cognitive</option><option>Other</option></select></div>
+        <div class="col-md-6"><label class="field-label">Phone Number (Optional)</label><input type="text" name="PhoneNumber" id="aPhone" class="form-control input-modern" placeholder="e.g. 0911000000"></div>
+        <div class="col-md-6"><label class="field-label">Email Address (Optional)</label><input type="email" name="EmailAddress" id="aEmail" class="form-control input-modern" placeholder="employee@example.com"></div>
+    </div>
+    
+    <div class="section-divider text-primary"><i class="bi bi-geo-alt me-2"></i>Address & Contact</div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="field-label">Region</label>
+            <select name="Region" class="form-select input-modern">
+                <option value="">— Select Region —</option>
+                <option>Addis Ababa</option><option>Afar</option><option>Amhara</option><option>Benishangul-Gumuz</option>
+                <option>Dire Dawa</option><option>Gambela</option><option>Harari</option><option>Oromia</option>
+                <option>Sidama</option><option>Somali</option><option>South West Ethiopia</option><option>SNNPR</option>
+            </select>
+        </div>
+        <div class="col-md-4"><label class="field-label">City</label><input type="text" name="City" class="form-control input-modern"></div>
+        <div class="col-md-4">
+            <label class="field-label">Subcity</label>
+            <select name="Subcity" class="form-select input-modern">
+                <option value="">— Select Subcity (A.A.) —</option>
+                <option>Addis Ketema</option><option>Akaky Kaliti</option><option>Arada</option>
+                <option>Bole</option><option>Gulele</option><option>Kirkos</option>
+                <option>Kolfe Keranio</option><option>Lemi Kura</option><option>Lideta</option>
+                <option>Nifas Silk-Lafto</option><option>Yeka</option>
+            </select>
+        </div>
+        <div class="col-12"><label class="field-label">Woreda / Kebele / House No.</label><input type="text" name="Address" class="form-control input-modern" placeholder="e.g. Woreda 03, Kebele 05, H.No 123"></div>
+        
+        <div class="col-md-4 mt-4"><label class="field-label">Emergency Contact 1</label><input type="text" name="EmergencyContact" class="form-control input-modern" placeholder="Name"></div>
+        <div class="col-md-4 mt-4"><label class="field-label">Emergency Phone 1</label><input type="text" name="EmergencyContactPhone" class="form-control input-modern" placeholder="Phone"></div>
+        <div class="col-md-4 mt-4"><label class="field-label">Relation 1</label><input type="text" name="EmergencyContactRelation" class="form-control input-modern" placeholder="e.g. Spouse"></div>
+        
+        <div class="col-md-4"><label class="field-label">Emergency Contact 2</label><input type="text" name="SecondEmergencyContact" class="form-control input-modern" placeholder="Name"></div>
+        <div class="col-md-4"><label class="field-label">Emergency Phone 2</label><input type="text" name="SecondEmergencyPhone" class="form-control input-modern" placeholder="Phone"></div>
+        <div class="col-md-4"><label class="field-label">Relation 2</label><input type="text" name="SecondEmergencyRelation" class="form-control input-modern" placeholder="e.g. Sibling"></div>
+    </div>
+    
+    <div class="section-divider text-primary"><i class="bi bi-briefcase me-2"></i>2. Employment Details</div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><label class="field-label">Department *</label>
+            <select name="Department" class="form-select input-modern" required>
+                <option value="">— Select Department —</option>
+                <option>Operations</option><option>Finance</option><option>HR</option>
+                <option>Logistics</option><option>IT</option><option>Administration</option>
+            </select>
+        </div>
+        <div class="col-md-4"><label class="field-label">Position / Title *</label><input type="text" name="Position" class="form-control input-modern" required></div>
+        <div class="col-md-4"><label class="field-label">Job Grade</label><input type="text" name="JobGrade" class="form-control input-modern" placeholder="e.g. G5, Senior"></div>
+        <div class="col-md-4"><label class="field-label">Employment Type</label>
+            <select name="EmploymentType" class="form-select input-modern"><option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Intern</option></select></div>
+        <div class="col-md-4"><label class="field-label">Hire Date *</label>
+            <input type="date" name="HireDate" class="form-control input-modern" required value="@DateTime.Today.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")"></div>
+        <div class="col-md-4"><label class="field-label">Contract End Date</label><input type="date" name="ContractEndDate" class="form-control input-modern"></div>
+        <div class="col-md-8"><label class="field-label">Work Location / Branch</label><input type="text" name="WorkLocation" class="form-control input-modern" placeholder="e.g. Head Office, Bole Branch"></div>
+        <div class="col-12"><label class="field-label">Notes / Remarks</label><textarea name="Notes" class="form-control input-modern" rows="2" placeholder="Any additional notes about this employee..."></textarea></div>
+    </div>
+    
+    <div class="section-divider text-primary"><i class="bi bi-mortarboard me-2"></i>3. Education & Documents</div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6"><label class="field-label">Highest Education</label>
+            <select name="HighestEducation" class="form-select input-modern"><option value="">—</option><option>High School</option><option>Diploma</option><option>Bachelor's Degree</option><option>Master's Degree</option><option>PhD</option></select></div>
+        <div class="col-md-6"><label class="field-label">Field of Study</label><input type="text" name="FieldOfStudy" class="form-control input-modern"></div>
+        <div class="col-md-8"><label class="field-label">Institution / University</label><input type="text" name="Institution" class="form-control input-modern"></div>
+        <div class="col-md-4"><label class="field-label">Graduation Year</label><input type="number" name="GraduationYear" class="form-control input-modern" min="1950" max="@DateTime.Now.Year"></div>
+        <div class="col-12"><label class="field-label">Skills / Certifications</label><textarea name="Skills" class="form-control input-modern" rows="3" placeholder="List key skills, certificates, or languages..."></textarea></div>
+    </div>
+    
+    <div class="mb-4">
+        <label class="field-label d-block">Employee Documents <small class="text-muted fw-normal text-none">(PDF, Word, JPG, PNG — max 5 MB each)</small></label>
+        <div id="aEduFilesContainer" class="d-flex flex-column gap-2 mb-2">
+            <div class="edu-file-row border rounded-3 p-2 bg-light d-flex flex-wrap gap-2 align-items-center">
+                <select name="EduFileTypes" class="form-select input-modern" style="max-width:160px">
+                    <option value="Education">🎓 Education</option>
+                    <option value="ID">🪪 ID / Kebele</option>
+                    <option value="Contract">📄 Contract</option>
+                    <option value="Certificate">🏅 Certificate</option>
+                    <option value="Other">📎 Other</option>
+                </select>
+                <input type="text" name="EduFileLabels" class="form-control input-modern" placeholder="File label (e.g. Degree)" style="max-width:200px">
+                <input type="file" name="EduFiles" class="form-control input-modern" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="max-width:300px">
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" style="display:none" title="Remove"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+        <button type="button" id="aAddEduFile" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="bi bi-plus-circle me-1"></i>Add Another File
+        </button>
+    </div>
+
+    <div class="section-divider text-primary"><i class="bi bi-cash-coin me-2"></i>4. Financial Details</div>
+    <div class="row g-3">
+        <div class="col-md-6"><label class="field-label">Basic Salary (ETB)</label><input type="number" name="Salary" class="form-control input-modern" step="0.01" min="0" value="0"></div>
+        <div class="col-md-6"><label class="field-label">Bank Name</label><input type="text" name="BankName" class="form-control input-modern" placeholder="e.g. CBE, Awash, Dashen"></div>
+        <div class="col-md-6"><label class="field-label">Bank Account Number</label><input type="text" name="BankAccount" class="form-control input-modern"></div>
+        <div class="col-md-6"><label class="field-label">Tax ID (TIN)</label><input type="text" name="TaxId" class="form-control input-modern"></div>
+        <div class="col-md-6"><label class="field-label">Pension ID</label><input type="text" name="PensionId" class="form-control input-modern"></div>
+    </div>
+    
+    <div class="d-flex justify-content-end mt-5 pt-4 border-top">
+        <a href="/Dashboard/HR/Employees" class="btn btn-light rounded-pill px-4 fw-bold text-secondary border shadow-sm me-3">Cancel</a>
+        <button type="button" id="addBtnSubmit" class="btn btn-success rounded-pill px-5 shadow-lg fw-bold" onclick="validateAndSubmitAdd()"><i class="bi bi-check2-circle me-1"></i> Register Employee</button>
+    </div>
+</div>
+</form>
+
+@section Scripts {
+<script>
+function showValidationError(msg) {
+    var existing = document.getElementById('addValidationAlert');
+    if (existing) existing.remove();
+    var alert = document.createElement('div');
+    alert.id = 'addValidationAlert';
+    alert.className = 'alert alert-danger d-flex align-items-center gap-2 rounded-3 mt-2 mb-4';
+    alert.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i><span>' + msg + '</span>';
+    document.getElementById('addValidationAlertContainer').appendChild(alert);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => { if (alert.parentNode) alert.remove(); }, 5000);
+}
+
+function validateAndSubmitAdd() {
+    var fn    = document.querySelector('input[name="FirstName"]').value.trim();
+    var ln    = document.querySelector('input[name="LastName"]').value.trim();
+    var email = document.getElementById('aEmail').value.trim();
+    var dept  = document.querySelector('select[name="Department"]').value.trim();
+    var pos   = document.querySelector('input[name="Position"]').value.trim();
+
+    if (!fn)    { showValidationError('First Name is required.'); return; }
+    if (!ln)    { showValidationError('Last Name is required.'); return; }
+    
+    if (email) {
+        var atSign = String.fromCharCode(64); var emailRx = new RegExp('^[^'+atSign+'\\s]+'+atSign+'[^'+atSign+'\\s]+\\.[^'+atSign+'\\s]+$');
+        if (!emailRx.test(email)) { showValidationError('Please enter a valid Email address.'); return; }
+    }
+    
+    if (!dept)  { showValidationError('Department is required.'); return; }
+    if (!pos)   { showValidationError('Position / Title is required.'); return; }
+
+    var files = document.querySelectorAll('#aEduFilesContainer input[type="file"]');
+    for (var f of files) {
+        if (f.files[0] && f.files[0].size > 5 * 1024 * 1024) {
+            showValidationError('File "' + f.files[0].name + '" exceeds 5 MB limit. Please choose a smaller file.');
+            return;
+        }
+    }
+    
+    var btn = document.getElementById('addBtnSubmit');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Registering...';
+    }
+    document.getElementById('formAddEmp').submit();
+}
+
+function makeEduRow(containerSelector) {
+    const row = document.createElement('div');
+    row.className = 'edu-file-row border rounded-3 p-2 bg-light d-flex flex-wrap gap-2 align-items-center mt-2';
+    row.innerHTML =
+        '<select name="EduFileTypes" class="form-select input-modern" style="max-width:160px">' +
+        '<option value="Education">🎓 Education</option>' +
+        '<option value="ID">🪪 ID / Kebele</option>' +
+        '<option value="Contract">📄 Contract</option>' +
+        '<option value="Certificate">🏅 Certificate</option>' +
+        '<option value="Other">📎 Other</option></select>' +
+        '<input type="text" name="EduFileLabels" class="form-control input-modern" placeholder="File label" style="max-width:200px">' +
+        '<input type="file" name="EduFiles" class="form-control input-modern" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="max-width:300px">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" title="Remove"><i class="bi bi-x-lg"></i></button>';
+    document.querySelector(containerSelector).appendChild(row);
+    row.querySelector('.edu-remove-btn').addEventListener('click', () => row.remove());
+}
+
+document.getElementById('aAddEduFile').addEventListener('click', () => makeEduRow('#aEduFilesContainer'));
+
+document.getElementById('aPhotoFile').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const wrap = document.getElementById('aPhotoPreviewWrap');
+        wrap.innerHTML = `<img src="${e.target.result}" class="rounded-circle" style="width:100%;height:100%;object-fit:cover;" alt="preview">`;
+    };
+    reader.readAsDataURL(file);
+});
+</script>
+}

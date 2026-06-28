@@ -16,26 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
   bool _loading = false;
 
-  final _quickLogins = [
-    {
-      'label': 'Driver',
-      'icon': Icons.local_shipping_rounded,
-      'email': 'driver1@yeka.et',
-      'pass': 'driver123',
-    },
-    {
-      'label': 'Outsource',
-      'icon': Icons.business_rounded,
-      'email': 'outsource@yeka.et',
-      'pass': 'outsource123',
-    },
-    {
-      'label': 'Private Co.',
-      'icon': Icons.cleaning_services_rounded,
-      'email': 'private@yeka.et',
-      'pass': 'private123',
-    },
-  ];
+
 
   Future<void> _login() async {
     if (_emailCtrl.text.trim().isEmpty || _passCtrl.text.trim().isEmpty) {
@@ -53,11 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _quick(String email, String pass) {
-    _emailCtrl.text = email;
-    _passCtrl.text = pass;
-    _login();
-  }
+
 
   void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
@@ -311,39 +288,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
 
-      const SizedBox(height: 24),
-      Center(
-        child: Text(
-          'Quick Access',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textHint,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      const SizedBox(height: 4),
-      Center(
-        child: Text(
-          'Tap a role to auto-fill credentials',
-          style: TextStyle(fontSize: 10, color: AppColors.textHint),
-        ),
-      ),
-      const SizedBox(height: 10),
-      Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
-        children: _quickLogins
-            .map(
-              (q) => _quickChip(
-                q['label'] as String,
-                q['icon'] as IconData,
-                () => _quick(q['email'] as String, q['pass'] as String),
-              ),
-            )
-            .toList(),
-      ),
     ],
   );
 
@@ -415,32 +359,5 @@ class _LoginScreenState extends State<LoginScreen> {
     ),
   );
 
-  Widget _quickChip(String label, IconData icon, VoidCallback onTap) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.primaryLight),
-            boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 4)],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14, color: AppColors.primary),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+
 }

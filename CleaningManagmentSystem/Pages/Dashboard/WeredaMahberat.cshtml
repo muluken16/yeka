@@ -109,7 +109,7 @@
             @{ var _wmPhoto = HttpContext.Session.GetString("UserPhoto") ?? ""; }
             @{ var _wmRole  = HttpContext.Session.GetString("UserRole")  ?? "Wereda Mahberat"; }
             <div class="dropdown">
-                <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="profile-btn" data-bs-toggle="dropdown" aria-expanded="false">
                     @if (!string.IsNullOrEmpty(_wmPhoto))
                     {
                         <img src="@_wmPhoto" class="p-avatar" alt="@userName"
@@ -120,7 +120,6 @@
                     {
                         <span class="p-initial">@(userName?.Length>0?userName[0].ToString().ToUpper():"W")</span>
                     }
-                    <span>@userName</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
                     <li>

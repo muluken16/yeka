@@ -1,0 +1,103 @@
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    var userName = HttpContextAccessor.HttpContext?.Session.GetString("UserName") ?? "Dispatch Officer";
+    var userPhoto = HttpContextAccessor.HttpContext?.Session.GetString("UserPhoto") ?? "";
+    var userRole = HttpContextAccessor.HttpContext?.Session.GetString("UserRole") ?? "Dispatch Officer";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Yeka Cleaning</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/dashboard.css" />
+    @RenderSection("Styles", required: false)
+</head>
+<body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+    <!-- Desktop Navbar -->
+    <nav class="navbar navbar-dark dashboard-navbar fixed-top d-none d-lg-flex">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/Dashboard/DispatchOfficer/Index">
+                <i class="bi bi-droplet-fill"></i> Yeka Cleaning
+            </a>
+            <div class="nav-user">
+                <div class="dropdown">
+                    <button class="profile-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                        @if (!string.IsNullOrEmpty(userPhoto))
+                        {
+                            <img src="@userPhoto" class="p-avatar" alt="@userName"
+                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                            <span class="p-initial" style="display:none">@(userName?.Length > 0 ? userName[0].ToString().ToUpper() : "D")</span>
+                        }
+                        else
+                        {
+                            <span class="p-initial">@(userName?.Length > 0 ? userName[0].ToString().ToUpper() : "D")</span>
+                        }
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
+                        <li>
+                            <div class="pd-header">
+                                @if (!string.IsNullOrEmpty(userPhoto))
+                                {
+                                    <img src="@userPhoto" class="pd-big-avatar" alt="@userName"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                    <span class="pd-big-initial" style="display:none">@(userName?.Length > 0 ? userName[0].ToString().ToUpper() : "D")</span>
+                                }
+                                else
+                                {
+                                    <span class="pd-big-initial">@(userName?.Length > 0 ? userName[0].ToString().ToUpper() : "D")</span>
+                                }
+                                <div>
+                                    <div class="pd-name">@userName</div>
+                                    <div class="pd-role">@userRole</div>
+                                </div>
+                            </div>
+                        </li>
+                        <li><a class="dropdown-item" href="/Dashboard/Profile"><i class="bi bi-person-circle text-primary"></i>My Profile</a></li>
+                        <li><a class="dropdown-item" href="/Dashboard/DispatchOfficer/Index"><i class="bi bi-speedometer2 text-success"></i>Dashboard</a></li>
+                        <li><hr class="dropdown-divider"/></li>
+                        <li><a class="dropdown-item text-danger" href="/Login?logout=1"><i class="bi bi-box-arrow-right text-danger"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Navbar -->
+    <nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" onclick="toggleSidebar()">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand" href="/Dashboard/DispatchOfficer/Index">
+                <i class="bi bi-droplet-fill"></i> Yeka
+            </a>
+            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i></a>
+        </div>
+    </nav>
+
+    <!-- Mobile sidebar -->
+    <nav id="sidebarMenu" class="sidebar d-lg-none">
+        @await Html.PartialAsync("~/Pages/Dashboard/DispatchOfficer/_Sidebar.cshtml")
+    </nav>
+    <!-- Desktop sidebar -->
+    <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
+        @await Html.PartialAsync("~/Pages/Dashboard/DispatchOfficer/_Sidebar.cshtml")
+    </nav>
+
+    @RenderBody()
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebarMenu').classList.toggle('show');
+            document.getElementById('sidebarBackdrop').classList.toggle('show');
+        }
+    </script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

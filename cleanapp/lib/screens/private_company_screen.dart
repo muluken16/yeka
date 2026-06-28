@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -189,6 +190,11 @@ class _PrivateCompanyScreenState extends State<PrivateCompanyScreen>
               )
             : null,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () => context.push('/settings'),
+            tooltip: 'Settings',
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAll, tooltip: 'Refresh'),
         ],
       ),

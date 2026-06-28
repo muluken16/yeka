@@ -5,6 +5,7 @@ import 'theme/app_colors.dart';
 import 'theme/theme_provider.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
+import 'providers/language_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/notifications_screen.dart';
@@ -12,7 +13,8 @@ import 'screens/trip_details_screen.dart';
 import 'screens/driver_trips_screen.dart';
 import 'screens/private_company_screen.dart';
 import 'screens/outsource_screen.dart';
-import 'screens/manager_screen.dart';
+import 'screens/settings_screen.dart';
+
 
 void main() {
   runApp(
@@ -21,6 +23,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => NotificationService()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
       child: const CleanApp(),
     ),
@@ -46,7 +49,6 @@ class CleanApp extends StatelessWidget {
           final role = authService.currentUser?.role.toLowerCase() ?? '';
           if (role == 'privatecompanyrep') return '/private-company';
           if (role == 'outsource') return '/outsource';
-          if (role == 'manager') return '/manager';
           return '/home';
         }
         return null;
@@ -62,7 +64,6 @@ class CleanApp extends StatelessWidget {
           path: '/outsource',
           builder: (_, __) => const OutsourceScreen(),
         ),
-        GoRoute(path: '/manager', builder: (_, __) => const ManagerScreen()),
         GoRoute(
           path: '/notifications',
           builder: (_, __) => const NotificationsScreen(),
@@ -83,6 +84,10 @@ class CleanApp extends StatelessWidget {
               requestNumber: requestNumber,
             );
           },
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (_, __) => const SettingsScreen(),
         ),
       ],
     );

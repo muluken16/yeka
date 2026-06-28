@@ -18,6 +18,7 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddRazorPages();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<EmailService>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCors(options =>
 {
@@ -81,6 +82,20 @@ if (!string.IsNullOrEmpty(connectionString))
             WHERE tr.driver_name IS NOT NULL
               AND tr.driver_name != ''
               AND tr.driver_user_id IS NULL");
+
+        // ── is_default_password: forces new users to change their password ──
+        // 0 = no change needed,  1 = must change on next login
+        await _db.ExecuteAsync(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_default_password TINYINT NOT NULL DEFAULT 0");
+
+        // Mark any account whose current password is one of the known defaults
+        await _db.ExecuteAsync(@"
+            UPDATE users
+            SET is_default_password = 1
+            WHERE password IN ('Yeka@1234','Yeka@123','admin123','hr123',
+                               'manager123','staff123','driver123',
+                               'dispatch123','outsource123','private123')
+              AND is_default_password = 0");
     }
     catch (Exception ex)
     {

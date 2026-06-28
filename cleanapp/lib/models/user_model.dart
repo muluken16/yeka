@@ -43,5 +43,4 @@ class UserModel {
   bool get isDriver => role.toLowerCase() == 'driver';
   bool get isOutsource => role.toLowerCase() == 'outsource';
   bool get isPrivateCompanyRep => role.toLowerCase() == 'privatecompanyrep';
-  bool get isManager => role.toLowerCase() == 'manager';
 }

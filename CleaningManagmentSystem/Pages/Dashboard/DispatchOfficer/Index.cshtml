@@ -1,166 +1,74 @@
 @page
 @model CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer.IndexModel
 @{
-    Layout = null;
+    Layout = "_DispatchLayout";
+    ViewData["Title"] = "Dispatch Dashboard";
     var userName = HttpContext.Session.GetString("UserName") ?? "Dispatch Officer";
     var greeting = DateTime.Now.Hour < 12 ? "Good morning" : DateTime.Now.Hour < 17 ? "Good afternoon" : "Good evening";
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>Dispatch Dashboard — Yeka Cleaning</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
-    <link rel="stylesheet" href="~/css/dashboard.css"/>
+
+@section Styles {
     <style>
-        :root {
-            --blue:  #2563eb;
-            --teal:  #0891b2;
-            --amber: #d97706;
-            --green: #059669;
-            --pink:  #db2777;
-            --purple:#7c3aed;
-            --bg:    #f8fafc;
-            --card:  #ffffff;
-            --border:#e2e8f0;
-            --text:  #0f172a;
-            --muted: #64748b;
-        }
-        * { box-sizing: border-box; }
-        body { background: var(--bg) !important; font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); }
-
-        /* ── Top bar ── */
-        .top-bar {
-            background: var(--card);
-            border-bottom: 1px solid var(--border);
-            padding: 0 24px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 1000;
-            box-shadow: 0 1px 3px rgba(0,0,0,.06);
-        }
-        .top-bar .brand { font-weight: 800; font-size: 1rem; color: var(--blue); display: flex; align-items: center; gap: 8px; }
-        .top-bar .brand i { font-size: 1.2rem; }
-        .top-bar .right { display: flex; align-items: center; gap: 12px; }
-        .top-bar .user-pill {
-            display: flex; align-items: center; gap: 8px;
-            background: #f1f5f9; border-radius: 99px;
-            padding: 6px 14px 6px 8px;
-            font-size: .82rem; font-weight: 600; color: var(--text);
-        }
-        .top-bar .user-pill .avatar {
-            width: 28px; height: 28px; border-radius: 50%;
-            background: var(--blue); color: #fff;
-            display: flex; align-items: center; justify-content: center;
-            font-size: .72rem; font-weight: 800;
-        }
-        .btn-sidebar { background: none; border: none; padding: 4px 8px; cursor: pointer; color: var(--text); font-size: 1.2rem; }
-
-        /* ── Layout ── */
-        .dash-wrap { display: flex; padding-top: 60px; min-height: 100vh; }
-        .sidebar-fixed {
-            width: 220px; flex-shrink: 0;
-            position: fixed; top: 60px; bottom: 0; left: 0;
-            overflow-y: auto; background: var(--card);
-            border-right: 1px solid var(--border);
-            transition: transform .25s;
-            z-index: 900;
-        }
-        .sidebar-fixed.hidden { transform: translateX(-220px); }
-        .main-area { flex: 1; margin-left: 220px; padding: 28px 28px 48px; transition: margin .25s; }
-        .main-area.full { margin-left: 0; }
-        @@media (max-width: 991px) {
-            .sidebar-fixed { transform: translateX(-220px); }
-            .sidebar-fixed.open { transform: translateX(0); }
-            .main-area { margin-left: 0; }
-            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 850; }
-            .sidebar-overlay.open { display: block; }
-        }
-
-        /* ── Page header ── */
-        .page-header { margin-bottom: 28px; }
-        .page-header .greeting { font-size: .82rem; color: var(--muted); margin-bottom: 2px; }
-        .page-header h1 { font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--text); }
-        .page-header .date-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: #f1f5f9; border-radius: 99px;
-            padding: 4px 12px; font-size: .75rem; color: var(--muted); font-weight: 600;
-        }
-
         /* ── Stat cards ── */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 16px; margin-bottom: 28px; }
         .scard {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: #fff;
+            border: 1px solid #e2e8f0;
             border-radius: 14px;
             padding: 18px 16px;
             display: flex; flex-direction: column; gap: 12px;
             transition: box-shadow .15s, transform .15s;
         }
         .scard:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); transform: translateY(-2px); }
-        .scard .scard-top { display: flex; align-items: center; justify-content: space-between; }
-        .scard .scard-icon {
+        .scard-top { display: flex; align-items: center; justify-content: space-between; }
+        .scard-icon {
             width: 38px; height: 38px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
             font-size: 1rem;
         }
-        .scard .scard-val { font-size: 1.9rem; font-weight: 900; line-height: 1; }
-        .scard .scard-lbl { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
-        .scard .scard-trend { font-size: .7rem; color: var(--green); font-weight: 600; }
+        .scard-val { font-size: 1.9rem; font-weight: 900; line-height: 1; }
+        .scard-lbl { font-size: .72rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
 
-        /* ── Section header ── */
-        .sec-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .sec-hdr h2 { font-size: .9rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 6px; }
-        .sec-hdr a { font-size: .75rem; color: var(--blue); text-decoration: none; font-weight: 600; }
-        .sec-hdr a:hover { text-decoration: underline; }
+        /* ── Quick actions ── */
+        .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+        @@media (max-width: 768px) { .qa-grid { grid-template-columns: repeat(2, 1fr); } }
+        .qa-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 16px;
+            text-decoration: none;
+            color: #0f172a;
+            display: flex; align-items: center; gap: 12px;
+            font-weight: 600; font-size: .82rem;
+            transition: all .15s;
+        }
+        .qa-card:hover { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.08); color: #2563eb; }
+        .qa-icon {
+            width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+        }
+        .qa-sub { font-size: .69rem; color: #64748b; font-weight: 500; }
+
+        /* ── Status badges ── */
+        .sbadge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px; font-size: .68rem; font-weight: 700; white-space: nowrap; }
+        .s-pending  { background: #fef3c7; color: #92400e; }
+        .s-active   { background: #dbeafe; color: #1e40af; }
+        .s-done     { background: #d1fae5; color: #065f46; }
+        .s-rejected { background: #fee2e2; color: #991b1b; }
 
         /* ── Content card ── */
         .ccard {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: #fff;
+            border: 1px solid #e2e8f0;
             border-radius: 14px;
             overflow: hidden;
             margin-bottom: 24px;
         }
         .ccard table { margin: 0; }
         .ccard table th, .ccard table td { font-size: .78rem; padding: 10px 16px !important; border-color: #f1f5f9 !important; }
-        .ccard table th { background: #f8fafc; font-weight: 700; color: var(--muted); text-transform: uppercase; font-size: .67rem; letter-spacing: .4px; }
+        .ccard table th { background: #f8fafc; font-weight: 700; color: #64748b; text-transform: uppercase; font-size: .67rem; letter-spacing: .4px; }
         .ccard table tr:last-child td { border-bottom: none !important; }
-
-        /* ── Status badges ── */
-        .sbadge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px; font-size: .68rem; font-weight: 700; white-space: nowrap; }
-        .sbadge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .6; }
-        .s-pending  { background: #fef3c7; color: #92400e; }
-        .s-active   { background: #dbeafe; color: #1e40af; }
-        .s-done     { background: #d1fae5; color: #065f46; }
-        .s-rejected { background: #fee2e2; color: #991b1b; }
-
-        /* ── Quick actions ── */
-        .qa-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
-        @@media (max-width: 768px) { .qa-grid { grid-template-columns: repeat(2, 1fr); } }
-        .qa-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 16px;
-            text-decoration: none;
-            color: var(--text);
-            display: flex; align-items: center; gap: 12px;
-            font-weight: 600; font-size: .82rem;
-            transition: all .15s;
-        }
-        .qa-card:hover { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.08); color: var(--blue); }
-        .qa-card .qa-icon {
-            width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
-        }
-        .qa-card .qa-sub { font-size: .69rem; color: var(--muted); font-weight: 500; }
 
         /* ── Alert banner ── */
         .alert-banner {
@@ -172,363 +80,200 @@
             display: flex; align-items: center; gap: 14px;
             margin-bottom: 24px;
         }
-        .alert-banner .ab-icon { color: #d97706; font-size: 1.3rem; flex-shrink: 0; }
-        .alert-banner .ab-title { font-weight: 700; font-size: .85rem; }
-        .alert-banner .ab-sub   { font-size: .75rem; color: var(--muted); }
+        .mono { font-family: 'Courier New', monospace; font-weight: 700; }
+
+        /* ── Section headers ── */
+        .sec-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .sec-hdr h2 { font-size: .9rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 6px; }
+        .sec-hdr a { font-size: .75rem; color: #2563eb; text-decoration: none; font-weight: 600; }
+        .sec-hdr a:hover { text-decoration: underline; }
 
         /* ── Empty state ── */
-        .empty-state { text-align: center; padding: 32px 16px; color: var(--muted); }
+        .empty-state { text-align: center; padding: 32px 16px; color: #64748b; }
         .empty-state i { font-size: 2rem; opacity: .3; display: block; margin-bottom: 8px; }
         .empty-state p { font-size: .82rem; margin: 0; }
-
-        /* ── Monospace IDs ── */
-        .mono { font-family: 'Courier New', monospace; font-weight: 700; }
     </style>
-</head>
-<body>
+}
 
-<div class="sidebar-overlay" id="sOverlay" onclick="closeSidebar()"></div>
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content" style="margin-top: 56px;">
 
-<!-- Top bar -->
-<header class="top-bar">
-    <div class="d-flex align-items-center gap-3">
-        <button class="btn-sidebar d-lg-none" onclick="openSidebar()"><i class="bi bi-list"></i></button>
-        <div class="brand"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</div>
+    <!-- Page header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <div>
+            <div class="text-muted small mb-1">@greeting, @userName 👋</div>
+            <h1 class="h2 mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Dispatch Dashboard</h1>
+        </div>
+        <div class="d-flex gap-2 flex-wrap mt-2 mt-md-0">
+            <a href="/Dashboard/DispatchOfficer/TransportRequests" class="btn btn-primary btn-sm rounded-pill px-3">
+                <i class="bi bi-truck me-1"></i>Transport
+                @if (Model.PendingTransport > 0) {
+                    <span class="badge bg-warning text-dark ms-1">@Model.PendingTransport</span>
+                }
+            </a>
+            <a href="/Dashboard/DispatchOfficer/CreateDispatch" class="btn btn-warning btn-sm rounded-pill px-3 text-dark fw-semibold">
+                <i class="bi bi-send me-1"></i>New Dispatch
+            </a>
+        </div>
     </div>
-    <div class="right">
-        <span class="date-badge d-none d-md-inline-flex">
-            <i class="bi bi-calendar3"></i>@DateTime.Now.ToString("ddd, MMM dd yyyy")
-        </span>
-        @{ var _doPhoto = HttpContext.Session.GetString("UserPhoto") ?? ""; }
-        @{ var _doRole  = HttpContext.Session.GetString("UserRole")  ?? "Dispatch Officer"; }
-        <div class="dropdown">
-            <button class="user-pill dropdown-toggle border-0" style="cursor:pointer"
-                    data-bs-toggle="dropdown" aria-expanded="false">
-                @if (!string.IsNullOrEmpty(_doPhoto))
+
+    <!-- Pending alert -->
+    @if (Model.PendingTransport > 0)
+    {
+    <div class="alert-banner">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-4 flex-shrink-0"></i>
+        <div class="flex-grow-1">
+            <div class="fw-bold" style="font-size:.85rem">@Model.PendingTransport transport request@(Model.PendingTransport == 1 ? "" : "s") waiting for driver assignment</div>
+            <div class="text-muted small">Review and assign a driver to keep things moving.</div>
+        </div>
+        <a href="/Dashboard/DispatchOfficer/TransportRequests?status=PendingDispatcher"
+           class="btn btn-sm btn-warning rounded-pill fw-semibold text-dark flex-shrink-0">
+            Assign Now →
+        </a>
+    </div>
+    }
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="scard">
+            <div class="scard-top">
+                <div class="scard-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-hourglass-split"></i></div>
+            </div>
+            <div>
+                <div class="scard-val" style="color:#d97706">@Model.PendingTransport</div>
+                <div class="scard-lbl">Pending Transport</div>
+            </div>
+        </div>
+        <div class="scard">
+            <div class="scard-top">
+                <div class="scard-icon" style="background:#dbeafe;color:#2563eb"><i class="bi bi-truck"></i></div>
+            </div>
+            <div>
+                <div class="scard-val" style="color:#2563eb">@Model.TotalTransport</div>
+                <div class="scard-lbl">Total Transport</div>
+            </div>
+        </div>
+        <div class="scard">
+            <div class="scard-top">
+                <div class="scard-icon" style="background:#ede9fe;color:#7c3aed"><i class="bi bi-send-check"></i></div>
+            </div>
+            <div>
+                <div class="scard-val" style="color:#7c3aed">@Model.ActiveDispatches</div>
+                <div class="scard-lbl">Active Dispatches</div>
+            </div>
+        </div>
+        <div class="scard">
+            <div class="scard-top">
+                <div class="scard-icon" style="background:#d1fae5;color:#059669"><i class="bi bi-check2-all"></i></div>
+            </div>
+            <div>
+                <div class="scard-val" style="color:#059669">@Model.CompletedToday</div>
+                <div class="scard-lbl">Completed Today</div>
+            </div>
+        </div>
+        <div class="scard">
+            <div class="scard-top">
+                <div class="scard-icon" style="background:#cffafe;color:#0891b2"><i class="bi bi-person-badge"></i></div>
+            </div>
+            <div>
+                <div class="scard-val" style="color:#0891b2">@Model.TotalDrivers</div>
+                <div class="scard-lbl">Active Drivers</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="sec-hdr">
+        <h2><i class="bi bi-lightning-charge-fill text-warning"></i> Quick Actions</h2>
+    </div>
+    <div class="qa-grid">
+        <a href="/Dashboard/DispatchOfficer/TransportRequests" class="qa-card">
+            <div class="qa-icon" style="background:#dbeafe;color:#2563eb"><i class="bi bi-truck"></i></div>
+            <div>
+                <div>Transport Requests</div>
+                <div class="qa-sub">Assign &amp; track</div>
+            </div>
+        </a>
+        <a href="/Dashboard/DispatchOfficer/CreateDispatch" class="qa-card">
+            <div class="qa-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-send"></i></div>
+            <div>
+                <div>Create Dispatch</div>
+                <div class="qa-sub">New job order</div>
+            </div>
+        </a>
+
+        <a href="/Dashboard/DispatchOfficer/Vehicles" class="qa-card">
+            <div class="qa-icon" style="background:#d1fae5;color:#059669"><i class="bi bi-truck-front"></i></div>
+            <div>
+                <div>Vehicles & Drivers</div>
+                <div class="qa-sub">Manage fleet</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Recent tables -->
+    <div class="row g-4">
+
+        <!-- Transport -->
+        <div class="col-12">
+            <div class="sec-hdr">
+                <h2><i class="bi bi-truck text-primary"></i> Recent Transport Requests</h2>
+                <a href="/Dashboard/DispatchOfficer/TransportRequests">View all →</a>
+            </div>
+            <div class="ccard">
+                @if (Model.RecentTransport.Any())
                 {
-                    <img src="@_doPhoto" class="avatar" style="object-fit:cover;border-radius:50%"
-                         alt="@userName" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
-                    <span class="avatar" style="display:none">@(userName.Length>0?userName[0].ToString().ToUpper():"D")</span>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Request #</th>
+                                <th>Route</th>
+                                <th>Requestor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model.RecentTransport)
+                            {
+                                string st = (string)(r.status ?? "");
+                                var (cls, lbl) = st switch {
+                                    "PendingDispatcher"      => ("s-pending",  "Pending"),
+                                    "DriverAssigned"         => ("s-active",   "Assigned"),
+                                    "DriverAccepted"         => ("s-active",   "Accepted"),
+                                    "PickedUp"               => ("s-active",   "Picked Up"),
+                                    "MahberatApprovedPickup" => ("s-active",   "Pickup OK"),
+                                    "ReceiptSubmitted"       => ("s-active",   "Receipt"),
+                                    "MahberatVerified"       => ("s-active",   "Verified"),
+                                    "StaffApproved"          => ("s-done",     "Approved"),
+                                    "Paid"                   => ("s-done",     "Paid ✓"),
+                                    var s when s.Contains("Rejected") => ("s-rejected", "Rejected"),
+                                    _                        => ("s-active",   st)
+                                };
+                                string pickup = (string?)r.pickup_location ?? "";
+                                string dest   = (string?)r.destination ?? "";
+                                <tr>
+                                    <td><span class="mono" style="color:#2563eb;font-size:.76rem">@r.request_number</span></td>
+                                    <td>
+                                        <div style="font-size:.76rem;font-weight:600">@(pickup.Length > 16 ? pickup[..16] + "…" : pickup)</div>
+                                        <div style="font-size:.7rem;color:#64748b">→ @(dest.Length > 16 ? dest[..16] + "…" : dest)</div>
+                                    </td>
+                                    <td style="color:#64748b;font-size:.78rem">@r.mahberat_user_name</td>
+                                    <td><span class="sbadge @cls">@lbl</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
                 }
                 else
                 {
-                    <div class="avatar">@(userName.Length>0?userName[0].ToString().ToUpper():"D")</div>
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No transport requests yet</p>
+                    </div>
                 }
-                @userName
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
-                <li>
-                    <div class="pd-header">
-                        @if (!string.IsNullOrEmpty(_doPhoto))
-                        {
-                            <img src="@_doPhoto" class="pd-big-avatar" alt="@userName"
-                                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
-                            <span class="pd-big-initial" style="display:none">@(userName.Length>0?userName[0].ToString().ToUpper():"D")</span>
-                        }
-                        else
-                        {
-                            <span class="pd-big-initial">@(userName.Length>0?userName[0].ToString().ToUpper():"D")</span>
-                        }
-                        <div>
-                            <div class="pd-name">@userName</div>
-                            <div class="pd-role">@_doRole</div>
-                        </div>
-                    </div>
-                </li>
-                <li><a class="dropdown-item" href="/Dashboard/Profile">
-                    <i class="bi bi-person-circle text-primary"></i>My Profile
-                </a></li>
-                <li><a class="dropdown-item" href="/Dashboard/DispatchOfficer/Index">
-                    <i class="bi bi-speedometer2 text-success"></i>Dashboard
-                </a></li>
-                <li><hr class="dropdown-divider"/></li>
-                <li><a class="dropdown-item text-danger" href="/Login?logout=1">
-                    <i class="bi bi-box-arrow-right text-danger"></i>Logout
-                </a></li>
-            </ul>
+            </div>
         </div>
+
     </div>
-</header>
-
-<div class="dash-wrap">
-    <!-- Sidebar -->
-    <aside class="sidebar-fixed" id="sidebar">
-        @await Html.PartialAsync("~/Pages/Dashboard/DispatchOfficer/_Sidebar.cshtml")
-    </aside>
-
-    <!-- Main content -->
-    <main class="main-area" id="mainArea">
-
-        <!-- Page header -->
-        <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2">
-            <div>
-                <div class="greeting">@greeting, @userName 👋</div>
-                <h1>Dispatch Dashboard</h1>
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <a href="/Dashboard/DispatchOfficer/TransportRequests" class="btn btn-primary btn-sm rounded-pill px-3">
-                    <i class="bi bi-truck me-1"></i>Transport
-                    @if (Model.PendingTransport > 0) {
-                        <span class="badge bg-warning text-dark ms-1">@Model.PendingTransport</span>
-                    }
-                </a>
-                <a href="/Dashboard/DispatchOfficer/CreateDispatch" class="btn btn-warning btn-sm rounded-pill px-3 text-dark fw-semibold">
-                    <i class="bi bi-send me-1"></i>New Dispatch
-                </a>
-            </div>
-        </div>
-
-        <!-- Pending alert -->
-        @if (Model.PendingTransport > 0)
-        {
-        <div class="alert-banner">
-            <i class="bi bi-exclamation-triangle-fill ab-icon"></i>
-            <div class="flex-grow-1">
-                <div class="ab-title">@Model.PendingTransport transport request@(Model.PendingTransport == 1 ? "" : "s") waiting for driver assignment</div>
-                <div class="ab-sub">Review and assign a driver to keep things moving.</div>
-            </div>
-            <a href="/Dashboard/DispatchOfficer/TransportRequests?status=PendingDispatcher"
-               class="btn btn-sm btn-warning rounded-pill fw-semibold text-dark flex-shrink-0">
-                Assign Now →
-            </a>
-        </div>
-        }
-
-        <!-- Stats -->
-        <div class="stats-grid">
-            <div class="scard">
-                <div class="scard-top">
-                    <div class="scard-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-hourglass-split"></i></div>
-                </div>
-                <div>
-                    <div class="scard-val" style="color:#d97706">@Model.PendingTransport</div>
-                    <div class="scard-lbl">Pending Transport</div>
-                </div>
-            </div>
-            <div class="scard">
-                <div class="scard-top">
-                    <div class="scard-icon" style="background:#dbeafe;color:#2563eb"><i class="bi bi-truck"></i></div>
-                </div>
-                <div>
-                    <div class="scard-val" style="color:#2563eb">@Model.TotalTransport</div>
-                    <div class="scard-lbl">Total Transport</div>
-                </div>
-            </div>
-            <div class="scard">
-                <div class="scard-top">
-                    <div class="scard-icon" style="background:#ede9fe;color:#7c3aed"><i class="bi bi-send-check"></i></div>
-                </div>
-                <div>
-                    <div class="scard-val" style="color:#7c3aed">@Model.ActiveDispatches</div>
-                    <div class="scard-lbl">Active Dispatches</div>
-                </div>
-            </div>
-            <div class="scard">
-                <div class="scard-top">
-                    <div class="scard-icon" style="background:#d1fae5;color:#059669"><i class="bi bi-check2-all"></i></div>
-                </div>
-                <div>
-                    <div class="scard-val" style="color:#059669">@Model.CompletedToday</div>
-                    <div class="scard-lbl">Completed Today</div>
-                </div>
-            </div>
-            <div class="scard">
-                <div class="scard-top">
-                    <div class="scard-icon" style="background:#cffafe;color:#0891b2"><i class="bi bi-person-badge"></i></div>
-                </div>
-                <div>
-                    <div class="scard-val" style="color:#0891b2">@Model.TotalDrivers</div>
-                    <div class="scard-lbl">Active Drivers</div>
-                </div>
-            </div>
-            <div class="scard">
-                <div class="scard-top">
-                    <div class="scard-icon" style="background:#fce7f3;color:#db2777"><i class="bi bi-calendar-check"></i></div>
-                </div>
-                <div>
-                    <div class="scard-val" style="color:#db2777">@Model.MeetingRoomsToday</div>
-                    <div class="scard-lbl">Meetings Today</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick actions -->
-        <div class="sec-hdr">
-            <h2><i class="bi bi-lightning-charge-fill text-warning"></i> Quick Actions</h2>
-        </div>
-        <div class="qa-grid">
-            <a href="/Dashboard/DispatchOfficer/TransportRequests" class="qa-card">
-                <div class="qa-icon" style="background:#dbeafe;color:#2563eb"><i class="bi bi-truck"></i></div>
-                <div>
-                    <div>Transport Requests</div>
-                    <div class="qa-sub">Assign &amp; track</div>
-                </div>
-            </a>
-            <a href="/Dashboard/DispatchOfficer/CreateDispatch" class="qa-card">
-                <div class="qa-icon" style="background:#fef3c7;color:#d97706"><i class="bi bi-send"></i></div>
-                <div>
-                    <div>Create Dispatch</div>
-                    <div class="qa-sub">New job order</div>
-                </div>
-            </a>
-            <a href="/Dashboard/DispatchOfficer/MeetingRoom" class="qa-card">
-                <div class="qa-icon" style="background:#fce7f3;color:#db2777"><i class="bi bi-calendar-event"></i></div>
-                <div>
-                    <div>Meeting Room</div>
-                    <div class="qa-sub">Book a room</div>
-                </div>
-            </a>
-            <a href="/Dashboard/DispatchOfficer/AllMahberatReport" class="qa-card">
-                <div class="qa-icon" style="background:#d1fae5;color:#059669"><i class="bi bi-file-earmark-bar-graph"></i></div>
-                <div>
-                    <div>Mahberat Report</div>
-                    <div class="qa-sub">View all reports</div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Recent activity tables -->
-        <div class="row g-4">
-
-            <!-- Transport -->
-            <div class="col-lg-7">
-                <div class="sec-hdr">
-                    <h2><i class="bi bi-truck text-primary"></i> Recent Transport Requests</h2>
-                    <a href="/Dashboard/DispatchOfficer/TransportRequests">View all →</a>
-                </div>
-                <div class="ccard">
-                    @if (Model.RecentTransport.Any())
-                    {
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Request #</th>
-                                    <th>Route</th>
-                                    <th>Requestor</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var r in Model.RecentTransport)
-                                {
-                                    string st = (string)(r.status ?? "");
-                                    var (cls, lbl) = st switch {
-                                        "PendingDispatcher"      => ("s-pending",  "Pending"),
-                                        "DriverAssigned"         => ("s-active",   "Assigned"),
-                                        "DriverAccepted"         => ("s-active",   "Accepted"),
-                                        "PickedUp"               => ("s-active",   "Picked Up"),
-                                        "MahberatApprovedPickup" => ("s-active",   "Pickup OK"),
-                                        "ReceiptSubmitted"       => ("s-active",   "Receipt"),
-                                        "MahberatVerified"       => ("s-active",   "Verified"),
-                                        "StaffApproved"          => ("s-done",     "Approved"),
-                                        "Paid"                   => ("s-done",     "Paid ✓"),
-                                        var s when s.Contains("Rejected") => ("s-rejected", "Rejected"),
-                                        _                        => ("s-active",   st)
-                                    };
-                                    string pickup = (string?)r.pickup_location ?? "";
-                                    string dest   = (string?)r.destination ?? "";
-                                    <tr>
-                                        <td><span class="mono" style="color:#2563eb;font-size:.76rem">@r.request_number</span></td>
-                                        <td>
-                                            <div style="font-size:.76rem;font-weight:600;color:var(--text)">@(pickup.Length > 16 ? pickup[..16] + "…" : pickup)</div>
-                                            <div style="font-size:.7rem;color:var(--muted)">→ @(dest.Length > 16 ? dest[..16] + "…" : dest)</div>
-                                        </td>
-                                        <td style="color:var(--muted)">@r.mahberat_user_name</td>
-                                        <td><span class="sbadge @cls">@lbl</span></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="bi bi-inbox"></i>
-                            <p>No transport requests yet</p>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Dispatches -->
-            <div class="col-lg-5">
-                <div class="sec-hdr">
-                    <h2><i class="bi bi-send" style="color:var(--amber)"></i> Recent Dispatches</h2>
-                    <a href="/Dashboard/DispatchOfficer/CreateDispatch">View all →</a>
-                </div>
-                <div class="ccard">
-                    @if (Model.RecentDispatches.Any())
-                    {
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Dispatch #</th>
-                                    <th>Driver</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var d in Model.RecentDispatches)
-                                {
-                                    string ds = (string)(d.status ?? "");
-                                    string dCls = ds == "Completed" ? "s-done" : ds == "Pending" ? "s-pending" : "s-active";
-                                    string dest = (string?)d.destination ?? "";
-                                    <tr>
-                                        <td>
-                                            <div class="mono" style="color:#7c3aed;font-size:.76rem">@d.dispatch_number</div>
-                                            <div style="font-size:.69rem;color:var(--muted)">@(dest.Length > 18 ? dest[..18] + "…" : dest)</div>
-                                        </td>
-                                        <td style="color:var(--muted);font-size:.78rem">@(d.driver_name ?? "—")</td>
-                                        <td><span class="sbadge @dCls">@ds</span></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="bi bi-inbox"></i>
-                            <p>No dispatches yet</p>
-                        </div>
-                    }
-                </div>
-            </div>
-
-        </div>
-    </main>
-</div>
-
-<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-function openSidebar() {
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('sOverlay').classList.add('open');
-}
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sOverlay').classList.remove('open');
-}
-// Desktop sidebar collapse
-(function() {
-    var collapsed = localStorage.getItem('dispatchSidebarCollapsed') === '1';
-    if (collapsed) applySidebarState(true);
-    function applySidebarState(c) {
-        var s = document.getElementById('sidebar');
-        var m = document.getElementById('mainArea');
-        if (c) { s.classList.add('hidden'); m.classList.add('full'); }
-        else   { s.classList.remove('hidden'); m.classList.remove('full'); }
-    }
-    window.toggleDesktopSidebar = function() {
-        var c = !document.getElementById('sidebar').classList.contains('hidden');
-        applySidebarState(c);
-        localStorage.setItem('dispatchSidebarCollapsed', c ? '1' : '0');
-    };
-})();
-</script>
-</body>
-</html>
+</main>

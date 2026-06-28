@@ -11,6 +11,7 @@
         "driver"            => "success",
         "outsource"         => "warning text-dark",
         "privatecompanyrep" => "info text-dark",
+        "hr"                => "purple text-white",
         "staff"             => "secondary",
         "wereda_mahberat"   => "warning text-dark",
         "dispatchofficer"   => "primary",
@@ -18,15 +19,16 @@
         _                   => "secondary"
     };
     string Label(string r) => (r ?? "").ToLower() switch {
-        "superadmin"        => "Super Admin",
-        "manager"           => "Manager 📱",
-        "driver"            => "Driver 📱",
-        "outsource"         => "Outsource 📱",
-        "privatecompanyrep" => "Private Rep 📱",
-        "staff"             => "Staff",
-        "wereda_mahberat"   => "Wereda Mahberat",
-        "dispatchofficer"   => "Dispatch Officer",
-        var x when string.IsNullOrWhiteSpace(x) => "⚠ No role — edit to fix",
+        "superadmin"        => "⭐ Super Admin",
+        "manager"           => "👔 Manager 📱",
+        "driver"            => "🚗 Driver 📱",
+        "outsource"         => "🏢 Outsource 📱",
+        "privatecompanyrep" => "🏭 Private Rep 📱",
+        "hr"                => "👥 HR",
+        "staff"             => "🧹 Staff",
+        "wereda_mahberat"   => "🏘 Wereda Mahberat",
+        "dispatchofficer"   => "📋 Dispatch Officer",
+        var x when string.IsNullOrWhiteSpace(x) => "⚠ No role",
         _                   => r ?? "—"
     };
     bool IsMobile(string r) => UsersModel.MobileRoles.Contains(r ?? "");
@@ -40,10 +42,16 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
     <link rel="stylesheet" href="~/css/dashboard.css"/>
+    <style>
+        .badge-role { font-size:.75rem; padding:.35em .6em; border-radius:.4rem; }
+        .table td, .table th { vertical-align: middle; }
+        .action-btn { white-space:nowrap; }
+    </style>
 </head>
 <body>
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
+<!-- Desktop navbar -->
 <nav class="navbar navbar-dark dashboard-navbar fixed-top d-none d-lg-flex">
     <div class="container-fluid">
         <a class="navbar-brand" href="/Dashboard/SuperAdmin">
@@ -57,6 +65,8 @@
         </div>
     </div>
 </nav>
+
+<!-- Mobile navbar -->
 <nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
     <div class="container-fluid">
         <button class="navbar-toggler" onclick="toggleSidebar()">
@@ -70,18 +80,22 @@
         </a>
     </div>
 </nav>
+
+<!-- Mobile sidebar -->
 <nav id="sidebarMenu" class="sidebar d-lg-none">
     @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
 </nav>
+<!-- Desktop sidebar -->
 <nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
     @await Html.PartialAsync("~/Pages/Dashboard/SuperAdmin/_Sidebar.cshtml")
 </nav>
 
 <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 pt-lg-5" style="margin-top:56px">
 
+    <!-- ── Page header ──────────────────────────────────────────────────── -->
     <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom flex-wrap gap-2">
         <h1 class="h2 mb-0"><i class="bi bi-people me-2"></i>Manage Users</h1>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-success btn-sm"
                     data-bs-toggle="modal" data-bs-target="#modalPrivate">
                 <i class="bi bi-building-add me-1"></i>Register Private Rep
@@ -93,6 +107,7 @@
         </div>
     </div>
 
+    <!-- ── Alerts ───────────────────────────────────────────────────────── -->
     @if (!string.IsNullOrEmpty(Model.SuccessMessage))
     {
         <div class="alert alert-success alert-dismissible fade show py-2">
@@ -109,67 +124,72 @@
     }
 
     @{
-        // Warn about PrivateCompanyRep users who have no linked company
         var unlinkedPrivateReps = Model.UsersList
-            .Where(u => u.Role?.ToLower() == "privatecompanyrep" && u.IsActive)
-            .ToList();
+            .Where(u => u.Role?.ToLower() == "privatecompanyrep" && u.IsActive).ToList();
     }
     @if (unlinkedPrivateReps.Any())
     {
         <div class="alert alert-warning alert-dismissible fade show py-2">
             <i class="bi bi-exclamation-triangle-fill me-1"></i>
             <strong>@unlinkedPrivateReps.Count Private Company Rep user(s)</strong>
-            may not have a company linked.
-            Go to
+            may not have a company linked. Go to
             <a href="/Dashboard/SuperAdmin/PrivateCleaningCompany" class="alert-link fw-bold">
-                Private Cleaning Companies
-            </a>
-            and use the <i class="bi bi-person-plus"></i> button to link each rep to their company.
+                Private Cleaning Companies</a>
+            and link each rep to their company.
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
 
-    <!-- Search + stats -->
+    <!-- ── Search + Role filter + Stats ─────────────────────────────────── -->
     <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
-        <form method="get" class="d-flex gap-2">
+        <form method="get" class="d-flex gap-2 flex-wrap">
             <input class="form-control form-control-sm" name="searchQuery"
-                   value="@Model.SearchQuery" placeholder="Search name / email / role…"
-                   style="width:240px"/>
+                   value="@Model.SearchQuery" placeholder="Search name / email / phone…"
+                   style="width:220px"/>
+            <select class="form-select form-select-sm" name="roleFilter" style="width:160px">
+                <option value="">All Roles</option>
+                <option value="superadmin"       selected="@(Model.RoleFilter=="superadmin")">⭐ Super Admin</option>
+                <option value="manager"          selected="@(Model.RoleFilter=="manager")">👔 Manager</option>
+                <option value="driver"           selected="@(Model.RoleFilter=="driver")">🚗 Driver</option>
+                <option value="outsource"        selected="@(Model.RoleFilter=="outsource")">🏢 Outsource</option>
+                <option value="PrivateCompanyRep" selected="@(Model.RoleFilter?.ToLower()=="privatecompanyrep")">🏭 Private Rep</option>
+                <option value="hr"               selected="@(Model.RoleFilter=="hr")">👥 HR</option>
+                <option value="staff"            selected="@(Model.RoleFilter=="staff")">🧹 Staff</option>
+                <option value="wereda_mahberat"  selected="@(Model.RoleFilter=="wereda_mahberat")">🏘 Wereda Mahberat</option>
+                <option value="DispatchOfficer"  selected="@(Model.RoleFilter?.ToLower()=="dispatchofficer")">📋 Dispatch Officer</option>
+            </select>
             <button class="btn btn-outline-secondary btn-sm" type="submit">
                 <i class="bi bi-search"></i>
             </button>
-            @if (!string.IsNullOrEmpty(Model.SearchQuery))
+            @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.RoleFilter))
             {
-                <a class="btn btn-outline-danger btn-sm"
-                   href="/Dashboard/SuperAdmin/Users">
-                    <i class="bi bi-x"></i>
+                <a class="btn btn-outline-danger btn-sm" href="/Dashboard/SuperAdmin/Users">
+                    <i class="bi bi-x"></i> Clear
                 </a>
             }
         </form>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-wrap ms-auto">
             <span class="badge bg-primary   px-3 py-2">Total: @Model.UsersList.Count</span>
             <span class="badge bg-success   px-3 py-2">Active: @Model.UsersList.Count(u => u.IsActive)</span>
             <span class="badge bg-danger    px-3 py-2">Inactive: @Model.UsersList.Count(u => !u.IsActive)</span>
-            <span class="badge bg-info text-dark px-3 py-2">
-                📱 Mobile: @Model.UsersList.Count(u => IsMobile(u.Role))
-            </span>
+            <span class="badge bg-info text-dark px-3 py-2">📱 Mobile: @Model.UsersList.Count(u => IsMobile(u.Role))</span>
         </div>
     </div>
 
-    <!-- Users table -->
+    <!-- ── Users Table ───────────────────────────────────────────────────── -->
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" id="usersTable">
                 <thead class="table-dark">
                     <tr>
-                        <th>#</th>
+                        <th class="ps-3">#</th>
                         <th>Name</th>
-                        <th>Email</th>
+                        <th>Username</th>
                         <th>Role</th>
                         <th>Phone</th>
                         <th>Status</th>
-                        <th>Mobile</th>
-                        <th>Actions</th>
+                        <th class="text-center">Mobile</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -177,6 +197,7 @@
                     {
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
                                 No users found.
                             </td>
                         </tr>
@@ -185,67 +206,68 @@
                     {
                         var rowCss = string.IsNullOrWhiteSpace(u.Role) ? "table-warning" : "";
                         <tr class="@rowCss">
-                            <td class="text-muted small">@u.Id</td>
+                            <td class="text-muted small ps-3">@u.Id</td>
                             <td class="fw-semibold">@u.Name</td>
                             <td><code class="small">@u.Email</code></td>
                             <td>
-                                <span class="badge bg-@Badge(u.Role ?? "") px-2 py-1">
+                                <span class="badge badge-role bg-@Badge(u.Role ?? "")">
                                     @Label(u.Role ?? "")
                                 </span>
                             </td>
-                            <td class="small">
-                                @(string.IsNullOrEmpty(u.Phone) ? "—" : u.Phone)
-                            </td>
+                            <td class="small">@(string.IsNullOrEmpty(u.Phone) ? "—" : u.Phone)</td>
                             <td>
-                                <!-- POST to /admin/users/toggle -->
-                                <form method="post" action="/admin/users/toggle"
-                                      style="display:inline">
+                                <form method="post" action="/admin/users/toggle" style="display:inline">
                                     <input type="hidden" name="UserId" value="@u.Id"/>
                                     <button type="submit"
                                             class="badge border-0 bg-@(u.IsActive ? "success" : "danger") px-2 py-1"
-                                            style="cursor:pointer">
-                                        @(u.IsActive ? "Active" : "Inactive")
+                                            style="cursor:pointer"
+                                            title="Click to toggle status">
+                                        @(u.IsActive ? "✓ Active" : "✗ Inactive")
                                     </button>
                                 </form>
                             </td>
                             <td class="text-center">
-                                @if (IsMobile(u.Role))
-                                {
-                                    <span title="Mobile app user">📱</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted small">—</span>
-                                }
+                                @if (IsMobile(u.Role)) { <span title="Mobile app user">📱</span> }
+                                else { <span class="text-muted small">—</span> }
                             </td>
-                            <td>
-                                <div class="d-flex gap-1">
+                            <td class="text-center action-btn">
+                                <div class="d-flex gap-1 justify-content-center">
                                     <!-- Edit -->
-                                    <button class="btn btn-sm btn-outline-warning"
+                                    <button class="btn btn-sm btn-warning"
                                             data-bs-toggle="modal"
                                             data-bs-target="#modalEdit"
-                                            onclick="fillEdit(
+                                            onclick='fillEdit(
                                                 @u.Id,
                                                 @Html.Raw(System.Text.Json.JsonSerializer.Serialize(u.Name)),
                                                 @Html.Raw(System.Text.Json.JsonSerializer.Serialize(u.Email)),
                                                 @Html.Raw(System.Text.Json.JsonSerializer.Serialize(u.Role ?? "")),
                                                 @Html.Raw(System.Text.Json.JsonSerializer.Serialize(u.Phone ?? "")),
-                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(u.Address ?? "")),
                                                 @(u.IsActive ? "true" : "false")
-                                            )"
+                                            )'
                                             title="Edit user">
-                                        <i class="bi bi-pencil"></i>
+                                        <i class="bi bi-pencil-fill"></i>
                                     </button>
-                                    <!-- Reset password -->
+                                    <!-- Reset Password -->
                                     <button class="btn btn-sm btn-outline-secondary"
                                             data-bs-toggle="modal"
                                             data-bs-target="#modalReset"
-                                            onclick="fillReset(
+                                            onclick='fillReset(
                                                 @u.Id,
                                                 @Html.Raw(System.Text.Json.JsonSerializer.Serialize(u.Name))
-                                            )"
+                                            )'
                                             title="Reset password">
-                                        <i class="bi bi-key"></i>
+                                        <i class="bi bi-key-fill"></i>
+                                    </button>
+                                    <!-- Delete -->
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalDelete"
+                                            onclick='fillDelete(
+                                                @u.Id,
+                                                @Html.Raw(System.Text.Json.JsonSerializer.Serialize(u.Name))
+                                            )'
+                                            title="Delete user">
+                                        <i class="bi bi-trash3-fill"></i>
                                     </button>
                                 </div>
                             </td>
@@ -254,45 +276,52 @@
                 </tbody>
             </table>
         </div>
+        <div class="card-footer bg-light text-muted small py-2 px-3">
+            Showing @Model.UsersList.Count user(s)
+            @if (!string.IsNullOrEmpty(Model.SearchQuery)) { <span> · Search: "<strong>@Model.SearchQuery</strong>"</span> }
+            @if (!string.IsNullOrEmpty(Model.RoleFilter))  { <span> · Role: "<strong>@Model.RoleFilter</strong>"</span> }
+        </div>
     </div>
 
 </main>
 
-<!-- ════ ADD USER MODAL — posts to /admin/users/create ══════════════════════ -->
-<div class="modal fade" id="modalAdd" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     ADD USER MODAL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalAdd" tabindex="-1" aria-modal="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
             <form method="post" action="/admin/users/create" id="formAdd">
+                <!-- Header -->
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-person-plus-fill me-1"></i> Add User
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white"
-                            data-bs-dismiss="modal"></button>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-person-plus-fill fs-4"></i>
+                        <div>
+                            <h5 class="modal-title mb-0">Create User from Employee</h5>
+                            <small class="opacity-75">Search employee to create an account</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body row g-3">
 
-                    <!-- ── Employee Live Search ──────────────────────────── -->
-                    <div class="col-12">
-                        <label class="form-label fw-semibold text-info">
-                            <i class="bi bi-search me-1"></i>Search Employee by Name or Mobile
+                <div class="modal-body p-4">
+                    <!-- Employee live search -->
+                    <div class="mb-3 p-3 bg-light rounded-3 border border-info">
+                        <label class="form-label fw-semibold text-info mb-1">
+                            <i class="bi bi-search me-1"></i>Quick-fill from Employee Record
                         </label>
-                        <input type="text" class="form-control border-info"
-                               id="empSearchInput"
-                               placeholder="Type name or phone number…"
-                               autocomplete="off"/>
-                        <!-- results dropdown -->
+                        <input type="text" class="form-control border-info" id="empSearchInput"
+                               placeholder="Type employee name or phone…" autocomplete="off"/>
                         <div id="empSearchResults"
                              class="list-group shadow mt-1 position-absolute z-3"
-                             style="display:none;max-height:220px;overflow-y:auto;min-width:350px;max-width:100%">
-                        </div>
+                             style="display:none;max-height:220px;overflow-y:auto;min-width:360px;max-width:100%"></div>
                         <div class="form-text">
-                            Select an employee to auto-fill their details and generate a password.
+                            Selecting an employee auto-fills name, phone and generates a username &amp; password.
                         </div>
                     </div>
 
-                    <!-- ── Auto-filled read-only preview ─────────────────── -->
-                    <div class="col-12" id="empPreviewRow" style="display:none">
+                    <!-- Employee preview banner -->
+                    <div id="empPreviewRow" style="display:none" class="mb-3">
                         <div class="alert alert-info py-2 mb-0 d-flex align-items-center gap-3">
                             <i class="bi bi-person-check-fill fs-4"></i>
                             <div>
@@ -306,8 +335,8 @@
                         </div>
                     </div>
 
-                    <!-- ── Already-has-account warning ───────────────────── -->
-                    <div class="col-12" id="empAlreadyHasAccountRow" style="display:none">
+                    <!-- Already-has-account warning -->
+                    <div id="empAlreadyHasAccountRow" style="display:none" class="mb-3">
                         <div class="alert alert-danger py-2 mb-0 d-flex align-items-center gap-2">
                             <i class="bi bi-exclamation-triangle-fill fs-5"></i>
                             <div>
@@ -317,85 +346,69 @@
                         </div>
                     </div>
 
-                    <!-- hidden employee id sent with the form -->
                     <input type="hidden" name="EmployeeId" id="addEmployeeId" value=""/>
+                    <input type="hidden" name="Name" id="addName" value=""/>
+                    <input type="hidden" name="Email" id="addEmail" value=""/>
+                    <input type="hidden" name="Phone" id="addPhone" value=""/>
+                    <input type="hidden" name="Password" id="addPassword" value=""/>
 
-                    <!-- ── User fields ────────────────────────────────────── -->
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Full Name *</label>
-                        <input class="form-control" name="Name" id="addName" required
-                               placeholder="Will be filled from employee search"/>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Department</label>
-                        <input class="form-control bg-light" id="addDeptDisplay" readonly
-                               placeholder="Filled from employee"/>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Email *</label>
-                        <input type="email" class="form-control" name="Email" id="addEmail" required/>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">
-                            Password *
-                            <span class="badge bg-info text-dark ms-1 small fw-normal">
-                                Auto: LastName&#64;123
-                            </span>
-                        </label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" name="Password" id="addPassword"
-                                   required minlength="6"
-                                   placeholder="Auto-filled as LastName@123"/>
-                            <button type="button" class="btn btn-outline-secondary"
-                                    onclick="togglePwdVisibility()" title="Show/hide">
-                                <i class="bi bi-eye" id="addPwdEyeIcon"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Role *</label>
-                        <select class="form-select" name="Role" id="addRole" required>
-                            <option value="">— Select Role —</option>
-                            <option value="driver">Driver  (Mobile App)</option>
-                            <option value="outsource">Outsource  (Mobile App)</option>
-                            <option value="manager">Manager  (Mobile App)</option>
-                            <option value="hr">Human Resources  (Web)</option>
-                            <option value="superadmin">Super Admin  (Web)</option>
-                            <option value="staff">Staff  (Web)</option>
-                            <option value="wereda_mahberat">Wereda Mahberat  (Web)</option>
-                            <option value="DispatchOfficer">Dispatch Officer  (Web)</option>
-                        </select>
-                        <div class="form-text mt-1">
-                            For <strong>Private Company Rep</strong> use the
-                            <em>Register Private Rep</em> button.
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Phone</label>
-                        <input type="tel" class="form-control" name="Phone" id="addPhone"
-                               placeholder="+251 9xx xxx xxx"/>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Address</label>
-                        <input class="form-control" name="Address"/>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input"
-                                   name="IsActive" value="true" checked id="addActive"/>
-                            <label class="form-check-label" for="addActive">
-                                Active (can log in immediately)
+                    <div class="row g-3">
+                        <!-- Role -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-shield-lock me-1 text-primary"></i>Assign Role *
                             </label>
+                            <select class="form-select" name="Role" id="addRole" required>
+                                <option value="">— Select Role —</option>
+                                <option value="superadmin">⭐ Super Admin</option>
+                                <option value="hr">👥 Human Resources</option>
+                                <option value="manager">👔 Manager</option>
+                                <option value="staff">🧹 Staff</option>
+                                <option value="driver">🚗 Driver</option>
+                                <option value="outsource">🏢 Outsource</option>
+                                <option value="wereda_mahberat">🏘 Wereda Mahberat</option>
+                                <option value="PrivateCompanyRep">🏢 Private Company Rep</option>
+                                <option value="DispatchOfficer">📋 Dispatch Officer</option>
+                            </select>
+                            <div class="form-text">
+                                Note: Creating a Private/Outsource rep here does not automatically link them to a company.
+                            </div>
+                        </div>
+
+                        <!-- Active -->
+                        <div class="col-12">
+                            <!-- Username preview (read-only display) -->
+                            <div id="usernamePreviewRow" style="display:none" class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-person-badge me-1 text-primary"></i>Generated Username
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-at"></i></span>
+                                    <input type="text" class="form-control bg-light fw-bold" id="usernamePreviewDisplay" readonly/>
+                                </div>
+                                <div class="form-text text-success">
+                                    <i class="bi bi-info-circle me-1"></i>This is the login username. Login uses username, not email.
+                                </div>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       name="IsActive" value="true" checked id="addActive"
+                                       role="switch" style="width:2.5em;height:1.3em"/>
+                                <label class="form-check-label fw-semibold ms-2" for="addActive">
+                                    Active — user can log in immediately
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"
-                            id="btnCreateUser"
-                            onclick="return validateAddRole()">
-                        <i class="bi bi-check-lg me-1"></i>Create User
+
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary fw-semibold px-4"
+                            id="btnCreateUser" onclick="return validateAddForm()">
+                        <i class="bi bi-person-check-fill me-1"></i>Create User
                     </button>
                 </div>
             </form>
@@ -403,64 +416,93 @@
     </div>
 </div>
 
-<!-- ════ REGISTER PRIVATE REP — posts to /admin/users/create-private ════════ -->
-<div class="modal fade" id="modalPrivate" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     REGISTER PRIVATE REP MODAL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalPrivate" tabindex="-1" aria-modal="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
             <form method="post" action="/admin/users/create-private">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-building-add me-1"></i> Register Private Company Rep
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white"
-                            data-bs-dismiss="modal"></button>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-building-add fs-4"></i>
+                        <div>
+                            <h5 class="modal-title mb-0">Register Private Company Rep</h5>
+                            <small class="opacity-75">Creates a mobile login + company profile in one step</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div class="alert alert-info small py-2 mb-3">
-                        Creates a <strong>PrivateCompanyRep</strong> mobile login
-                        <em>and</em> a linked company profile in one step.
+                        <i class="bi bi-info-circle me-1"></i>
+                        Creates a <strong>PrivateCompanyRep</strong> mobile account
+                        <em>and</em> a linked company profile simultaneously.
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Full Name *</label>
-                            <input class="form-control" name="Name" required/>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-person me-1 text-success"></i>Full Name *
+                            </label>
+                            <input class="form-control" name="Name" id="privateName" required placeholder="Rep full name"/>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Email *</label>
-                            <input type="email" class="form-control" name="Email" required/>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-person-badge me-1 text-success"></i>Username *
+                            </label>
+                            <input type="text" class="form-control" name="Email" id="privateEmail" required placeholder="e.g. rep@yeka"/>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Password *</label>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-lock me-1 text-success"></i>Password *
+                            </label>
                             <input type="password" class="form-control" name="Password"
-                                   required minlength="6"/>
+                                   required minlength="6" placeholder="Min. 6 characters"/>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Phone</label>
-                            <input type="tel" class="form-control" name="Phone"/>
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-telephone me-1 text-success"></i>Phone
+                            </label>
+                            <input type="tel" class="form-control" name="Phone" id="privatePhone"
+                                   placeholder="+251 9xx xxx xxx"/>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Company Name *</label>
-                            <input class="form-control" name="CompanyName" required/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">License Number</label>
-                            <input class="form-control" name="LicenseNumber"/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Company Address</label>
-                            <input class="form-control" name="CompanyAddress"/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Services Offered</label>
-                            <input class="form-control" name="ServicesOffered"
-                                   placeholder="Waste collection, Street cleaning…"/>
+                        <div class="col-12"><hr class="my-1"/></div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-building me-1 text-success"></i>Select Registered Company *
+                            </label>
+                            @if (Model.UnlinkedCompanies.Any())
+                            {
+                                <select class="form-select" name="CompanyId" id="privateCompanySelect" required onchange="populatePrivateRep()">
+                                    <option value="">— Select Company —</option>
+                                    @foreach (var comp in Model.UnlinkedCompanies)
+                                    {
+                                        <option value="@comp.id" 
+                                                data-contact="@comp.contact_person" 
+                                                data-email="@comp.email" 
+                                                data-phone="@comp.phone">@comp.company_name</option>
+                                    }
+                                </select>
+                                <div class="form-text">
+                                    Only companies without an assigned representative are shown here. 
+                                    If a company is not listed, please register it from the Manager dashboard first.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning py-2 mb-0">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    No available companies found. Please register the company from the Manager dashboard first.
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-success fw-semibold px-4">
                         <i class="bi bi-person-check-fill me-1"></i>Register
                     </button>
                 </div>
@@ -469,75 +511,170 @@
     </div>
 </div>
 
-<!-- ════ EDIT USER — posts to /admin/users/update ═══════════════════════════ -->
-<div class="modal fade" id="modalEdit" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" action="/admin/users/update">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     EDIT USER MODAL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEdit" tabindex="-1" aria-modal="true" aria-labelledby="editModalLabel">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="/admin/users/update" id="formEdit">
                 <input type="hidden" name="UserId" id="eId"/>
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title">
-                        <i class="bi bi-pencil-square me-1"></i> Edit User
-                    </h5>
-                    <button type="button" class="btn-close"
-                            data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body row g-3">
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Full Name *</label>
-                        <input class="form-control" name="Name" id="eName" required/>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Email *</label>
-                        <input type="email" class="form-control" name="Email"
-                               id="eEmail" required/>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Role *</label>
-                        <select class="form-select" name="Role" id="eRole" required>
-                            <option value="">— Select Role —</option>
-                            <option value="driver">Driver  (Mobile App)</option>
-                            <option value="outsource">Outsource  (Mobile App)</option>
-                            <option value="PrivateCompanyRep">Private Company Rep  (Mobile App)</option>
-                            <option value="manager">Manager  (Mobile App)</option>
-                            <option value="hr">Human Resources  (Web)</option>
-                            <option value="superadmin">Super Admin  (Web)</option>
-                            <option value="staff">Staff  (Web)</option>
-                            <option value="wereda_mahberat">Wereda Mahberat  (Web)</option>
-                            <option value="DispatchOfficer">Dispatch Officer  (Web)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Phone</label>
-                        <input type="tel" class="form-control" name="Phone" id="ePhone"/>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Address</label>
-                        <input class="form-control" name="Address" id="eAddress"/>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">
-                            New Password
-                            <small class="text-muted">(leave blank to keep current)</small>
-                        </label>
-                        <input type="password" class="form-control" name="Password"
-                               minlength="6" placeholder="Leave blank to keep current"/>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input"
-                                   name="IsActive" id="eActive" value="true"/>
-                            <label class="form-check-label fw-semibold" for="eActive">
-                                Active
-                            </label>
+
+                <!-- Header -->
+                <div class="modal-header text-dark"
+                     style="background:linear-gradient(135deg,#ffe082,#ffc107)">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-white d-flex align-items-center justify-content-center shadow-sm"
+                             style="width:44px;height:44px;min-width:44px">
+                            <i class="bi bi-person-fill text-warning fs-4"></i>
                         </div>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold" id="editModalLabel">
+                                <i class="bi bi-pencil-square me-1"></i>Edit User
+                            </h5>
+                            <small class="opacity-75" id="eSubtitle">Loading…</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+
+                        <!-- Name -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-person me-1 text-warning"></i>Full Name *
+                            </label>
+                            <input class="form-control" name="Name" id="eName" required
+                                   placeholder="Full name"/>
+                        </div>
+
+                        <!-- Username -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-person-badge me-1 text-warning"></i>Username *
+                            </label>
+                            <input type="text" class="form-control" name="Email"
+                                   id="eEmail" required placeholder="username (e.g. user@yeka)"/>
+                        </div>
+
+                        <!-- Role -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-shield-lock me-1 text-warning"></i>Role *
+                            </label>
+                            <select class="form-select" name="Role" id="eRole" required>
+                                <option value="">— Select Role —</option>
+                                <option value="superadmin">⭐ Super Admin</option>
+                                <option value="hr">👥 Human Resources</option>
+                                <option value="manager">👔 Manager</option>
+                                <option value="staff">🧹 Staff</option>
+                                <option value="driver">🚗 Driver</option>
+                                <option value="outsource">🏢 Outsource</option>
+                                <option value="wereda_mahberat">🏘 Wereda Mahberat</option>
+                                <option value="PrivateCompanyRep">🏭 Private Company Rep</option>
+                                <option value="DispatchOfficer">📋 Dispatch Officer</option>
+                            </select>
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-telephone me-1 text-warning"></i>Phone
+                            </label>
+                            <input type="tel" class="form-control" name="Phone" id="ePhone"
+                                   placeholder="+251 9xx xxx xxx"/>
+                        </div>
+
+
+                        <!-- New Password -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-key me-1 text-warning"></i>New Password
+                                <small class="text-muted fw-normal">(leave blank to keep current)</small>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" name="Password"
+                                       id="ePassword" minlength="6"
+                                       placeholder="Leave blank to keep current password"/>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        onclick="toggleEditPwd()" title="Show / hide">
+                                    <i class="bi bi-eye" id="ePwdEyeIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox"
+                                       name="IsActive" id="eActive" value="true"
+                                       role="switch" style="width:2.5em;height:1.3em"/>
+                                <label class="form-check-label fw-semibold ms-2" for="eActive">
+                                    Active — user can log in
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer border-top d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-danger"
+                            onclick="confirmDeleteUser()" title="Delete this user permanently">
+                        <i class="bi bi-trash3-fill me-1"></i>Delete User
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x me-1"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-warning fw-semibold px-4">
+                            <i class="bi bi-floppy-fill me-1"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     RESET PASSWORD MODAL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalReset" tabindex="-1" aria-modal="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="/admin/users/reset-password">
+                <input type="hidden" name="UserId" id="rId"/>
+                <div class="modal-header bg-secondary text-white">
+                    <h6 class="modal-title">
+                        <i class="bi bi-key-fill me-1"></i>Reset Password
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        <i class="bi bi-person-fill me-1"></i>
+                        User: <strong id="rName"></strong>
+                    </p>
+                    <label class="form-label fw-semibold">New Password *</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" name="Password"
+                               id="rPassword" required minlength="6"
+                               placeholder="Min. 6 characters"/>
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="toggleResetPwd()" title="Show/hide">
+                            <i class="bi bi-eye" id="rPwdEyeIcon"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-save me-1"></i>Save Changes
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-warning fw-semibold px-3">
+                        <i class="bi bi-key me-1"></i>Reset
                     </button>
                 </div>
             </form>
@@ -545,32 +682,33 @@
     </div>
 </div>
 
-<!-- ════ RESET PASSWORD — posts to /admin/users/reset-password ══════════════ -->
-<div class="modal fade" id="modalReset" tabindex="-1">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     DELETE CONFIRM MODAL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalDelete" tabindex="-1" aria-modal="true">
     <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <form method="post" action="/admin/users/reset-password">
-                <input type="hidden" name="UserId" id="rId"/>
-                <div class="modal-header">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="/admin/users/delete">
+                <input type="hidden" name="UserId" id="dId"/>
+                <div class="modal-header bg-danger text-white">
                     <h6 class="modal-title">
-                        <i class="bi bi-key me-1"></i> Reset Password
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Delete User
                     </h6>
-                    <button type="button" class="btn-close"
-                            data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="small text-muted mb-2">
-                        User: <strong id="rName"></strong>
+                <div class="modal-body text-center py-3">
+                    <i class="bi bi-person-dash-fill text-danger" style="font-size:3rem"></i>
+                    <p class="mt-2 mb-1 fw-semibold">Permanently delete</p>
+                    <strong id="dName" class="text-danger fs-6 d-block mb-1"></strong>
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-exclamation-circle me-1"></i>This action cannot be undone.
                     </p>
-                    <label class="form-label fw-semibold">New Password *</label>
-                    <input type="password" class="form-control" name="Password"
-                           required minlength="6" placeholder="Min. 6 characters"/>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary"
+                <div class="modal-footer justify-content-center gap-2">
+                    <button type="button" class="btn btn-secondary btn-sm px-3"
                             data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm btn-warning">
-                        Reset
+                    <button type="submit" class="btn btn-danger btn-sm fw-semibold px-4">
+                        <i class="bi bi-trash3-fill me-1"></i>Yes, Delete
                     </button>
                 </div>
             </form>
@@ -581,34 +719,70 @@
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ── Sidebar ──────────────────────────────────────────────────────────────────
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 function toggleSidebar() {
     document.getElementById('sidebarMenu').classList.toggle('show');
     document.getElementById('sidebarBackdrop').classList.toggle('show');
 }
 
-// ── Add User: validate role ───────────────────────────────────────────────────
-function validateAddRole() {
-    var v = document.getElementById('addRole').value;
-    if (!v) { alert('Please select a Role before creating the user.'); return false; }
+// ── Add modal: validate before submit ────────────────────────────────────────
+function validateAddForm() {
+    var role = document.getElementById('addRole').value;
+    var name = document.getElementById('addName').value.trim();
+    var email = document.getElementById('addEmail').value.trim();
+    var pwd  = document.getElementById('addPassword').value;
+    var empId = document.getElementById('addEmployeeId').value;
+    
+    if (!empId) { showToast('Please search and select an employee first.', 'danger'); return false; }
+    if (!name)  { showToast('Employee name is missing.', 'danger'); return false; }
+    if (!email) { showToast('Username is missing.', 'danger'); return false; }
+    if (!pwd)   { showToast('Password is required.', 'danger'); return false; }
+    if (!role)  { showToast('Please select a Role.', 'danger'); return false; }
     return true;
 }
 
-// ── Password field visibility toggle ─────────────────────────────────────────
-function togglePwdVisibility() {
-    var inp  = document.getElementById('addPassword');
-    var icon = document.getElementById('addPwdEyeIcon');
-    if (inp.type === 'text') {
-        inp.type = 'password';
-        icon.className = 'bi bi-eye';
-    } else {
+// ── Add password show/hide ────────────────────────────────────────────────────
+function toggleAddPwd() {
+    togglePwdField('addPassword', 'addPwdEyeIcon');
+}
+
+// ── Edit password show/hide ───────────────────────────────────────────────────
+function toggleEditPwd() {
+    togglePwdField('ePassword', 'ePwdEyeIcon');
+}
+
+// ── Reset password show/hide ──────────────────────────────────────────────────
+function toggleResetPwd() {
+    togglePwdField('rPassword', 'rPwdEyeIcon');
+}
+
+function togglePwdField(inputId, iconId) {
+    var inp  = document.getElementById(inputId);
+    var icon = document.getElementById(iconId);
+    if (inp.type === 'password') {
         inp.type = 'text';
         icon.className = 'bi bi-eye-slash';
+    } else {
+        inp.type = 'password';
+        icon.className = 'bi bi-eye';
     }
 }
 
+// ── Simple toast notification ─────────────────────────────────────────────────
+function showToast(msg, type) {
+    var t = document.createElement('div');
+    t.className = 'position-fixed bottom-0 end-0 p-3';
+    t.style.zIndex = '9999';
+    t.innerHTML = '<div class="toast show align-items-center text-white bg-' + type + ' border-0">' +
+        '<div class="d-flex"><div class="toast-body">' + msg + '</div>' +
+        '<button type="button" class="btn-close btn-close-white me-2 m-auto" ' +
+        'onclick="this.closest(\'.position-fixed\').remove()"></button></div></div>';
+    document.body.appendChild(t);
+    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 4000);
+}
+
 // ── Employee live search ──────────────────────────────────────────────────────
-var _empSearchTimer = null;
+var _empTimer = null;
 
 document.addEventListener('DOMContentLoaded', function () {
     var input   = document.getElementById('empSearchInput');
@@ -616,33 +790,32 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!input) return;
 
     input.addEventListener('input', function () {
-        clearTimeout(_empSearchTimer);
+        clearTimeout(_empTimer);
         var q = input.value.trim();
         if (q.length < 2) { results.style.display = 'none'; return; }
-
-        _empSearchTimer = setTimeout(function () {
+        _empTimer = setTimeout(function () {
             fetch('/admin/users/search-employees?q=' + encodeURIComponent(q))
                 .then(function (r) { return r.json(); })
-                .then(function (data) { renderSearchResults(data); });
+                .then(function (data) { renderEmpResults(data); })
+                .catch(function() { results.style.display = 'none'; });
         }, 280);
     });
 
-    // Close dropdown when clicking outside
     document.addEventListener('click', function (e) {
-        if (!input.contains(e.target) && !results.contains(e.target)) {
+        if (!input.contains(e.target) && !results.contains(e.target))
             results.style.display = 'none';
-        }
     });
 
-    // Reset modal when closed
     document.getElementById('modalAdd').addEventListener('hidden.bs.modal', function () {
         clearEmployeeSelection();
         document.getElementById('formAdd').reset();
         results.style.display = 'none';
+        document.getElementById('addPassword').type = 'password';
+        document.getElementById('addPwdEyeIcon').className = 'bi bi-eye';
     });
 });
 
-function renderSearchResults(data) {
+function renderEmpResults(data) {
     var results = document.getElementById('empSearchResults');
     results.innerHTML = '';
     if (!data || data.length === 0) {
@@ -656,18 +829,18 @@ function renderSearchResults(data) {
         btn.type = 'button';
         btn.className = 'list-group-item list-group-item-action py-2 px-3' +
                         (emp.hasAccount ? ' list-group-item-warning' : '');
-        var accountBadge = emp.hasAccount
-            ? '<span class="badge bg-danger ms-2"><i class="bi bi-person-fill-check me-1"></i>Has Account</span>'
-            : '<span class="badge bg-success ms-2"><i class="bi bi-person-plus me-1"></i>No Account</span>';
+        var badge = emp.hasAccount
+            ? '<span class="badge bg-danger ms-2">Has Account</span>'
+            : '<span class="badge bg-success ms-2">No Account</span>';
         btn.innerHTML =
             '<div class="d-flex justify-content-between align-items-center">' +
             '  <span class="fw-semibold">' + escHtml(emp.fullName) + '</span>' +
-            '  <div class="d-flex gap-1">' +
-            '    <span class="badge bg-secondary">' + escHtml(emp.department || '—') + '</span>' +
-            '    ' + accountBadge +
+            '  <div>' +
+            '    <span class="badge bg-secondary">' + escHtml(emp.department||'—') + '</span>' +
+            '    ' + badge +
             '  </div>' +
             '</div>' +
-            '<small class="text-muted">' + escHtml(emp.phone || '') + '</small>';
+            '<small class="text-muted">' + escHtml(emp.phone||'') + ' · ' + escHtml(emp.email||'') + '</small>';
         btn.addEventListener('click', function () { selectEmployee(emp); });
         results.appendChild(btn);
     });
@@ -675,84 +848,89 @@ function renderSearchResults(data) {
 }
 
 function selectEmployee(emp) {
-    // Fill form fields
-    document.getElementById('addName').value          = emp.fullName   || '';
-    document.getElementById('addEmail').value         = emp.email      || '';
-    document.getElementById('addPhone').value         = emp.phone      || '';
-    document.getElementById('addDeptDisplay').value   = emp.department || '';
-    document.getElementById('addEmployeeId').value    = emp.id         || '';
+    // Generate short username from first name only: "Melikam Abrea" → "melikam"
+    var fullName = (emp.fullName || '').trim();
+    var firstName = (emp.firstName || fullName.split(' ')[0] || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!firstName) firstName = 'user';
+    var username = firstName + '@@yeka';
+    
+    document.getElementById('addName').value        = emp.fullName   || '';
+    document.getElementById('addEmail').value       = username;
+    document.getElementById('addPhone').value       = emp.phone      || '';
+    document.getElementById('addEmployeeId').value  = emp.id         || '';
 
-    // Auto password: LastName@@123
-    var pwd = (emp.lastName || '').trim();
-    if (pwd) {
-        document.getElementById('addPassword').value = pwd + '@@123';
-        document.getElementById('addPassword').type  = 'text'; // show it clearly
-        document.getElementById('addPwdEyeIcon').className = 'bi bi-eye-slash';
-    }
+    // Auto password: Yeka@1234
+    document.getElementById('addPassword').value = 'Yeka@1234';
 
-    // Show preview
-    document.getElementById('empPreviewName').textContent = emp.fullName || '';
+    // Show generated username preview
+    var preview = document.getElementById('usernamePreviewDisplay');
+    if (preview) preview.value = username;
+    var previewRow = document.getElementById('usernamePreviewRow');
+    if (previewRow) previewRow.style.display = '';
+
+    document.getElementById('empPreviewName').textContent = emp.fullName   || '';
     document.getElementById('empPreviewDept').textContent = emp.department || '';
     document.getElementById('empPreviewRow').style.display = '';
 
-    // ── Already has account? show warning & disable Create button ────────
     var alreadyRow = document.getElementById('empAlreadyHasAccountRow');
     var createBtn  = document.getElementById('btnCreateUser');
     if (emp.hasAccount) {
-        var info = '';
-        if (emp.existingUserName)  info += emp.existingUserName;
+        var info = emp.existingUserName || '';
         if (emp.existingUserEmail) info += ' (' + emp.existingUserEmail + ')';
-        document.getElementById('empExistingAccountInfo').textContent =
-            'Existing account: ' + (info || 'linked');
+        document.getElementById('empExistingAccountInfo').textContent = 'Existing: ' + (info || 'linked');
         alreadyRow.style.display = '';
         createBtn.disabled = true;
-        createBtn.title    = 'Cannot create — this employee already has an account';
+        createBtn.title = 'Cannot create — employee already has an account';
     } else {
         alreadyRow.style.display = 'none';
         createBtn.disabled = false;
-        createBtn.title    = '';
+        createBtn.title = '';
     }
-
-    // Clear search
     document.getElementById('empSearchInput').value = '';
     document.getElementById('empSearchResults').style.display = 'none';
 }
 
 function clearEmployeeSelection() {
-    document.getElementById('addName').value             = '';
-    document.getElementById('addEmail').value            = '';
-    document.getElementById('addPhone').value            = '';
-    document.getElementById('addDeptDisplay').value      = '';
-    document.getElementById('addPassword').value         = '';
-    document.getElementById('addPassword').type          = 'text';
-    document.getElementById('addPwdEyeIcon').className   = 'bi bi-eye';
-    document.getElementById('addEmployeeId').value       = '';
+    ['addName','addEmail','addPhone','addPassword','addEmployeeId']
+        .forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = '';
+        });
     document.getElementById('empPreviewRow').style.display           = 'none';
     document.getElementById('empAlreadyHasAccountRow').style.display = 'none';
-    document.getElementById('empSearchInput').value      = '';
+    var previewRow = document.getElementById('usernamePreviewRow');
+    if (previewRow) previewRow.style.display = 'none';
+    document.getElementById('empSearchInput').value = '';
     document.getElementById('empSearchResults').style.display = 'none';
-    // Re-enable create button
     var btn = document.getElementById('btnCreateUser');
     btn.disabled = false;
-    btn.title    = '';
+    btn.title = '';
 }
 
 function escHtml(str) {
     return String(str)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Edit + Reset modals ───────────────────────────────────────────────────────
-function fillEdit(id, name, email, role, phone, address, isActive) {
-    document.getElementById('eId').value      = id;
-    document.getElementById('eName').value    = name;
-    document.getElementById('eEmail').value   = email;
-    document.getElementById('ePhone').value   = phone;
-    document.getElementById('eAddress').value = address;
+// ── Edit modal ────────────────────────────────────────────────────────────────
+var _editUserId   = 0;
+var _editUserName = '';
+
+function fillEdit(id, name, email, role, phone, isActive) {
+    _editUserId   = id;
+    _editUserName = name;
+
+    document.getElementById('eId').value       = id;
+    document.getElementById('eName').value     = name;
+    document.getElementById('eEmail').value    = email;
+    document.getElementById('ePhone').value    = phone;
+
+    document.getElementById('ePassword').value = '';
+    document.getElementById('ePassword').type  = 'password';
+    document.getElementById('ePwdEyeIcon').className = 'bi bi-eye';
     document.getElementById('eActive').checked = (isActive === true || isActive === 'true');
+    document.getElementById('eSubtitle').textContent = 'ID #' + id + ' · ' + email;
 
     var sel = document.getElementById('eRole');
     var matched = false;
@@ -764,9 +942,56 @@ function fillEdit(id, name, email, role, phone, address, isActive) {
     if (!matched) sel.selectedIndex = 0;
 }
 
+// ── Confirm delete from Edit modal ───────────────────────────────────────────
+function confirmDeleteUser() {
+    var id   = document.getElementById('eId').value;
+    var name = _editUserName;
+    bootstrap.Modal.getInstance(document.getElementById('modalEdit')).hide();
+    document.getElementById('dId').value         = id;
+    document.getElementById('dName').textContent = name;
+    setTimeout(function () {
+        new bootstrap.Modal(document.getElementById('modalDelete')).show();
+    }, 350);
+}
+
+// ── Delete direct from table row ─────────────────────────────────────────────
+function fillDelete(id, name) {
+    document.getElementById('dId').value         = id;
+    document.getElementById('dName').textContent = name;
+}
+
+// ── Reset password modal ──────────────────────────────────────────────────────
 function fillReset(id, name) {
-    document.getElementById('rId').value         = id;
-    document.getElementById('rName').textContent = name;
+    document.getElementById('rId').value          = id;
+    document.getElementById('rName').textContent  = name;
+    document.getElementById('rPassword').value    = '';
+    document.getElementById('rPassword').type     = 'password';
+    document.getElementById('rPwdEyeIcon').className = 'bi bi-eye';
+}
+
+// ── Auto-populate Private Rep from Selected Company ───────────────────────────
+function populatePrivateRep() {
+    var sel = document.getElementById('privateCompanySelect');
+    var opt = sel.options[sel.selectedIndex];
+    var n = document.getElementById('privateName');
+    var e = document.getElementById('privateEmail');
+    var p = document.getElementById('privatePhone');
+    
+    if (opt && opt.value) {
+        n.value = opt.getAttribute('data-contact') || '';
+        e.value = opt.getAttribute('data-email') || '';
+        p.value = opt.getAttribute('data-phone') || '';
+        n.readOnly = true;
+        e.readOnly = true;
+        p.readOnly = true;
+    } else {
+        n.value = '';
+        e.value = '';
+        p.value = '';
+        n.readOnly = false;
+        e.readOnly = false;
+        p.readOnly = false;
+    }
 }
 </script>
 </body>

@@ -79,6 +79,23 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.settings_rounded,
+                color: isDark ? Colors.white70 : AppColors.primary,
+                size: 22,
+              ),
+            ),
+            onPressed: () => context.push('/settings'),
+          ),
           Consumer<NotificationService>(
             builder: (_, ns, __) => Stack(
               children: [
@@ -126,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+
       ),
       body: screens[_currentIndex],
       bottomNavigationBar: _BottomNav(

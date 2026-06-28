@@ -1,323 +1,338 @@
 @page
 @model CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer.VehiclesModel
 @{
-    Layout = null;
-    var userName = HttpContext.Session.GetString("UserName") ?? "Dispatch Officer";
+    Layout = "_DispatchLayout";
+    ViewData["Title"] = "Vehicles";
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>Vehicles — Dispatch Officer</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
-    <link rel="stylesheet" href="~/css/dashboard.css"/>
-    <style>
-        body { background:#f4f6fb !important; }
-        .pg-hero {
-            background:linear-gradient(135deg,#1d4ed8,#0891b2);
-            border-radius:0 0 24px 24px; color:#fff;
-            padding:22px 28px 20px; margin-bottom:24px;
-        }
-        .stat-pill {
-            background:rgba(255,255,255,.15); border-radius:12px;
-            padding:10px 18px; text-align:center; min-width:90px;
-        }
-        .stat-pill .sv { font-size:1.6rem; font-weight:900; line-height:1; }
-        .stat-pill .sl { font-size:.68rem; opacity:.8; }
-        .vcard {
-            background:#fff; border-radius:16px;
-            box-shadow:0 1px 4px rgba(0,0,0,.07);
-            border-top:4px solid var(--vc,#1d4ed8);
-            padding:0; overflow:hidden; height:100%;
-            transition:transform .15s, box-shadow .15s;
-        }
-        .vcard:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.1); }
-        .vcard-head { padding:16px 18px 10px; }
-        .vcard-plate {
-            font-size:1.05rem; font-weight:900; font-family:monospace;
-            color:#1d4ed8; letter-spacing:1px;
-        }
-        .vcard-body { padding:0 18px 14px; }
-        .vi { font-size:.78rem; color:#64748b; display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-        .vi i { color:#94a3b8; width:14px; }
-        .status-dot {
-            width:8px; height:8px; border-radius:50%; display:inline-block;
-            margin-right:5px;
-        }
-        .s-available  { background:#10b981; }
-        .s-assigned   { background:#3b82f6; }
-        .s-maintenance{ background:#f59e0b; }
-        .driver-badge {
-            background:#eff6ff; border:1px solid #bfdbfe;
-            border-radius:10px; padding:8px 12px; margin-top:10px;
-            font-size:.78rem;
-        }
-        .no-driver {
-            background:#f8fafc; border:1px dashed #e2e8f0;
-            border-radius:10px; padding:8px 12px; margin-top:10px;
-            font-size:.76rem; color:#94a3b8; text-align:center;
-        }
-        .vcard-actions {
-            border-top:1px solid #f1f5f9; padding:10px 14px;
-            display:flex; gap:6px; flex-wrap:wrap;
-        }
-    </style>
-</head>
-<body>
-<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
-<nav class="navbar navbar-dark dashboard-navbar fixed-top d-none d-lg-flex">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/Dashboard/DispatchOfficer/Index"><i class="bi bi-droplet-fill"></i> Yeka Cleaning</a>
-        <div class="nav-user">
-            <span>Welcome, @userName</span>
-            <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-right"></i> Logout</a>
+@section Styles {
+<style>
+    body { background: #f4f6fb !important; }
+
+    /* ── Page wrapper ───────────────────────────── */
+    .page-wrap { padding: 0 4px; }
+
+    /* ── Top bar ────────────────────────────────── */
+    .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .top-bar h5 { margin: 0; font-weight: 700; font-size: 1.05rem; color: #1e293b; }
+
+    /* ── Stat badges ────────────────────────────── */
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: .75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+        background: #f1f5f9;
+        color: #475569;
+    }
+    .stat-badge .dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    /* ── Search bar ─────────────────────────────── */
+    .search-bar {
+        max-width: 260px;
+    }
+    .search-bar .input-group-text {
+        background: #fff;
+        border-right: none;
+        border-color: #e2e8f0;
+        color: #94a3b8;
+    }
+    .search-bar .form-control {
+        border-left: none;
+        border-color: #e2e8f0;
+        font-size: .84rem;
+    }
+    .search-bar .form-control:focus {
+        box-shadow: none;
+        border-color: #93c5fd;
+    }
+
+    /* ── Table ──────────────────────────────────── */
+    .v-table-wrap {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 1px 6px rgba(0,0,0,.07);
+        overflow: hidden;
+    }
+    .v-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .84rem;
+    }
+    .v-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+        font-size: .73rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        padding: 11px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+    .v-table tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background .12s;
+    }
+    .v-table tbody tr:last-child { border-bottom: none; }
+    .v-table tbody tr:hover { background: #f8fafc; }
+    .v-table td {
+        padding: 11px 16px;
+        color: #334155;
+        vertical-align: middle;
+    }
+
+    /* ── Plate cell ─────────────────────────────── */
+    .plate-num {
+        font-family: monospace;
+        font-weight: 800;
+        font-size: .92rem;
+        color: #1d4ed8;
+        letter-spacing: .5px;
+    }
+
+    /* ── Status pill ────────────────────────────── */
+    .s-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: .72rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+    .s-available  { background: #dcfce7; color: #16a34a; }
+    .s-assigned   { background: #dbeafe; color: #2563eb; }
+    .s-maintenance{ background: #fef3c7; color: #d97706; }
+    .s-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ── Action buttons ─────────────────────────── */
+    .act-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 3px 9px;
+        font-size: .72rem;
+        font-weight: 500;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: opacity .12s;
+        white-space: nowrap;
+    }
+    .act-btn:hover { opacity: .8; }
+    .ab-avail  { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+    .ab-maint  { background: #fef3c7; color: #d97706; border-color: #fde68a; }
+    .ab-edit   { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+    .ab-del    { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
+
+    /* ── Empty state ────────────────────────────── */
+    .empty-row td {
+        text-align: center;
+        padding: 48px 16px;
+        color: #94a3b8;
+    }
+</style>
+}
+
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 main-content" style="margin-top:56px">
+<div class="page-wrap">
+
+    @{
+        int avail    = Model.Vehicles.Count(v => v.Status == "Available");
+        int assigned = Model.Vehicles.Count(v => v.Status == "Assigned");
+        int maint    = Model.Vehicles.Count(v => v.Status == "Maintenance");
+    }
+
+    <!-- Top bar -->
+    <div class="top-bar">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-truck text-primary"></i>
+            <h5>Vehicle Management</h5>
+            <span class="stat-badge ms-1">@Model.Vehicles.Count Total</span>
+            <span class="stat-badge"><span class="dot" style="background:#16a34a"></span>@avail Available</span>
+            <span class="stat-badge"><span class="dot" style="background:#2563eb"></span>@assigned Assigned</span>
+            <span class="stat-badge"><span class="dot" style="background:#d97706"></span>@maint Maintenance</span>
         </div>
-    </div>
-</nav>
-<nav class="navbar navbar-dark dashboard-navbar fixed-top d-lg-none">
-    <div class="container-fluid">
-        <button class="navbar-toggler" onclick="toggleSidebar()"><span class="navbar-toggler-icon"></span></button>
-        <a class="navbar-brand"><i class="bi bi-droplet-fill"></i> Yeka</a>
-        <a class="btn-logout" href="/Login?logout=1"><i class="bi bi-box-arrow-left"></i></a>
-    </div>
-</nav>
-
-<nav id="sidebarMenu" class="sidebar d-lg-none">
-    @await Html.PartialAsync("~/Pages/Dashboard/DispatchOfficer/_Sidebar.cshtml")
-</nav>
-<nav class="col-md-3 col-lg-2 d-none d-md-block sidebar" style="transform:none;padding-top:56px">
-    @await Html.PartialAsync("~/Pages/Dashboard/DispatchOfficer/_Sidebar.cshtml")
-</nav>
-
-<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4" style="margin-top:56px">
-
-    <!-- Hero -->
-    <div class="pg-hero">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-3">
-                <div style="width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem">
-                    <i class="bi bi-truck"></i>
-                </div>
-                <div>
-                    <h4 class="fw-bold mb-0">Vehicle Management</h4>
-                    <div style="font-size:.78rem;opacity:.75">Register vehicles &amp; assign drivers</div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="search-bar">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search" style="font-size:.8rem"></i></span>
+                    <input type="text" id="searchBox" class="form-control" placeholder="Search…" oninput="filterRows()"/>
                 </div>
             </div>
-            <div class="d-flex gap-2 flex-wrap align-items-center">
-                @{
-                    int avail = Model.Vehicles.Count(v => v.Status == "Available");
-                    int assigned = Model.Vehicles.Count(v => v.Status == "Assigned");
-                    int maint = Model.Vehicles.Count(v => v.Status == "Maintenance");
-                }
-                <div class="stat-pill"><div class="sv">@Model.Vehicles.Count</div><div class="sl">Total</div></div>
-                <div class="stat-pill" style="background:rgba(16,185,129,.25)"><div class="sv">@avail</div><div class="sl">Available</div></div>
-                <div class="stat-pill" style="background:rgba(59,130,246,.25)"><div class="sv">@assigned</div><div class="sl">Assigned</div></div>
-                <button class="btn btn-light btn-sm rounded-pill fw-bold px-3"
-                        data-bs-toggle="modal" data-bs-target="#addModal">
-                    <i class="bi bi-plus-circle me-1"></i>Register Vehicle
-                </button>
-            </div>
+            <button class="btn btn-primary btn-sm rounded-3 px-3"
+                    data-bs-toggle="modal" data-bs-target="#addModal">
+                <i class="bi bi-plus-lg me-1"></i>Register
+            </button>
         </div>
     </div>
 
     <!-- Alerts -->
     @if (!string.IsNullOrEmpty(Model.SuccessMessage)) {
-    <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-3">
+    <div class="alert alert-success alert-dismissible fade show rounded-3 py-2 mb-3" style="font-size:.85rem">
         <i class="bi bi-check-circle-fill me-2"></i>@Model.SuccessMessage
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     }
     @if (!string.IsNullOrEmpty(Model.ErrorMessage)) {
-    <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-3">
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 py-2 mb-3" style="font-size:.85rem">
         <i class="bi bi-exclamation-circle-fill me-2"></i>@Model.ErrorMessage
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     }
 
-    <!-- Vehicle cards -->
-    @if (!Model.Vehicles.Any()) {
-    <div class="text-center py-5 text-muted">
-        <i class="bi bi-truck fs-1 opacity-25 d-block mb-3"></i>
-        <h5 class="fw-bold">No vehicles registered yet</h5>
-        <p class="small">Click "Register Vehicle" to add the first one.</p>
-        <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addModal">
-            <i class="bi bi-plus-circle me-1"></i>Register Vehicle
-        </button>
-    </div>
-    } else {
-    <!-- Search bar -->
-    <div class="mb-3">
-        <div class="input-group" style="max-width:320px">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" id="searchBox" class="form-control border-start-0" placeholder="Search plate, type, driver…" oninput="filterCards()"/>
-        </div>
-    </div>
-
-    <div class="row g-3" id="vehicleGrid">
-        @foreach (var v in Model.Vehicles) {
-            var borderColor = v.Status switch {
-                "Available"   => "#10b981",
-                "Assigned"    => "#3b82f6",
-                "Maintenance" => "#f59e0b",
-                _             => "#94a3b8"
-            };
-            var dotClass = v.Status switch {
-                "Available"   => "s-available",
-                "Assigned"    => "s-assigned",
-                "Maintenance" => "s-maintenance",
-                _             => "s-maintenance"
-            };
-        <div class="col-sm-6 col-lg-4 col-xl-3 vehicle-item"
-             data-search="@v.PlateNumber @v.VehicleType @v.Model @v.DriverName @v.Status".ToLower()>
-            <div class="vcard" style="--vc:@borderColor">
-                <div class="vcard-head">
-                    <div class="d-flex align-items-start justify-content-between">
-                        <div>
-                            <div class="vcard-plate">@v.PlateNumber</div>
-                            <div style="font-size:.72rem;color:#64748b;margin-top:2px">
-                                @v.VehicleType @(string.IsNullOrEmpty(v.Model) ? "" : "· " + v.Model)
-                            </div>
-                        </div>
-                        <span class="badge rounded-pill" style="font-size:.68rem;background:@borderColor">
-                            <span class="status-dot @dotClass" style="width:6px;height:6px"></span>@v.Status
+    <!-- Table -->
+    <div class="v-table-wrap">
+        <table class="v-table" id="vehicleTable">
+            <thead>
+                <tr>
+                    <th style="width:40px">#</th>
+                    <th>Plate Number</th>
+                    <th>Type</th>
+                    <th>Model</th>
+                    <th>Color</th>
+                    <th>Status</th>
+                    <th style="text-align:right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Vehicles.Any()) {
+                <tr class="empty-row">
+                    <td colspan="7">
+                        <i class="bi bi-truck fs-2 d-block mb-2 opacity-25"></i>
+                        No vehicles registered yet.<br/>
+                        <button class="btn btn-primary btn-sm rounded-3 mt-3 px-3"
+                                data-bs-toggle="modal" data-bs-target="#addModal">
+                            <i class="bi bi-plus-lg me-1"></i>Register Vehicle
+                        </button>
+                    </td>
+                </tr>
+                } else {
+                    int row = 1;
+                    @foreach (var v in Model.Vehicles) {
+                        var pillClass = v.Status switch {
+                            "Available"   => "s-available",
+                            "Assigned"    => "s-assigned",
+                            "Maintenance" => "s-maintenance",
+                            _             => "s-maintenance"
+                        };
+                <tr class="v-row" data-search="@v.PlateNumber @v.VehicleType @v.Model @v.Color @v.Status".ToLower()>
+                    <td style="color:#cbd5e1;font-size:.78rem">@row</td>
+                    <td><span class="plate-num">@v.PlateNumber</span></td>
+                    <td>@v.VehicleType</td>
+                    <td>@(string.IsNullOrEmpty(v.Model) ? "-" : v.Model)</td>
+                    <td>@(string.IsNullOrEmpty(v.Color) ? "-" : v.Color)</td>
+                    <td>
+                        <span class="s-pill @pillClass">
+                            <span class="s-dot"></span>@v.Status
                         </span>
-                    </div>
-                </div>
-                <div class="vcard-body">
-                    @if (!string.IsNullOrEmpty(v.Color)) {
-                    <div class="vi"><i class="bi bi-palette"></i>@v.Color</div>
-                    }
-
-                    @if (v.DriverId.HasValue && v.DriverId > 0) {
-                        var driverInfo = Model.Drivers.FirstOrDefault(d => d.Id == v.DriverId);
-                        <div class="driver-badge">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <div style="width:30px;height:30px;border-radius:50%;background:#1d4ed8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:700;flex-shrink:0">
-                                    @(v.DriverName.Length > 0 ? v.DriverName[0].ToString().ToUpper() : "D")
-                                </div>
-                                <div>
-                                    <div style="font-weight:700;color:#1e40af;font-size:.8rem">@v.DriverName</div>
-                                    <div style="font-size:.7rem;color:#64748b">Assigned Driver</div>
-                                </div>
-                            </div>
-                            @if (driverInfo != null) {
-                            <div class="vi" style="margin:0"><i class="bi bi-phone"></i>@driverInfo.Phone</div>
-                            @if (!string.IsNullOrEmpty(driverInfo.LicenseNumber)) {
-                            <div class="vi" style="margin:0"><i class="bi bi-card-text"></i>License: @driverInfo.LicenseNumber (@driverInfo.LicenseType)</div>
+                    </td>
+                    <td>
+                        <div class="d-flex justify-content-end gap-1 flex-wrap">
+                            @if (v.Status != "Available") {
+                            <form method="post" asp-page-handler="SetStatus" style="display:inline">
+                                <input type="hidden" name="id" value="@v.Id"/>
+                                <input type="hidden" name="status" value="Available"/>
+                                <button type="submit" class="act-btn ab-avail">
+                                    <i class="bi bi-check-circle" style="font-size:.75rem"></i> Available
+                                </button>
+                            </form>
                             }
-                            <div class="vi" style="margin:0">
-                                <i class="bi bi-calendar-check"></i>
-                                Expires: @driverInfo.LicenseExpiry.ToString("MMM dd, yyyy")
-                            </div>
+                            @if (v.Status != "Maintenance") {
+                            <form method="post" asp-page-handler="SetStatus" style="display:inline">
+                                <input type="hidden" name="id" value="@v.Id"/>
+                                <input type="hidden" name="status" value="Maintenance"/>
+                                <button type="submit" class="act-btn ab-maint">
+                                    <i class="bi bi-tools" style="font-size:.75rem"></i> Maintenance
+                                </button>
+                            </form>
                             }
+                            <button class="act-btn ab-edit"
+                                    onclick="openEdit(@v.Id, '@v.PlateNumber', '@v.VehicleType', '@(v.Model?.Replace("'", "\\'"))', '@(v.Color?.Replace("'", "\\'"))', '@v.Status')">
+                                <i class="bi bi-pencil" style="font-size:.75rem"></i> Edit
+                            </button>
+                            <form method="post" asp-page-handler="Delete" style="display:inline"
+                                  onsubmit="return confirm('Delete @v.PlateNumber?')">
+                                <input type="hidden" name="id" value="@v.Id"/>
+                                <button type="submit" class="act-btn ab-del">
+                                    <i class="bi bi-trash" style="font-size:.75rem"></i>
+                                </button>
+                            </form>
                         </div>
-                    } else {
-                        <div class="no-driver">
-                            <i class="bi bi-person-slash me-1"></i>No driver assigned
-                        </div>
+                    </td>
+                </tr>
+                        row++;
                     }
-                </div>
-                <div class="vcard-actions">
-                    <!-- Status buttons -->
-                    @if (v.Status != "Available") {
-                    <form method="post" asp-page-handler="SetStatus" style="display:inline">
-                        <input type="hidden" name="id" value="@v.Id"/>
-                        <input type="hidden" name="status" value="Available"/>
-                        <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" style="font-size:.7rem">
-                            <i class="bi bi-check-circle"></i> Available
-                        </button>
-                    </form>
-                    }
-                    @if (v.Status != "Maintenance") {
-                    <form method="post" asp-page-handler="SetStatus" style="display:inline">
-                        <input type="hidden" name="id" value="@v.Id"/>
-                        <input type="hidden" name="status" value="Maintenance"/>
-                        <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill" style="font-size:.7rem">
-                            <i class="bi bi-tools"></i> Maintenance
-                        </button>
-                    </form>
-                    }
-                    <button class="btn btn-sm btn-outline-primary rounded-pill ms-auto" style="font-size:.7rem"
-                            onclick="openEdit(@v.Id, '@v.PlateNumber', '@v.VehicleType', '@v.Model', '@v.Color', @(v.DriverId?.ToString() ?? "0"), '@v.Status')">
-                        <i class="bi bi-pencil"></i> Edit
-                    </button>
-                    <form method="post" asp-page-handler="Delete" style="display:inline"
-                          onsubmit="return confirm('Delete vehicle @v.PlateNumber?')">
-                        <input type="hidden" name="id" value="@v.Id"/>
-                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" style="font-size:.7rem">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        }
+                }
+            </tbody>
+        </table>
     </div>
-    }
 
+</div>
 </main>
 
 <!-- ══ ADD MODAL ══════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="addModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
         <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header text-white rounded-top-4" style="background:linear-gradient(135deg,#1d4ed8,#0891b2)">
-                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Register New Vehicle</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h6 class="modal-title fw-bold"><i class="bi bi-plus-circle text-primary me-2"></i>Register Vehicle</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" asp-page-handler="Add">
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-semibold small">Plate Number <span class="text-danger">*</span></label>
-                            <input name="PlateNumber" class="form-control rounded-3" placeholder="e.g. AA-12345" required/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Vehicle Type <span class="text-danger">*</span></label>
-                            <select name="VehicleType" class="form-select rounded-3" required>
-                                <option value="">-- Select --</option>
-                                <option>Truck</option>
-                                <option>Van</option>
-                                <option>Car</option>
-                                <option>Pickup</option>
-                                <option>Minibus</option>
-                                <option>Motorcycle</option>
-                                <option>Other</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Model</label>
-                            <input name="VehicleModel" class="form-control rounded-3" placeholder="e.g. Isuzu NPR"/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Color</label>
-                            <input name="Color" class="form-control rounded-3" placeholder="e.g. White"/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Status</label>
-                            <select name="Status" class="form-select rounded-3">
-                                <option value="Available">Available</option>
-                                <option value="Assigned">Assigned</option>
-                                <option value="Maintenance">Maintenance</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold small">Assign Driver</label>
-                            <select name="DriverId" class="form-select rounded-3">
-                                <option value="">-- No Driver --</option>
-                                @foreach (var d in Model.Drivers) {
-                                    <option value="@d.Id">@d.FullName @(string.IsNullOrEmpty(d.Phone) ? "" : "· " + d.Phone)</option>
-                                }
-                            </select>
-                        </div>
+                <div class="modal-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Plate Number <span class="text-danger">*</span></label>
+                        <input name="PlateNumber" class="form-control rounded-3" placeholder="e.g. AA-12345" required/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Vehicle Type <span class="text-danger">*</span></label>
+                        <select name="VehicleType" class="form-select rounded-3" required>
+                            <option value="">-- Select --</option>
+                            <option>Truck</option>
+                            <option>Van</option>
+                            <option>Car</option>
+                            <option>Pickup</option>
+                            <option>Minibus</option>
+                            <option>Motorcycle</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Model</label>
+                        <input name="Model" class="form-control rounded-3" placeholder="e.g. Hilux, FSR..."/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Color</label>
+                        <input name="Color" class="form-control rounded-3" placeholder="e.g. White, Blue..."/>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label small fw-semibold">Status</label>
+                        <select name="Status" class="form-select rounded-3">
+                            <option value="Available">Available</option>
+                            <option value="Assigned">Assigned</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pb-4 px-4">
-                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                <div class="modal-footer border-0 px-4 pb-4 pt-1">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-3 px-4">
                         <i class="bi bi-save me-1"></i>Register
                     </button>
                 </div>
@@ -328,58 +343,47 @@
 
 <!-- ══ EDIT MODAL ════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
         <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header text-white rounded-top-4" style="background:linear-gradient(135deg,#059669,#0d9488)">
-                <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Vehicle</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h6 class="modal-title fw-bold"><i class="bi bi-pencil text-success me-2"></i>Edit Vehicle</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" asp-page-handler="Update">
-                <div class="modal-body p-4">
+                <div class="modal-body px-4 py-3">
                     <input type="hidden" name="EditId" id="editId"/>
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-semibold small">Plate Number <span class="text-danger">*</span></label>
-                            <input id="editPlate" name="PlateNumber" class="form-control rounded-3" required/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Vehicle Type</label>
-                            <select id="editType" name="VehicleType" class="form-select rounded-3">
-                                <option>Truck</option><option>Van</option><option>Car</option>
-                                <option>Pickup</option><option>Minibus</option><option>Motorcycle</option><option>Other</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Model</label>
-                            <input id="editModel" name="VehicleModel" class="form-control rounded-3"/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Color</label>
-                            <input id="editColor" name="Color" class="form-control rounded-3"/>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small">Status</label>
-                            <select id="editStatus" name="Status" class="form-select rounded-3">
-                                <option value="Available">Available</option>
-                                <option value="Assigned">Assigned</option>
-                                <option value="Maintenance">Maintenance</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold small">Assign Driver</label>
-                            <select id="editDriver" name="DriverId" class="form-select rounded-3">
-                                <option value="">-- No Driver --</option>
-                                @foreach (var d in Model.Drivers) {
-                                    <option value="@d.Id">@d.FullName @(string.IsNullOrEmpty(d.Phone) ? "" : "· " + d.Phone)</option>
-                                }
-                            </select>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Plate Number <span class="text-danger">*</span></label>
+                        <input id="editPlate" name="PlateNumber" class="form-control rounded-3" required/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Vehicle Type</label>
+                        <select id="editType" name="VehicleType" class="form-select rounded-3">
+                            <option>Truck</option><option>Van</option><option>Car</option>
+                            <option>Pickup</option><option>Minibus</option><option>Motorcycle</option><option>Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Model</label>
+                        <input id="editModel" name="Model" class="form-control rounded-3"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Color</label>
+                        <input id="editColor" name="Color" class="form-control rounded-3"/>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label small fw-semibold">Status</label>
+                        <select id="editStatus" name="Status" class="form-select rounded-3">
+                            <option value="Available">Available</option>
+                            <option value="Assigned">Assigned</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pb-4 px-4">
-                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success rounded-pill px-4">
-                        <i class="bi bi-save me-1"></i>Save Changes
+                <div class="modal-footer border-0 px-4 pb-4 pt-1">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success btn-sm rounded-3 px-4">
+                        <i class="bi bi-save me-1"></i>Save
                     </button>
                 </div>
             </form>
@@ -387,30 +391,23 @@
     </div>
 </div>
 
-<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@section Scripts {
 <script>
-function toggleSidebar() {
-    document.getElementById('sidebarMenu').classList.toggle('show');
-    document.getElementById('sidebarBackdrop').classList.toggle('show');
-}
-
-function openEdit(id, plate, type, model, color, driverId, status) {
+function openEdit(id, plate, type, model, color, status) {
     document.getElementById('editId').value     = id;
     document.getElementById('editPlate').value  = plate;
+    document.getElementById('editType').value   = type;
     document.getElementById('editModel').value  = model;
     document.getElementById('editColor').value  = color;
-    document.getElementById('editType').value   = type;
     document.getElementById('editStatus').value = status;
-    document.getElementById('editDriver').value = driverId || '';
     new bootstrap.Modal(document.getElementById('editModal')).show();
 }
 
-function filterCards() {
+function filterRows() {
     const q = document.getElementById('searchBox').value.toLowerCase();
-    document.querySelectorAll('.vehicle-item').forEach(el => {
-        el.style.display = el.dataset.search.includes(q) ? '' : 'none';
+    document.querySelectorAll('#vehicleTable .v-row').forEach(row => {
+        row.style.display = row.dataset.search.includes(q) ? '' : 'none';
     });
 }
 </script>
-</body>
-</html>
+}

@@ -13,9 +13,19 @@
 .tab-pill .nav-link{border:none;border-radius:30px;padding:.45rem 1.1rem;font-weight:600;color:#6c757d;font-size:.875rem}
 .tab-pill .nav-link.active{background:#0d6efd;color:#fff}
 .field-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6c757d;margin-bottom:.3rem}
-.input-modern{border-radius:.6rem;border:1.5px solid #dee2e6;padding:.55rem .9rem;font-size:.9rem;transition:.2s}
-.input-modern:focus{border-color:#86b7fe;box-shadow:0 0 0 3px rgba(13,110,253,.15)}
-.section-divider{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#adb5bd;border-bottom:1px solid #f0f0f0;padding-bottom:.4rem;margin-bottom:.8rem}
+.input-modern{border-radius:.6rem;border:1.5px solid #e9ecef;padding:.65rem .9rem;font-size:.9rem;transition:all .2s;background:#f8f9fa}
+.input-modern:focus{border-color:#86b7fe;background:#fff;box-shadow:0 0 0 4px rgba(13,110,253,.1)}
+.section-divider{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#adb5bd;border-bottom:2px dashed #f0f0f0;padding-bottom:.5rem;margin-top:1rem;margin-bottom:1.2rem}
+.modern-stepper{display:flex;justify-content:space-between;position:relative;margin-bottom:2.5rem;padding:0 10%;}
+.modern-stepper::before{content:'';position:absolute;top:22px;left:10%;right:10%;height:3px;background:#e9ecef;z-index:1;border-radius:3px;transition:all .3s;}
+.step-item{position:relative;z-index:2;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;}
+.step-circle{width:48px;height:48px;border-radius:50%;background:#fff;border:3px solid #e9ecef;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#adb5bd;margin-bottom:.5rem;transition:all .4s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:0 4px 10px rgba(0,0,0,0.02);}
+.step-item.active .step-circle{border-color:#0d6efd;background:#0d6efd;color:#fff;box-shadow:0 8px 20px rgba(13,110,253,0.3);transform:scale(1.15);}
+.step-item.completed .step-circle{border-color:#198754;background:#198754;color:#fff;}
+.step-title{font-size:.8rem;font-weight:700;color:#adb5bd;text-transform:uppercase;letter-spacing:1px;transition:color .3s ease;}
+.step-item.active .step-title{color:#0d6efd;}
+.step-item.completed .step-title{color:#198754;}
+.modal-content-premium{border-radius:1.5rem;border:none;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);}
 </style>
 }
 
@@ -24,9 +34,9 @@
         <h4 class="fw-bold mb-1"><i class="bi bi-people-fill text-primary me-2"></i>Employee Management</h4>
         <p class="text-muted mb-0 small">Register, view and manage all employees.</p>
     </div>
-    <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#addEmpModal">
+    <a href="/Dashboard/HR/AddEmployee" class="btn btn-primary rounded-pill px-4 shadow-sm">
         <i class="bi bi-person-plus me-1"></i> Add Employee
-    </button>
+    </a>
 </div>
 
 @if (!string.IsNullOrEmpty(Model.SuccessMessage))
@@ -231,151 +241,7 @@
     </div>
 </div>
 
-<!-- ════ ADD EMPLOYEE MODAL ════ -->
-<div class="modal fade" id="addEmpModal" tabindex="-1">
-<div class="modal-dialog modal-xl modal-dialog-scrollable">
-<div class="modal-content rounded-4 border-0 shadow">
-    <div class="modal-header rounded-top-4" style="background:linear-gradient(135deg,#0d6efd,#0b5ed7)">
-        <h5 class="modal-title text-white fw-bold"><i class="bi bi-person-plus me-2"></i>Register New Employee</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-    </div>
-    <form method="post" asp-page-handler="Add" enctype="multipart/form-data">
-    <div class="modal-body p-4">
-        <ul class="nav tab-pill gap-1 mb-4" id="addTabs" role="tablist">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#at-personal" type="button"><i class="bi bi-person me-1"></i>Personal</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#at-employ" type="button"><i class="bi bi-briefcase me-1"></i>Employment</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#at-edu" type="button"><i class="bi bi-mortarboard me-1"></i>Education</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#at-fin" type="button"><i class="bi bi-cash-coin me-1"></i>Financial</button></li>
-        </ul>
-        <div class="tab-content">
 
-            <!-- ── PERSONAL TAB ── -->
-            <div class="tab-pane fade show active" id="at-personal">
-
-                <!-- Photo Upload -->
-                <div class="section-divider">Profile Photo</div>
-                <div class="row g-3 mb-3 align-items-center">
-                    <div class="col-auto">
-                        <div id="aPhotoPreviewWrap" class="rounded-circle border border-2 border-primary d-flex align-items-center justify-content-center overflow-hidden bg-light"
-                             style="width:90px;height:90px;font-size:2rem;color:#adb5bd;">
-                            <i class="bi bi-person-circle"></i>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <label class="field-label">Upload Photo (JPG / PNG, max 2 MB)</label>
-                        <input type="file" name="PhotoFile" id="aPhotoFile" accept="image/*" class="form-control input-modern">
-                    </div>
-                </div>
-
-                <div class="section-divider">Basic Info</div>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4"><label class="field-label">First Name *</label><input type="text" name="FirstName" class="form-control input-modern" required></div>
-                    <div class="col-md-4"><label class="field-label">Last Name *</label><input type="text" name="LastName" class="form-control input-modern" required></div>
-                    <div class="col-md-4"><label class="field-label">Middle Name</label><input type="text" name="MiddleName" class="form-control input-modern"></div>
-                    <div class="col-md-3"><label class="field-label">Gender</label>
-                        <select name="Gender" class="form-select input-modern"><option value="">—</option><option>Male</option><option>Female</option></select></div>
-                    <div class="col-md-3"><label class="field-label">Date of Birth</label><input type="date" name="DateOfBirth" class="form-control input-modern"></div>
-                    <div class="col-md-3"><label class="field-label">Nationality</label><input type="text" name="Nationality" class="form-control input-modern" value="Ethiopian"></div>
-                    <div class="col-md-3"><label class="field-label">Marital Status</label>
-                        <select name="MaritalStatus" class="form-select input-modern"><option value="">—</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select></div>
-                    <div class="col-md-3"><label class="field-label">Religion</label><input type="text" name="Religion" class="form-control input-modern"></div>
-                    <div class="col-md-3"><label class="field-label">Blood Type</label>
-                        <select name="BloodType" class="form-select input-modern"><option value="">—</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
-                    <div class="col-md-3"><label class="field-label">National ID</label><input type="text" name="NationalId" class="form-control input-modern" placeholder="Kebele / National ID"></div>
-                    <div class="col-md-3"><label class="field-label">Disability Status</label>
-                        <select name="DisabilityStatus" class="form-select input-modern"><option value="None">None</option><option>Visual</option><option>Hearing</option><option>Physical</option><option>Cognitive</option><option>Other</option></select></div>
-                    <div class="col-md-6"><label class="field-label">Phone Number</label><input type="text" name="PhoneNumber" class="form-control input-modern"></div>
-                    <div class="col-md-6"><label class="field-label">Email Address</label><input type="email" name="EmailAddress" class="form-control input-modern"></div>
-                </div>
-
-                <div class="section-divider">Address</div>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4"><label class="field-label">Region</label><input type="text" name="Region" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">City</label><input type="text" name="City" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">Subcity</label><input type="text" name="Subcity" class="form-control input-modern"></div>
-                    <div class="col-12"><label class="field-label">Detailed Address</label><input type="text" name="Address" class="form-control input-modern"></div>
-                </div>
-
-                <div class="section-divider">Emergency Contact #1</div>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4"><label class="field-label">Contact Name</label><input type="text" name="EmergencyContact" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">Phone</label><input type="text" name="EmergencyContactPhone" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">Relation</label><input type="text" name="EmergencyContactRelation" class="form-control input-modern" placeholder="e.g. Spouse, Parent"></div>
-                </div>
-
-                <div class="section-divider">Emergency Contact #2</div>
-                <div class="row g-3">
-                    <div class="col-md-4"><label class="field-label">Contact Name</label><input type="text" name="SecondEmergencyContact" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">Phone</label><input type="text" name="SecondEmergencyPhone" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">Relation</label><input type="text" name="SecondEmergencyRelation" class="form-control input-modern" placeholder="e.g. Sibling, Friend"></div>
-                </div>
-            </div>
-
-            <!-- ── EMPLOYMENT TAB ── -->
-            <div class="tab-pane fade" id="at-employ">
-                <div class="row g-3">
-                    <div class="col-md-4"><label class="field-label">Department *</label>
-                        <input type="text" name="Department" class="form-control input-modern" list="deptList" required>
-                        <datalist id="deptList"><option>Operations</option><option>Finance</option><option>HR</option><option>Logistics</option><option>IT</option><option>Administration</option></datalist></div>
-                    <div class="col-md-4"><label class="field-label">Position / Title *</label><input type="text" name="Position" class="form-control input-modern" required></div>
-                    <div class="col-md-4"><label class="field-label">System Role</label>
-                        <select name="Role" class="form-select input-modern"><option value="">Standard</option><option>HR</option><option>Manager</option><option>Finance</option><option>Logistics</option></select></div>
-                    <div class="col-md-4"><label class="field-label">Job Grade</label><input type="text" name="JobGrade" class="form-control input-modern" placeholder="e.g. G5, Senior"></div>
-                    <div class="col-md-4"><label class="field-label">Employment Type</label>
-                        <select name="EmploymentType" class="form-select input-modern"><option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Intern</option></select></div>
-                    <div class="col-md-4"><label class="field-label">Hire Date *</label>
-                        <input type="date" name="HireDate" class="form-control input-modern" required value="@DateTime.Today.ToString("yyyy-MM-dd")"></div>
-                    <div class="col-md-4"><label class="field-label">Contract End Date</label><input type="date" name="ContractEndDate" class="form-control input-modern"></div>
-                    <div class="col-md-8"><label class="field-label">Work Location / Branch</label><input type="text" name="WorkLocation" class="form-control input-modern" placeholder="e.g. Head Office, Bole Branch"></div>
-                    <div class="col-12"><label class="field-label">Notes / Remarks</label><textarea name="Notes" class="form-control input-modern" rows="2" placeholder="Any additional notes about this employee..."></textarea></div>
-                </div>
-            </div>
-
-            <!-- ── EDUCATION TAB ── -->
-            <div class="tab-pane fade" id="at-edu">
-                <div class="row g-3">
-                    <div class="col-md-6"><label class="field-label">Highest Education</label>
-                        <select name="HighestEducation" class="form-select input-modern"><option value="">—</option><option>High School</option><option>Diploma</option><option>Bachelor's Degree</option><option>Master's Degree</option><option>PhD</option></select></div>
-                    <div class="col-md-6"><label class="field-label">Field of Study</label><input type="text" name="FieldOfStudy" class="form-control input-modern"></div>
-                    <div class="col-md-8"><label class="field-label">Institution / University</label><input type="text" name="Institution" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">Graduation Year</label><input type="number" name="GraduationYear" class="form-control input-modern" min="1950" max="@DateTime.Now.Year"></div>
-                    <div class="col-12"><label class="field-label">Skills / Certifications</label><textarea name="Skills" class="form-control input-modern" rows="3" placeholder="List key skills, certificates, or languages..."></textarea></div>
-                </div>
-
-                <!-- Education Documents -->
-                <div class="section-divider mt-4">Education Documents</div>
-                <p class="text-muted small mb-3">Attach degree, diploma, certificate or any supporting documents (PDF, Word, JPG, PNG — max 5 MB each).</p>
-                <div id="aEduFilesContainer">
-                    <div class="edu-file-row d-flex gap-2 align-items-center mb-2">
-                        <input type="text"   name="EduFileLabels" class="form-control input-modern" placeholder="Label (e.g. Degree Certificate)" style="max-width:220px">
-                        <input type="file"   name="EduFiles"      class="form-control input-modern" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" style="display:none" title="Remove"><i class="bi bi-x-lg"></i></button>
-                    </div>
-                </div>
-                <button type="button" id="aAddEduFile" class="btn btn-outline-primary btn-sm rounded-pill mt-1">
-                    <i class="bi bi-plus-circle me-1"></i>Add Another File
-                </button>
-            </div>
-
-            <!-- ── FINANCIAL TAB ── -->
-            <div class="tab-pane fade" id="at-fin">
-                <div class="row g-3">
-                    <div class="col-md-6"><label class="field-label">Basic Salary (ETB)</label><input type="number" name="Salary" class="form-control input-modern" step="0.01" min="0" value="0"></div>
-                    <div class="col-md-6"><label class="field-label">Bank Name</label><input type="text" name="BankName" class="form-control input-modern" placeholder="e.g. CBE, Awash, Dashen"></div>
-                    <div class="col-md-6"><label class="field-label">Bank Account Number</label><input type="text" name="BankAccount" class="form-control input-modern"></div>
-                    <div class="col-md-6"><label class="field-label">Tax ID (TIN)</label><input type="text" name="TaxId" class="form-control input-modern"></div>
-                    <div class="col-md-6"><label class="field-label">Pension ID</label><input type="text" name="PensionId" class="form-control input-modern"></div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-    <div class="modal-footer border-0 px-4 pb-4">
-        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-primary rounded-pill px-5 shadow-sm"><i class="bi bi-save me-1"></i>Register Employee</button>
-    </div>
-    </form>
-</div></div></div>
 
 <!-- ════ EDIT EMPLOYEE MODAL ════ -->
 <div class="modal fade" id="editEmpModal" tabindex="-1">
@@ -385,7 +251,7 @@
         <h5 class="modal-title text-white fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Employee</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
     </div>
-    <form method="post" asp-page-handler="Update" enctype="multipart/form-data">
+    <form method="post" asp-page-handler="Update" enctype="multipart/form-data" id="formEditEmp" onsubmit="disableEditBtn()">
     <input type="hidden" name="Id"                id="eId">
     <input type="hidden" name="EmployeeCode"      id="eCode">
     <input type="hidden" name="ExistingPhotoUrl"  id="eExistingPhoto">
@@ -424,26 +290,57 @@
                     <div class="col-md-4"><label class="field-label">Middle Name</label><input type="text" name="MiddleName" id="eMn" class="form-control input-modern"></div>
                     <div class="col-md-3"><label class="field-label">Gender</label>
                         <select name="Gender" id="eGender" class="form-select input-modern"><option value="">—</option><option>Male</option><option>Female</option></select></div>
-                    <div class="col-md-3"><label class="field-label">Date of Birth</label><input type="date" name="DateOfBirth" id="eDob" class="form-control input-modern"></div>
+                    <div class="col-md-3"><label class="field-label">Date of Birth</label><input type="date" name="DateOfBirth" id="eDob" class="form-control input-modern" max="@DateTime.Today.AddYears(-18).ToString("yyyy-MM-dd")"></div>
                     <div class="col-md-3"><label class="field-label">Nationality</label><input type="text" name="Nationality" id="eNat" class="form-control input-modern"></div>
                     <div class="col-md-3"><label class="field-label">Marital Status</label>
                         <select name="MaritalStatus" id="eMarital" class="form-select input-modern"><option value="">—</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select></div>
-                    <div class="col-md-3"><label class="field-label">Religion</label><input type="text" name="Religion" id="eReligion" class="form-control input-modern"></div>
+                    <div class="col-md-3">
+                        <label class="field-label">Religion</label>
+                        <select name="Religion" id="eReligion" class="form-select input-modern">
+                            <option value="">—</option><option>Orthodox</option><option>Muslim</option><option>Protestant</option><option>Catholic</option><option>Other</option>
+                        </select>
+                    </div>
                     <div class="col-md-3"><label class="field-label">Blood Type</label>
                         <select name="BloodType" id="eBloodType" class="form-select input-modern"><option value="">—</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
                     <div class="col-md-3"><label class="field-label">National ID</label><input type="text" name="NationalId" id="eNationalId" class="form-control input-modern"></div>
                     <div class="col-md-3"><label class="field-label">Disability Status</label>
                         <select name="DisabilityStatus" id="eDisability" class="form-select input-modern"><option value="None">None</option><option>Visual</option><option>Hearing</option><option>Physical</option><option>Cognitive</option><option>Other</option></select></div>
-                    <div class="col-md-6"><label class="field-label">Phone Number</label><input type="text" name="PhoneNumber" id="ePhone" class="form-control input-modern"></div>
-                    <div class="col-md-6"><label class="field-label">Email Address</label><input type="email" name="EmailAddress" id="eEmail" class="form-control input-modern"></div>
+                    <div class="col-md-6"><label class="field-label">Phone Number (Optional)</label><input type="text" name="PhoneNumber" id="ePhone" class="form-control input-modern"></div>
+                    <div class="col-md-6"><label class="field-label">Email Address (Optional)</label><input type="email" name="EmailAddress" id="eEmail" class="form-control input-modern"></div>
                 </div>
 
                 <div class="section-divider">Address</div>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-4"><label class="field-label">Region</label><input type="text" name="Region" id="eRegion" class="form-control input-modern"></div>
+                    <div class="col-md-4">
+                        <label class="field-label">Region</label>
+                        <select name="Region" id="eRegion" class="form-select input-modern">
+                            <option value="">— Select Region —</option>
+                            <option>Addis Ababa</option>
+                            <option>Afar</option>
+                            <option>Amhara</option>
+                            <option>Benishangul-Gumuz</option>
+                            <option>Dire Dawa</option>
+                            <option>Gambela</option>
+                            <option>Harari</option>
+                            <option>Oromia</option>
+                            <option>Sidama</option>
+                            <option>Somali</option>
+                            <option>South West Ethiopia</option>
+                            <option>SNNPR</option>
+                        </select>
+                    </div>
                     <div class="col-md-4"><label class="field-label">City</label><input type="text" name="City" id="eCity" class="form-control input-modern"></div>
-                    <div class="col-md-4"><label class="field-label">Subcity</label><input type="text" name="Subcity" id="eSubcity" class="form-control input-modern"></div>
-                    <div class="col-12"><label class="field-label">Detailed Address</label><input type="text" name="Address" id="eAddress" class="form-control input-modern"></div>
+                    <div class="col-md-4">
+                        <label class="field-label">Subcity</label>
+                        <select name="Subcity" id="eSubcity" class="form-select input-modern">
+                            <option value="">— Select Subcity (A.A.) —</option>
+                            <option>Addis Ketema</option><option>Akaky Kaliti</option><option>Arada</option>
+                            <option>Bole</option><option>Gulele</option><option>Kirkos</option>
+                            <option>Kolfe Keranio</option><option>Lemi Kura</option><option>Lideta</option>
+                            <option>Nifas Silk-Lafto</option><option>Yeka</option>
+                        </select>
+                    </div>
+                    <div class="col-12"><label class="field-label">Woreda / Kebele / House No.</label><input type="text" name="Address" id="eAddress" class="form-control input-modern"></div>
                 </div>
 
                 <div class="section-divider">Emergency Contact #1</div>
@@ -465,15 +362,17 @@
             <div class="tab-pane fade" id="et-employ">
                 <div class="row g-3">
                     <div class="col-md-4"><label class="field-label">Department *</label>
-                        <input type="text" name="Department" id="eDept" class="form-control input-modern" list="deptList2" required>
-                        <datalist id="deptList2"><option>Operations</option><option>Finance</option><option>HR</option><option>Logistics</option><option>IT</option><option>Administration</option></datalist></div>
-                    <div class="col-md-4"><label class="field-label">Position / Title *</label><input type="text" name="Position" id="ePos" class="form-control input-modern" required></div>
-                    <div class="col-md-4"><label class="field-label">System Role</label>
-                        <select name="Role" id="eRole" class="form-select input-modern"><option value="">Standard</option><option>HR</option><option>Manager</option><option>Finance</option><option>Logistics</option></select></div>
+                        <select name="Department" id="eDept" class="form-select input-modern" required>
+                            <option value="">— Select Department —</option>
+                            <option>Operations</option><option>Finance</option><option>HR</option>
+                            <option>Logistics</option><option>IT</option><option>Administration</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6"><label class="field-label">Position / Title *</label><input type="text" name="Position" id="ePos" class="form-control input-modern" required></div>
                     <div class="col-md-4"><label class="field-label">Job Grade</label><input type="text" name="JobGrade" id="eGrade" class="form-control input-modern"></div>
                     <div class="col-md-4"><label class="field-label">Employment Type</label>
                         <select name="EmploymentType" id="eEmpType" class="form-select input-modern"><option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Intern</option></select></div>
-                    <div class="col-md-4"><label class="field-label">Hire Date *</label><input type="date" name="HireDate" id="eHireDate" class="form-control input-modern" required></div>
+                    <div class="col-md-4"><label class="field-label">Hire Date *</label><input type="date" name="HireDate" id="eHireDate" class="form-control input-modern" required max="@DateTime.Today.ToString("yyyy-MM-dd")"></div>
                     <div class="col-md-4"><label class="field-label">Contract End Date</label><input type="date" name="ContractEndDate" id="eCed" class="form-control input-modern"></div>
                     <div class="col-md-4"><label class="field-label">Status</label>
                         <select name="EmploymentStatus" id="eStatus" class="form-select input-modern"><option>Active</option><option>Inactive</option><option>On Leave</option></select></div>
@@ -494,16 +393,22 @@
                 </div>
 
                 <!-- Education Documents -->
-                <div class="section-divider mt-4">Add More Documents</div>
-                <p class="text-muted small mb-2">Existing documents are shown on the profile page. Add new files here — they will be appended.</p>
-                <div id="eEduFilesContainer">
-                    <div class="edu-file-row d-flex gap-2 align-items-center mb-2">
-                        <input type="text"   name="EduFileLabels" class="form-control input-modern" placeholder="Label (e.g. Degree Certificate)" style="max-width:220px">
-                        <input type="file"   name="EduFiles"      class="form-control input-modern" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                <div class="section-divider mt-4">Add More Documents <small class="text-muted fw-normal">(appended to existing)</small></div>
+                <div id="eEduFilesContainer" class="d-flex flex-column gap-2 mb-2">
+                    <div class="edu-file-row border rounded-3 p-2 bg-light d-flex flex-wrap gap-2 align-items-center">
+                        <select name="EduFileTypes" class="form-select input-modern" style="max-width:160px">
+                            <option value="Education">🎓 Education</option>
+                            <option value="ID">🪪 ID / Kebele</option>
+                            <option value="Contract">📄 Contract</option>
+                            <option value="Certificate">🏅 Certificate</option>
+                            <option value="Other">📎 Other</option>
+                        </select>
+                        <input type="text" name="EduFileLabels" class="form-control input-modern" placeholder="File label" style="max-width:200px">
+                        <input type="file" name="EduFiles" class="form-control input-modern" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="max-width:260px">
                         <button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" style="display:none" title="Remove"><i class="bi bi-x-lg"></i></button>
                     </div>
                 </div>
-                <button type="button" id="eAddEduFile" class="btn btn-outline-primary btn-sm rounded-pill mt-1">
+                <button type="button" id="eAddEduFile" class="btn btn-outline-primary btn-sm rounded-pill">
                     <i class="bi bi-plus-circle me-1"></i>Add Another File
                 </button>
             </div>
@@ -530,36 +435,30 @@
 
 @section Scripts {
 <script>
+
+
 // ── Dynamic education file rows ────────────────────────────────────────────
 function makeEduRow(containerSelector) {
     const row = document.createElement('div');
-    row.className = 'edu-file-row d-flex gap-2 align-items-center mb-2';
-    // Note: HTML built with string concat to avoid Razor tag-helper parsing
+    row.className = 'edu-file-row border rounded-3 p-2 bg-light d-flex flex-wrap gap-2 align-items-center';
     row.innerHTML =
-        '<input type="text" name="EduFileLabels" class="form-control input-modern"' +
-        ' placeholder="Label (e.g. Transcript)" style="max-width:220px">' +
-        '<input type="file" name="EduFiles" class="form-control input-modern"' +
-        ' accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">' +
-        '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" title="Remove">' +
-        '<i class="bi bi-x-lg"></i></button>';
+        '<select name="EduFileTypes" class="form-select input-modern" style="max-width:160px">' +
+        '<option value="Education">🎓 Education</option>' +
+        '<option value="ID">🪪 ID / Kebele</option>' +
+        '<option value="Contract">📄 Contract</option>' +
+        '<option value="Certificate">🏅 Certificate</option>' +
+        '<option value="Other">📎 Other</option></select>' +
+        '<input type="text" name="EduFileLabels" class="form-control input-modern" placeholder="File label" style="max-width:200px">' +
+        '<input type="file" name="EduFiles" class="form-control input-modern" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="max-width:260px">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill edu-remove-btn" title="Remove"><i class="bi bi-x-lg"></i></button>';
     document.querySelector(containerSelector).appendChild(row);
     row.querySelector('.edu-remove-btn').addEventListener('click', () => row.remove());
 }
 
-document.getElementById('aAddEduFile').addEventListener('click', () => makeEduRow('#aEduFilesContainer'));
+
 document.getElementById('eAddEduFile').addEventListener('click', () => makeEduRow('#eEduFilesContainer'));
 
-// ── Add modal: live photo preview ─────────────────────────────────────────
-document.getElementById('aPhotoFile').addEventListener('change', function() {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        const wrap = document.getElementById('aPhotoPreviewWrap');
-        wrap.innerHTML = `<img src="${e.target.result}" class="rounded-circle object-fit-cover" style="width:90px;height:90px;" alt="preview">`;
-    };
-    reader.readAsDataURL(file);
-});
+
 
 // ── Edit modal: photo preview ─────────────────────────────────────────────
 document.getElementById('ePhotoFile').addEventListener('change', function() {
@@ -628,7 +527,6 @@ document.getElementById('editEmpModal').addEventListener('show.bs.modal', functi
     // employment
     document.getElementById('eDept').value        = g('dept');
     document.getElementById('ePos').value         = g('pos');
-    document.getElementById('eRole').value        = g('role');
     document.getElementById('eGrade').value       = g('grade');
     document.getElementById('eEmpType').value     = g('emptype');
     document.getElementById('eHireDate').value    = g('hiredate');
@@ -651,5 +549,13 @@ document.getElementById('editEmpModal').addEventListener('show.bs.modal', functi
     document.getElementById('eTaxId').value       = g('taxid');
     document.getElementById('ePension').value     = g('pension');
 });
+
+function disableEditBtn() {
+    var btn = document.querySelector('#editEmpModal .modal-footer button[type="submit"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving Changes...';
+    }
+}
 </script>
 }

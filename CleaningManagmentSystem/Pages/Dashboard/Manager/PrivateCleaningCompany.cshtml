@@ -140,11 +140,15 @@
                                 <!-- Link mobile rep -->
                                 <button class="btn btn-sm btn-outline-success"
                                         title="Link mobile rep user"
-                                        onclick="fillLinkUser(
+                                        onclick='fillLinkUser(
                                             @c.Id,
                                             @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.CompanyName)),
-                                            @(c.RepUserId.HasValue ? c.RepUserId.Value.ToString() : "0")
-                                        )"
+                                            @(c.RepUserId.HasValue ? c.RepUserId.Value.ToString() : "0"),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.ContactPerson ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.Email ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.Phone ?? "")),
+                                            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(c.Address ?? ""))
+                                        )'
                                         data-bs-toggle="modal" data-bs-target="#modalLinkUser">
                                     <i class="bi bi-person-plus"></i>
                                 </button>
@@ -475,7 +479,7 @@ function fillEdit(id, name, license, contact, phone, email, address, services, s
     for (var i = 0; i < repSel.options.length; i++)
         repSel.options[i].selected = (repSel.options[i].value == repUserId);
 }
-function fillLinkUser(id, companyName, currentRepUserId) {
+function fillLinkUser(id, companyName, currentRepUserId, contact, email, phone, address) {
     document.getElementById('lId').value = id;
     document.getElementById('lAction').value = 'link_user';
     var label = document.getElementById('lblCompanyName');
@@ -486,6 +490,11 @@ function fillLinkUser(id, companyName, currentRepUserId) {
     if (sel && currentRepUserId > 0)
         for (var i = 0; i < sel.options.length; i++)
             sel.options[i].selected = (sel.options[i].value == currentRepUserId);
+
+    document.querySelector('input[name="NewUserName"]').value = contact || '';
+    document.querySelector('input[name="NewUserEmail"]').value = email || '';
+    document.querySelector('input[name="NewUserPhone"]').value = phone || '';
+    document.querySelector('input[name="NewUserAddress"]').value = address || '';
 }
 function setLinkAction(action) { document.getElementById('lAction').value = action; }
 function filterUsers(query) {

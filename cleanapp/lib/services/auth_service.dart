@@ -16,6 +16,13 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     _currentUser = await _apiService.login(username, password);
+
+    // Block non-mobile roles
+    if (_currentUser != null) {
+      if (!_currentUser!.isDriver && !_currentUser!.isOutsource && !_currentUser!.isPrivateCompanyRep) {
+        _currentUser = null;
+      }
+    }
     
     _isLoading = false;
     notifyListeners();

@@ -8,26 +8,17 @@
 }
 
 <!-- Collapse toggle button (desktop only) -->
-<button onclick="toggleDesktopSidebar()"
-        title="Collapse sidebar"
-        style="position:absolute;top:50%;right:-13px;transform:translateY(-50%);
-               width:26px;height:26px;border-radius:50%;background:#fff;
-               border:2px solid rgba(255,255,255,.3);color:#2E86AB;
-               display:flex;align-items:center;justify-content:center;
-               cursor:pointer;font-size:.75rem;z-index:210;
-               box-shadow:0 2px 8px rgba(0,0,0,.18);transition:all .2s;"
-        class="d-none d-lg-flex" id="sbToggleBtn">
-    <i class="bi bi-chevron-left" id="sbToggleIcon"></i>
+<button class="sidebar-toggle-btn d-none d-md-flex" id="sidebarToggleBtn" onclick="toggleSidebarCollapse()" title="Expand / Collapse sidebar">
+    <i class="bi bi-chevron-left" id="sidebarToggleIcon"></i>
 </button>
 
-<div style="overflow-y:auto;height:100%;padding-top:.75rem">
+<div class="sidebar-scroll pt-3" style="height:100%">
     <!-- Logo area -->
-    <div style="padding:.75rem 1rem 1rem;border-bottom:1px solid rgba(255,255,255,.15);
-                display:flex;align-items:center;gap:8px;min-height:54px" class="sb-logo">
-        <i class="bi bi-droplet-fill text-info flex-shrink-0" style="font-size:1.1rem"></i>
-        <div class="sb-brand-text">
-            <div style="color:#fff;font-weight:700;font-size:.9rem;line-height:1.2">Yeka Cleaning</div>
-            <div style="color:rgba(255,255,255,.55);font-size:.65rem">Manager</div>
+    <div class="sidebar-logo-area pb-3 mb-3 border-bottom d-flex align-items-center gap-2 px-3" style="min-height:54px">
+        <i class="bi bi-droplet-fill text-info fs-5 flex-shrink-0"></i>
+        <div class="sidebar-brand-text">
+            <div class="text-white fw-bold" style="font-size:.95rem;line-height:1.2">Yeka Cleaning</div>
+            <div class="text-white-50" style="font-size:.68rem">Manager</div>
         </div>
     </div>
 
@@ -36,114 +27,114 @@
             <a class="nav-link @(IsActive("/Dashboard/Manager",true)?"active":"")"
                href="/Dashboard/Manager" title="Dashboard">
                 <i class="bi bi-speedometer2 flex-shrink-0"></i>
-                <span class="sb-label ms-2">Dashboard</span>
+                <span class="nav-label ms-2">Dashboard</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Weredas")?"active":"")"
                href="/Dashboard/Manager/Weredas" title="Weredas">
                 <i class="bi bi-geo-alt flex-shrink-0"></i>
-                <span class="sb-label ms-2">Weredas</span>
+                <span class="nav-label ms-2">Weredas</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Mahberats")?"active":"")"
                href="/Dashboard/Manager/Mahberats" title="Mahberats">
                 <i class="bi bi-people flex-shrink-0"></i>
-                <span class="sb-label ms-2">Mahberats</span>
+                <span class="nav-label ms-2">Mahberats</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Vehicles")?"active":"")"
                href="/Dashboard/Manager/Vehicles" title="Vehicles">
                 <i class="bi bi-truck flex-shrink-0"></i>
-                <span class="sb-label ms-2">Vehicles</span>
+                <span class="nav-label ms-2">Vehicles</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Drivers")?"active":"")"
                href="/Dashboard/Manager/Drivers" title="Drivers">
                 <i class="bi bi-person-badge flex-shrink-0"></i>
-                <span class="sb-label ms-2">Drivers</span>
+                <span class="nav-label ms-2">Drivers</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/OutsourceCompany")?"active":"")"
                href="/Dashboard/Manager/OutsourceCompany" title="Outsource Companies">
                 <i class="bi bi-building flex-shrink-0"></i>
-                <span class="sb-label ms-2">Outsource Co.</span>
+                <span class="nav-label ms-2">Outsource Co.</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/PrivateCleaningCompany")?"active":"")"
                href="/Dashboard/Manager/PrivateCleaningCompany" title="Private Companies">
                 <i class="bi bi-briefcase flex-shrink-0"></i>
-                <span class="sb-label ms-2">Private Co.</span>
+                <span class="nav-label ms-2">Private Co.</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Staff")?"active":"")"
                href="/Dashboard/Manager/Staff" title="Employees">
                 <i class="bi bi-people-fill flex-shrink-0"></i>
-                <span class="sb-label ms-2">Employees</span>
+                <span class="nav-label ms-2">Employees</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Approvals")?"active":"")"
                href="/Dashboard/Manager/Approvals" title="Approvals">
                 <i class="bi bi-check2-square flex-shrink-0"></i>
-                <span class="sb-label ms-2">Approvals</span>
+                <span class="nav-label ms-2">Approvals</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Tasks")?"active":"")"
                href="/Dashboard/Manager/Tasks" title="Tasks">
                 <i class="bi bi-clipboard-check flex-shrink-0"></i>
-                <span class="sb-label ms-2">Tasks</span>
+                <span class="nav-label ms-2">Tasks</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Reports")?"active":"")"
                href="/Dashboard/Manager/Reports" title="Reports">
                 <i class="bi bi-file-earmark-bar-graph flex-shrink-0"></i>
-                <span class="sb-label ms-2">Reports</span>
+                <span class="nav-label ms-2">Reports</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(IsActive("/Dashboard/Manager/Settings")?"active":"")"
                href="/Dashboard/Manager/Settings" title="Settings">
                 <i class="bi bi-gear flex-shrink-0"></i>
-                <span class="sb-label ms-2">Settings</span>
+                <span class="nav-label ms-2">Settings</span>
             </a>
         </li>
-        <li class="nav-item" style="border-top:1px solid rgba(255,255,255,.12);margin-top:.5rem;padding-top:.5rem">
+        <li class="nav-item mt-3 border-top pt-2">
             <a class="nav-link @(IsActive("/Dashboard/Profile")?"active":"")"
                href="/Dashboard/Profile" title="My Profile">
                 <i class="bi bi-person-circle flex-shrink-0"></i>
-                <span class="sb-label ms-2">My Profile</span>
+                <span class="nav-label ms-2">My Profile</span>
             </a>
         </li>
-        <li class="nav-item mt-1">
+        <li class="nav-item">
             <a class="nav-link text-warning fw-semibold" href="/Login?logout=1" title="Logout">
                 <i class="bi bi-box-arrow-left flex-shrink-0"></i>
-                <span class="sb-label ms-2">Logout</span>
+                <span class="nav-label ms-2">Logout</span>
             </a>
         </li>
     </ul>
 </div>
 
 <script>
-// Keep icon in sync with collapsed state
-(function() {
-    var ic = document.getElementById('sbToggleIcon');
-    if (!ic) return;
-    ic.className = document.body.classList.contains('sb-collapsed')
-        ? 'bi bi-chevron-right' : 'bi bi-chevron-left';
-    // Update icon when collapse toggles
-    var obs = new MutationObserver(function() {
-        var col = document.body.classList.contains('sb-collapsed');
-        ic.className = col ? 'bi bi-chevron-right' : 'bi bi-chevron-left';
-    });
-    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+(function(){
+    var collapsed = localStorage.getItem('sidebarCollapsed')==='1';
+    if(collapsed) _applyCollapse(true);
+    function _applyCollapse(c){
+        var b=document.body, ic=document.getElementById('sidebarToggleIcon');
+        c ? b.classList.add('sidebar-collapsed') : b.classList.remove('sidebar-collapsed');
+        if(ic){ ic.className = c ? 'bi bi-chevron-right' : 'bi bi-chevron-left'; }
+    }
+    window.toggleSidebarCollapse=function(){
+        var c=!document.body.classList.contains('sidebar-collapsed');
+        _applyCollapse(c); localStorage.setItem('sidebarCollapsed',c?'1':'0');
+    };
 })();
 </script>

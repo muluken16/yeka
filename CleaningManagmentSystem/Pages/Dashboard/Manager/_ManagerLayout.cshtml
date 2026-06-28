@@ -100,7 +100,7 @@
         @{ var _mgrRole  = Context.Session.GetString("UserRole")  ?? "Manager"; }
         @{ var _mgrInit  = (userName.Length > 0 ? userName[0].ToString().ToUpper() : "M"); }
         <div class="dropdown">
-            <button class="profile-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="profile-btn" data-bs-toggle="dropdown" aria-expanded="false">
                 <span class="p-wrap">
                     @if (!string.IsNullOrEmpty(_mgrPhoto))
                     {
@@ -111,8 +111,6 @@
                     else { <span class="p-initial">@_mgrInit</span> }
                     <span class="p-dot"></span>
                 </span>
-                <span class="p-name welcome-text">@userName</span>
-                <i class="bi bi-chevron-down"></i>
             </button>
             <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
                 <li>

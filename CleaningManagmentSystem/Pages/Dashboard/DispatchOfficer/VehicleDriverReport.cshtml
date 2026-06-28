@@ -1,0 +1,131 @@
+@page
+@model CleaningManagmentSystem.Pages.Dashboard.DispatchOfficer.VehicleDriverReportModel
+@{
+    Layout = "_DispatchLayout";
+    ViewData["Title"] = "Vehicle & Driver Report";
+    var userName = Model.UserName;
+}
+
+@section Styles {
+    <style>
+        .report-card { border-radius: 12px; border: none; transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .report-card:hover { transform: translateY(-3px); }
+        .bg-gradient-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
+        .bg-gradient-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .bg-gradient-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .bg-gradient-info { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; }
+        @@media print {
+            .sidebar, .navbar, .btn, .no-print { display: none !important; }
+            .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+            .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+        }
+    </style>
+}
+
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4 main-content" style="margin-top: 56px;">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+            <div>
+                <h1 class="h2 mb-0"><i class="bi bi-file-earmark-bar-graph me-2 text-primary"></i>Vehicle & Driver Report</h1>
+                <div class="text-muted small mt-1">Generated: @DateTime.Now.ToString("dd MMM yyyy HH:mm")</div>
+            </div>
+            <div class="btn-toolbar mb-2 mb-md-0 no-print">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Print Report
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card report-card bg-gradient-primary h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <i class="bi bi-truck display-4 mb-2 opacity-75"></i>
+                        <h2 class="mb-0 fw-bold">@Model.TotalVehicles</h2>
+                        <div class="small text-uppercase tracking-wide opacity-75">Total Vehicles</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card report-card bg-gradient-success h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <i class="bi bi-check-circle display-4 mb-2 opacity-75"></i>
+                        <h2 class="mb-0 fw-bold">@Model.AvailableVehicles</h2>
+                        <div class="small text-uppercase tracking-wide opacity-75">Available</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card report-card bg-gradient-warning h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <i class="bi bi-tools display-4 mb-2 opacity-75"></i>
+                        <h2 class="mb-0 fw-bold">@Model.MaintenanceVehicles</h2>
+                        <div class="small text-uppercase tracking-wide opacity-75">In Maintenance</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card report-card bg-gradient-info h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <i class="bi bi-person-badge display-4 mb-2 opacity-75"></i>
+                        <h2 class="mb-0 fw-bold">@Model.ActiveDrivers / @Model.TotalDrivers</h2>
+                        <div class="small text-uppercase tracking-wide opacity-75">Active Drivers</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0">
+                <h5 class="fw-bold"><i class="bi bi-list-ul me-2 text-primary"></i>Vehicle & Assignment Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Plate Number</th>
+                                <th>Type / Model</th>
+                                <th>Color</th>
+                                <th>Status</th>
+                                <th>Assigned Driver</th>
+                                <th>Driver Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.VehicleList.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-2 opacity-25"></i>
+                                        No vehicles found.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var v in Model.VehicleList)
+                            {
+                                string st = (string)(v.status ?? "");
+                                string stCls = st switch {
+                                    "Available" => "bg-success",
+                                    "Assigned" => "bg-primary",
+                                    "Maintenance" => "bg-warning text-dark",
+                                    _ => "bg-secondary"
+                                };
+                                <tr>
+                                    <td><span class="badge bg-light text-dark border" style="font-family: monospace; font-size: 0.85rem;">@v.plate_number</span></td>
+                                    <td>
+                                        <div class="fw-semibold" style="font-size: 0.85rem;">@v.vehicle_type</div>
+                                        <div class="small text-muted">@v.model</div>
+                                    </td>
+                                    <td>@v.color</td>
+                                    <td><span class="badge @stCls">@st</span></td>
+                                    <td class="fw-semibold">@v.driver_name</td>
+                                    <td>@v.driver_phone</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+</main>

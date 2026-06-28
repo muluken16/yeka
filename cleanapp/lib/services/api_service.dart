@@ -9,12 +9,10 @@ import '../models/notification_model.dart';
 class ApiService {
   static const String _serverHost = 'localhost';
   static const String _emulatorHost = '10.0.2.2'; // Android emulator → host PC
-
   // ── YOUR PC's LAN IP ──────────────────────────────────────────────────────
-  // Run `ipconfig` on your PC and set this to the IPv4 address shown under
-  // your active WiFi adapter (e.g. 192.168.1.105).
-  // The phone and PC must be on the same WiFi network.
-  static const String _lanHost = '10.0.26.234';
+  // We set this to 127.0.0.1 so it connects directly through the USB cable 
+  // via adb reverse tcp:5117 tcp:5117 (which bypasses Windows Firewall).
+  static const String _lanHost = '127.0.0.1';
   // ─────────────────────────────────────────────────────────────────────────
 
   static const int _serverPort = 5000;
@@ -453,6 +451,45 @@ class ApiService {
       return [];
     } catch (_) {
       return [];
+    }
+  }
+
+  // ── Settings APIs ─────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> changePassword({
+    required int userId,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final r = await http.post(
+        Uri.parse('$baseUrl/change-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'oldPassword': oldPassword,
+          'newPassword': newPassword,
+        }),
+      );
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {'success': false, 'message': 'Network error. Please try again.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required int userId,
+    required String phone,
+  }) async {
+    try {
+      final r = await http.post(
+        Uri.parse('$baseUrl/update-profile'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'userId': userId, 'phone': phone}),
+      );
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {'success': false, 'message': 'Network error. Please try again.'};
     }
   }
 }
